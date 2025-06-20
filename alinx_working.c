@@ -3129,16 +3129,16 @@ void Port_mode(int port_value)
         DefenderPort_en_2 = 0;
         break;
       case 3:
-        DefenderPort_en_4 = 0;
+        DefenderPort_en_3 = 0;
         break;
       case 4:
-        DefenderPort_en_5 = 0;
+        DefenderPort_en_4 = 0;
         break;
       case 5:
-        DefenderPort_en_6 = 0;
+        DefenderPort_en_5 = 0;
         break;
       case 6:
-        DefenderPort_en_7 = 0;
+        DefenderPort_en_6 = 0;
         break;
       case 7:
         DefenderPort_en_7 = 0;
@@ -3160,16 +3160,16 @@ void Port_mode(int port_value)
         DefenderPort_en_2 = 1;
         break;
       case 3:
-        DefenderPort_en_4 = 1;
+        DefenderPort_en_3 = 1;
         break;
       case 4:
-        DefenderPort_en_5 = 1;
+        DefenderPort_en_4 = 1;
         break;
       case 5:
-        DefenderPort_en_6 = 1;
+        DefenderPort_en_5 = 1;
         break;
       case 6:
-        DefenderPort_en_7 = 1;
+        DefenderPort_en_6 = 1;
         break;
       case 7:
         DefenderPort_en_7 = 1;
@@ -3188,11 +3188,36 @@ void Port_mode(int port_value)
       break;
     }
   }
-  // xil_printf("\r\n\t\t|                                                                                                                                                                        |");
-  // xil_printf("\r\n\t\t+------------------------------------------------------------------------------------------------------------------------------------------------------------------------+");
-  EnableDefender1 = (HTTPSGETFlood_en1 << 13) + (HTTPGETFlood_en1 << 12) + (DefenderPort_en_5 << 11) + (DefenderPort_en_4 << 10) + (DefenderPort_en_1 << 9) + (DefenderPort_en1 << 8) + (UDPFragFlood_en1 << 7) + (TCPFragFlood_en1 << 6) + (IPSecFlood_en1 << 5) + (ICMPFlood_en1 << 4) + (DNSFlood_en1 << 3) + (UDPFlood_en1 << 2) + (LANDATTACK_en1 << 1) + SYNFlood_en1;
-  // EnableDefender1 = (HTTPSGETFlood_en1 << 13) + (HTTPGETFlood_en1 << 12) +  (DefenderPort_en_5 << 11) + (DefenderPort_en_4 << 10) +  (DefenderPort_en_1 << 9) + (DefenderPort_en1 << 8) + (UDPFragFlood_en1 << 7) + (TCPFragFlood_en1 << 6) + (IPSecFlood_en1 << 5) + (ICMPFlood_en1 << 4) + (DNSFlood_en1 << 3) + (UDPFlood_en1 << 2) + (LANDATTACK_en1 << 1) + SYNFlood_en1;
-  ReturnMode2();
+  switch (port_value)
+  {
+  case 1:
+    EnableDefender1 = (HTTPSGETFlood_en1 << 10) + (HTTPGETFlood_en1 << 9) + (UDPFragFlood_en1 << 8) + (TCPFragFlood_en1 << 7) + (IPSecFlood_en1 << 6) + (ICMPFlood_en1 << 5) + (DNSFlood_en1 << 4) + (UDPFlood_en1 << 3) + (LANDATTACK_en1 << 2) + (SYNFlood_en1 << 1) + DefenderPort_en_1;
+    break;
+  case 2:
+    EnableDefender2 = (HTTPSGETFlood_en2 << 10) + (HTTPGETFlood_en2 << 9) + (UDPFragFlood_en2 << 8) + (TCPFragFlood_en2 << 7) + (IPSecFlood_en2 << 6) + (ICMPFlood_en2 << 5) + (DNSFlood_en2 << 4) + (UDPFlood_en2 << 3) + (LANDATTACK_en2 << 2) + (SYNFlood_en2 << 1) + DefenderPort_en_2;
+    break;
+  case 3:
+    EnableDefender3 = (HTTPSGETFlood_en3 << 10) + (HTTPGETFlood_en3 << 9) + (UDPFragFlood_en3 << 8) + (TCPFragFlood_en3 << 7) + (IPSecFlood_en3 << 6) + (ICMPFlood_en3 << 5) + (DNSFlood_en3 << 4) + (UDPFlood_en3 << 3) + (LANDATTACK_en3 << 2) + (SYNFlood_en3 << 1) + DefenderPort_en_3;
+    break;
+  case 4:
+    EnableDefender4 = (HTTPSGETFlood_en4 << 10) + (HTTPGETFlood_en4 << 9) + (UDPFragFlood_en4 << 8) + (TCPFragFlood_en4 << 7) + (IPSecFlood_en4 << 6) + (ICMPFlood_en4 << 5) + (DNSFlood_en4 << 4) + (UDPFlood_en4 << 3) + (LANDATTACK_en4 << 2) + (SYNFlood_en4 << 1) + DefenderPort_en_4;
+    break;
+  case 5:
+    EnableDefender5 = (HTTPSGETFlood_en5 << 10) + (HTTPGETFlood_en5 << 9) + (UDPFragFlood_en5 << 8) + (TCPFragFlood_en5 << 7) + (IPSecFlood_en5 << 6) + (ICMPFlood_en5 << 5) + (DNSFlood_en5 << 4) + (UDPFlood_en5 << 3) + (LANDATTACK_en5 << 2) + (SYNFlood_en5 << 1) + DefenderPort_en_5;
+    break;
+  case 6:
+    EnableDefender6 = (HTTPSGETFlood_en6 << 10) + (HTTPGETFlood_en6 << 9) + (UDPFragFlood_en6 << 8) + (TCPFragFlood_en6 << 7) + (IPSecFlood_en6 << 6) + (ICMPFlood_en6 << 5) + (DNSFlood_en6 << 4) + (UDPFlood_en6 << 3) + (LANDATTACK_en6 << 2) + (SYNFlood_en6 << 1) + DefenderPort_en_6;
+    break;
+  case 7:
+    EnableDefender7 = (HTTPSGETFlood_en7 << 10) + (HTTPGETFlood_en7 << 9) + (UDPFragFlood_en7 << 8) + (TCPFragFlood_en7 << 7) + (IPSecFlood_en7 << 6) + (ICMPFlood_en7 << 5) + (DNSFlood_en7 << 4) + (UDPFlood_en7 << 3) + (LANDATTACK_en7 << 2) + (SYNFlood_en7 << 1) + DefenderPort_en_7;
+    break;
+  case 8:
+    EnableDefender8 = (HTTPSGETFlood_en8 << 10) + (HTTPGETFlood_en8 << 9) + (UDPFragFlood_en8 << 8) + (TCPFragFlood_en8 << 7) + (IPSecFlood_en8 << 6) + (ICMPFlood_en8 << 5) + (DNSFlood_en8 << 4) + (UDPFlood_en8 << 3) + (LANDATTACK_en8 << 2) + (SYNFlood_en8 << 1) + DefenderPort_en_8;
+    break;
+  default:
+    break;
+  }
+  ReturnMode2(key1 - '0');
 }
 //
 void Add_or_Remove_IPv4_into_port(const char *ip_str, int part_ip1_addr, int part_ip2_addr, int part_ip3_addr, int part_ip4_addr, int ver_ip_addr, int signal_en_addr, int ver_ip_val, int signal_en)
@@ -5214,7 +5239,7 @@ void ModeStart()
     //
     else if (key1 == '5')
     {
-      SetTimeflood();
+      SetTimeflood(); //
       goto start;
     }
     else if (key1 == '6')
@@ -5239,7 +5264,7 @@ void ModeStart()
     }
     else if (key1 == 'A' || key1 == 'a')
     {
-      SetSynonymousDefender();
+      SetSynonymousDefender(); //
       goto start;
     }
     else if (key1 == 'B' || key1 == 'b')
@@ -5262,43 +5287,43 @@ void ModeStart()
     else if (key1 == 'E' || key1 == 'e')
     {
 
-      SetDNSDefender();
+      SetDNSDefender(); //
       goto start;
     }
     else if (key1 == 'F' || key1 == 'f')
     {
 
-      SetDNSThresh();
+      SetDNSThresh(); //
       goto start;
     }
     else if (key1 == 'G' || key1 == 'g')
     {
 
-      SetICMPDefender();
+      SetICMPDefender(); //
       goto start;
     }
     else if (key1 == 'H' || key1 == 'h')
     {
 
-      SetICMPThresh();
+      SetICMPThresh(); //
       goto start;
     }
     else if (key1 == 'I' || key1 == 'i')
     {
 
-      SetICMPThresh1s();
+      SetICMPThresh1s(); //
       goto start;
     }
     else if (key1 == 'J' || key1 == 'j')
     {
 
-      SetIPSecDefender();
+      SetIPSecDefender(); //
       goto start;
     }
     else if (key1 == 'K' || key1 == 'k')
     {
 
-      SetIPSecThresh();
+      SetIPSecThresh(); //
       goto start;
     }
     else if (key1 == 'L' || key1 == 'l')
@@ -5328,13 +5353,13 @@ void ModeStart()
     else if (key1 == 'N' || key1 == 'n')
     {
 
-      SetTCPFragDefender();
+      SetTCPFragDefender(); //
       goto start;
     }
     else if (key1 == 'O' || key1 == 'o')
     {
 
-      SetUDPFragDefender();
+      SetUDPFragDefender(); //
       goto start;
     }
     else if (key1 == 'P' || key1 == 'p')
@@ -8909,9 +8934,14 @@ Return:
   key = 0;
   count = 0;
   u32 icmpthresh_valid = 0;
-  // xil_printf("\r\n");
-  // xil_printf("\r\n================+========================================================================================================================================================================+");
-  // xil_printf("\r\n    Setting     | Enter the value of incoming ICMP request packet threshold (PPS): ");
+
+  u8 key1 = 0;
+  while (1)
+  {
+    key1 = XUartLite_RecvByte(0x40600000);
+    if (key1 == '1' || key1 == '2' || key1 == '3' || key1 == '4' || key1 == '5' || key1 == '6' || key1 == '7' || key1 == '8')
+      break;
+  }
   while (key != 13 && count < 16)
   {
     key = XUartLite_RecvByte(0x40600000);
@@ -8945,8 +8975,36 @@ Return:
     // goto Return;
   }
   else
-    ICMPThreshold1 = icmpthresh_valid;
-  ReturnMode2();
+  {
+    switch (key1 - '0') // Convert char to int
+    {
+    case 1:
+      ICMPThreshold1 = icmpthresh_valid;
+      break;
+    case 2:
+      ICMPThreshold2 = icmpthresh_valid;
+      break;
+    case 3:
+      ICMPThreshold3 = icmpthresh_valid;
+      break;
+    case 4:
+      ICMPThreshold4 = icmpthresh_valid;
+      break;
+    case 5:
+      ICMPThreshold5 = icmpthresh_valid;
+      break;
+    case 6:
+      ICMPThreshold6 = icmpthresh_valid;
+      break;
+    case 7:
+      ICMPThreshold7 = icmpthresh_valid;
+      break;
+    case 8:
+      ICMPThreshold8 = icmpthresh_valid;
+      break;
+    }
+    ReturnMode2(key1 - '0');
+  }
 }
 
 void SetICMPThresh1s()
@@ -8957,9 +9015,13 @@ Return:
   key = 0;
   count = 0;
   u32 icmpthresh1s_valid = 0;
-  // xil_printf("\r\n");
-  // xil_printf("\r\n================+========================================================================================================================================================================+");
-  // xil_printf("\r\n    Setting     | Enter the limit of incoming ICMP packet per second (PPS): ");
+  u8 key1 = 0;
+  while (1)
+  {
+    key1 = XUartLite_RecvByte(0x40600000);
+    if (key1 == '1' || key1 == '2' || key1 == '3' || key1 == '4' || key1 == '5' || key1 == '6' || key1 == '7' || key1 == '8')
+      break;
+  }
   while (key != 13 && count < 16)
   {
     key = XUartLite_RecvByte(0x40600000);
@@ -8992,8 +9054,36 @@ Return:
     // goto Return;
   }
   else
-    ICMPThresh_1s1 = icmpthresh1s_valid;
-  ReturnMode2();
+  {
+    switch (key1 - '0') // Convert char to int
+    {
+    case 1:
+      ICMPThresh_1s1 = icmpthresh1s_valid;
+      break;
+    case 2:
+      ICMPThresh_1s2 = icmpthresh1s_valid;
+      break;
+    case 3:
+      ICMPThresh_1s3 = icmpthresh1s_valid;
+      break;
+    case 4:
+      ICMPThresh_1s4 = icmpthresh1s_valid;
+      break;
+    case 5:
+      ICMPThresh_1s5 = icmpthresh1s_valid;
+      break;
+    case 6:
+      ICMPThresh_1s6 = icmpthresh1s_valid;
+      break;
+    case 7:
+      ICMPThresh_1s7 = icmpthresh1s_valid;
+      break;
+    case 8:
+      ICMPThresh_1s8 = icmpthresh1s_valid;
+      break;
+    }
+    ReturnMode2(key1 - '0');
+  }
 }
 
 void SetDNSThresh()
@@ -9005,9 +9095,13 @@ Return:
   count = 0;
   u32 dnsthresh_valid = 0;
 start:
-  // xil_printf("\r\n");
-  // xil_printf("\r\n================+========================================================================================================================================================================+");
-  // xil_printf("\r\n    Setting     | Enter the value of incoming DNS request threshold (PPS): ");
+  u8 key1 = 0;
+  while (1)
+  {
+    key1 = XUartLite_RecvByte(0x40600000);
+    if (key1 == '1' || key1 == '2' || key1 == '3' || key1 == '4' || key1 == '5' || key1 == '6' || key1 == '7' || key1 == '8')
+      break;
+  }
   while (key != 13 && count < 16)
   {
     key = XUartLite_RecvByte(0x40600000);
@@ -9035,16 +9129,40 @@ start:
 
   if (dnsthresh_valid > 65535)
   {
-    // xil_printf("\r\n\t\t|                                                                                                                                                                        |");
-    // xil_printf("\r\n\t\t+========================================================================================================================================================================+");
-    // xil_printf("\r\n\t\t| The value must be less than 65536.                                                                                                                                     |");
-    // xil_printf("\r\n\t\t|                                                                                                                                                                        |");
-    // xil_printf("\r\n\t\t+------------------------------------------------------------------------------------------------------------------------------------------------------------------------+");
-    // goto Return;
   }
   else
-    DNSThreshold1 = dnsthresh_valid;
-  ReturnMode2();
+  {
+    switch (key1 - '0') // Convert char to int
+    {
+    case 1:
+      DNSThreshold1 = dnsthresh_valid;
+      break;
+    case 2:
+      DNSThreshold2 = dnsthresh_valid;
+      break;
+    case 3:
+      DNSThreshold3 = dnsthresh_valid;
+      break;
+    case 4:
+      DNSThreshold4 = dnsthresh_valid;
+      break;
+    case 5:
+      DNSThreshold5 = dnsthresh_valid;
+      break;
+    case 6:
+      DNSThreshold6 = dnsthresh_valid;
+      break;
+    case 7:
+      DNSThreshold7 = dnsthresh_valid;
+      break;
+    case 8:
+      DNSThreshold8 = dnsthresh_valid;
+      break;
+    default:
+      break;
+    }
+  }
+  ReturnMode2(key1 - '0'); // Pass the selected option to ReturnMode2
 }
 
 void SetIPSecThresh()
@@ -9059,6 +9177,13 @@ start:
   // xil_printf("\r\n");
   // xil_printf("\r\n================+========================================================================================================================================================================+");
   // xil_printf("\r\n    Setting     | Enter the value of incoming IPSec IKE packet threshold (PPS): ");
+  u8 key1 = 0;
+  while (1)
+  {
+    key1 = XUartLite_RecvByte(0x40600000);
+    if (key1 == '1' || key1 == '2' || key1 == '3' || key1 == '4' || key1 == '5' || key1 == '6' || key1 == '7' || key1 == '8')
+      break;
+  }
   while (key != 13 && count < 16)
   {
     key = XUartLite_RecvByte(0x40600000);
@@ -9093,8 +9218,38 @@ start:
     //  goto Return;
   }
   else
-    IPSecThreshold1 = ipsecthresh_valid;
-  ReturnMode2();
+  {
+    switch (key1 - '0') // Convert char to int
+    {
+    case 1:
+      IPSecThreshold1 = ipsecthresh_valid;
+      break;
+    case 2:
+      IPSecThreshold2 = ipsecthresh_valid;
+      break;
+    case 3:
+      IPSecThreshold3 = ipsecthresh_valid;
+      break;
+    case 4:
+      IPSecThreshold4 = ipsecthresh_valid;
+      break;
+    case 5:
+      IPSecThreshold5 = ipsecthresh_valid;
+      break;
+    case 6:
+      IPSecThreshold6 = ipsecthresh_valid;
+      break;
+    case 7:
+      IPSecThreshold7 = ipsecthresh_valid;
+      break;
+    case 8:
+      IPSecThreshold8 = ipsecthresh_valid;
+      break;
+    default:
+      break;
+    }
+    ReturnMode2(key1 - '0'); // Pass the selected option to ReturnMode2
+  }
 }
 
 void AddIpv4VPN()
@@ -9867,6 +10022,13 @@ void SetSynonymousDefender()
   // xil_printf("\r\n    Setting     | Do you want to enable LAND Attack protect now (Y/N)?: ");
   u8 key = 0;
   u8 done4 = 0;
+  u8 key1 = 0;
+  while (1)
+  {
+    key1 = XUartLite_RecvByte(0x40600000);
+    if (key1 == '1' || key1 == '2' || key1 == '3' || key1 == '4' || key1 == '5' || key1 == '6' || key1 == '7' || key1 == '8')
+      break;
+  }
   while (1)
   {
     key = XUartLite_RecvByte(0x40600000);
@@ -9875,14 +10037,69 @@ void SetSynonymousDefender()
       // XUartLite_SendByte(0x40600000, 'Y');
       //  xil_printf("%c",key);
       done4 = 1;
-      LANDATTACK_en1 = 1;
+      switch (key1 - '0')
+      {
+      case 1:
+        LANDATTACK_en1 = 1;
+        break;
+      case 2:
+        LANDATTACK_en2 = 1;
+        break;
+      case 3:
+        LANDATTACK_en3 = 1;
+        break;
+      case 4:
+        LANDATTACK_en4 = 1;
+        break;
+      case 5:
+        LANDATTACK_en5 = 1;
+        break;
+      case 6:
+        LANDATTACK_en6 = 1;
+        break;
+      case 7:
+        LANDATTACK_en7 = 1;
+        break;
+      case 8:
+        LANDATTACK_en8 = 1;
+        break;
+      default:
+        break;
+      }
     }
     else if (key == 'n' || key == 'N')
     {
       // XUartLite_SendByte(0x40600000, 'N');
       done4 = 1;
-      // xil_printf("%c",key);
-      LANDATTACK_en1 = 0;
+      switch (key1 - '0')
+      {
+      case 1:
+        LANDATTACK_en1 = 0;
+        break;
+      case 2:
+        LANDATTACK_en2 = 0;
+        break;
+      case 3:
+        LANDATTACK_en3 = 01;
+        break;
+      case 4:
+        LANDATTACK_en4 = 0;
+        break;
+      case 5:
+        LANDATTACK_en5 = 0;
+        break;
+      case 6:
+        LANDATTACK_en6 = 0;
+        break;
+      case 7:
+        LANDATTACK_en7 = 0;
+        break;
+      case 8:
+        LANDATTACK_en8 = 0;
+        break;
+      default:
+        break;
+      }
     }
     else if (key == 03)
     {
@@ -9895,10 +10112,36 @@ void SetSynonymousDefender()
     }
     // XUartLite_SendByte(0x40600000, 'H');
   }
-  // xil_printf("\r\n\t\t|                                                                                                                                                                        |");
-  // xil_printf("\r\n\t\t+------------------------------------------------------------------------------------------------------------------------------------------------------------------------+");
-  EnableDefender1 = (HTTPSGETFlood_en1 << 13) + (HTTPGETFlood_en1 << 12) + (DefenderPort_en_5 << 11) + (DefenderPort_en_4 << 10) + (DefenderPort_en_1 << 9) + (DefenderPort_en1 << 8) + (UDPFragFlood_en1 << 7) + (TCPFragFlood_en1 << 6) + (IPSecFlood_en1 << 5) + (ICMPFlood_en1 << 4) + (DNSFlood_en1 << 3) + (UDPFlood_en1 << 2) + (LANDATTACK_en1 << 1) + SYNFlood_en1;
-  ReturnMode2();
+  switch (key1 - '0')
+  {
+  case 1:
+    EnableDefender1 = (HTTPSGETFlood_en1 << 10) + (HTTPGETFlood_en1 << 9) + (UDPFragFlood_en1 << 8) + (TCPFragFlood_en1 << 7) + (IPSecFlood_en1 << 6) + (ICMPFlood_en1 << 5) + (DNSFlood_en1 << 4) + (UDPFlood_en1 << 3) + (LANDATTACK_en1 << 2) + (SYNFlood_en1 << 1) + DefenderPort_en_1;
+    break;
+  case 2:
+    EnableDefender2 = (HTTPSGETFlood_en2 << 10) + (HTTPGETFlood_en2 << 9) + (UDPFragFlood_en2 << 8) + (TCPFragFlood_en2 << 7) + (IPSecFlood_en2 << 6) + (ICMPFlood_en2 << 5) + (DNSFlood_en2 << 4) + (UDPFlood_en2 << 3) + (LANDATTACK_en2 << 2) + (SYNFlood_en2 << 1) + DefenderPort_en_2;
+    break;
+  case 3:
+    EnableDefender3 = (HTTPSGETFlood_en3 << 10) + (HTTPGETFlood_en3 << 9) + (UDPFragFlood_en3 << 8) + (TCPFragFlood_en3 << 7) + (IPSecFlood_en3 << 6) + (ICMPFlood_en3 << 5) + (DNSFlood_en3 << 4) + (UDPFlood_en3 << 3) + (LANDATTACK_en3 << 2) + (SYNFlood_en3 << 1) + DefenderPort_en_3;
+    break;
+  case 4:
+    EnableDefender4 = (HTTPSGETFlood_en4 << 10) + (HTTPGETFlood_en4 << 9) + (UDPFragFlood_en4 << 8) + (TCPFragFlood_en4 << 7) + (IPSecFlood_en4 << 6) + (ICMPFlood_en4 << 5) + (DNSFlood_en4 << 4) + (UDPFlood_en4 << 3) + (LANDATTACK_en4 << 2) + (SYNFlood_en4 << 1) + DefenderPort_en_4;
+    break;
+  case 5:
+    EnableDefender5 = (HTTPSGETFlood_en5 << 10) + (HTTPGETFlood_en5 << 9) + (UDPFragFlood_en5 << 8) + (TCPFragFlood_en5 << 7) + (IPSecFlood_en5 << 6) + (ICMPFlood_en5 << 5) + (DNSFlood_en5 << 4) + (UDPFlood_en5 << 3) + (LANDATTACK_en5 << 2) + (SYNFlood_en5 << 1) + DefenderPort_en_5;
+    break;
+  case 6:
+    EnableDefender6 = (HTTPSGETFlood_en6 << 10) + (HTTPGETFlood_en6 << 9) + (UDPFragFlood_en6 << 8) + (TCPFragFlood_en6 << 7) + (IPSecFlood_en6 << 6) + (ICMPFlood_en6 << 5) + (DNSFlood_en6 << 4) + (UDPFlood_en6 << 3) + (LANDATTACK_en6 << 2) + (SYNFlood_en6 << 1) + DefenderPort_en_6;
+    break;
+  case 7:
+    EnableDefender7 = (HTTPSGETFlood_en7 << 10) + (HTTPGETFlood_en7 << 9) + (UDPFragFlood_en7 << 8) + (TCPFragFlood_en7 << 7) + (IPSecFlood_en7 << 6) + (ICMPFlood_en7 << 5) + (DNSFlood_en7 << 4) + (UDPFlood_en7 << 3) + (LANDATTACK_en7 << 2) + (SYNFlood_en7 << 1) + DefenderPort_en_7;
+    break;
+  case 8:
+    EnableDefender8 = (HTTPSGETFlood_en8 << 10) + (HTTPGETFlood_en8 << 9) + (UDPFragFlood_en8 << 8) + (TCPFragFlood_en8 << 7) + (IPSecFlood_en8 << 6) + (ICMPFlood_en8 << 5) + (DNSFlood_en8 << 4) + (UDPFlood_en8 << 3) + (LANDATTACK_en8 << 2) + (SYNFlood_en8 << 1) + DefenderPort_en_8;
+    break;
+  default:
+    break;
+  }
+  ReturnMode2(key1 - '0');
 }
 
 void SetUDPDefender()
@@ -10037,6 +10280,13 @@ void SetDNSDefender()
   // xil_printf("\r\n    Setting     | Do you want to enable DNS flood protect now (Y/N)?: ");
   u8 key = 0;
   u8 done = 0;
+  u8 key1 = 0;
+  while (1)
+  {
+    key1 = XUartLite_RecvByte(0x40600000);
+    if (key1 == '1' || key1 == '2' || key1 == '3' || key1 == '4' || key1 == '5' || key1 == '6' || key1 == '7' || key1 == '8')
+      break;
+  }
   while (1)
   {
     key = XUartLite_RecvByte(0x40600000);
@@ -10044,15 +10294,69 @@ void SetDNSDefender()
     {
       // XUartLite_SendByte(0x40600000, 'Y');
       done = 1;
-      // xil_printf("%c",key);
-      DNSFlood_en1 = 1;
+      switch (key1 - '0')
+      {
+      case 1:
+        DNSFlood_en1 = 1;
+        break;
+      case 2:
+        DNSFlood_en2 = 1;
+        break;
+      case 3:
+        DNSFlood_en3 = 1;
+        break;
+      case 4:
+        DNSFlood_en4 = 1;
+        break;
+      case 5:
+        DNSFlood_en5 = 1;
+        break;
+      case 6:
+        DNSFlood_en6 = 1;
+        break;
+      case 7:
+        DNSFlood_en7 = 1;
+        break;
+      case 8:
+        DNSFlood_en8 = 1;
+        break;
+      default:
+        break;
+      }
     }
     else if (key == 'n' || key == 'N')
     {
       // XUartLite_SendByte(0x40600000, 'N');
       done = 1;
-      // xil_printf("%c",key);
-      DNSFlood_en1 = 0;
+      switch (key1 - '0')
+      {
+      case 1:
+        DNSFlood_en1 = 0;
+        break;
+      case 2:
+        DNSFlood_en2 = 0;
+        break;
+      case 3:
+        DNSFlood_en3 = 0;
+        break;
+      case 4:
+        DNSFlood_en4 = 0;
+        break;
+      case 5:
+        DNSFlood_en5 = 0;
+        break;
+      case 6:
+        DNSFlood_en6 = 0;
+        break;
+      case 7:
+        DNSFlood_en7 = 0;
+        break;
+      case 8:
+        DNSFlood_en8 = 0;
+        break;
+      default:
+        break;
+      }
     }
     else if (key == 03)
     {
@@ -10066,8 +10370,36 @@ void SetDNSDefender()
   }
   // xil_printf("\r\n\t\t|                                                                                                                                                                        |");
   // xil_printf("\r\n\t\t+------------------------------------------------------------------------------------------------------------------------------------------------------------------------+");
-  EnableDefender1 = (HTTPSGETFlood_en1 << 13) + (HTTPGETFlood_en1 << 12) + (DefenderPort_en_5 << 11) + (DefenderPort_en_4 << 10) + (DefenderPort_en_1 << 9) + (DefenderPort_en1 << 8) + (UDPFragFlood_en1 << 7) + (TCPFragFlood_en1 << 6) + (IPSecFlood_en1 << 5) + (ICMPFlood_en1 << 4) + (DNSFlood_en1 << 3) + (UDPFlood_en1 << 2) + (LANDATTACK_en1 << 1) + SYNFlood_en1;
-  ReturnMode2();
+  switch (key1 - '0')
+  {
+  case 1:
+    EnableDefender1 = (HTTPSGETFlood_en1 << 10) + (HTTPGETFlood_en1 << 9) + (UDPFragFlood_en1 << 8) + (TCPFragFlood_en1 << 7) + (IPSecFlood_en1 << 6) + (ICMPFlood_en1 << 5) + (DNSFlood_en1 << 4) + (UDPFlood_en1 << 3) + (LANDATTACK_en1 << 2) + (SYNFlood_en1 << 1) + DefenderPort_en_1;
+    break;
+  case 2:
+    EnableDefender2 = (HTTPSGETFlood_en2 << 10) + (HTTPGETFlood_en2 << 9) + (UDPFragFlood_en2 << 8) + (TCPFragFlood_en2 << 7) + (IPSecFlood_en2 << 6) + (ICMPFlood_en2 << 5) + (DNSFlood_en2 << 4) + (UDPFlood_en2 << 3) + (LANDATTACK_en2 << 2) + (SYNFlood_en2 << 1) + DefenderPort_en_2;
+    break;
+  case 3:
+    EnableDefender3 = (HTTPSGETFlood_en3 << 10) + (HTTPGETFlood_en3 << 9) + (UDPFragFlood_en3 << 8) + (TCPFragFlood_en3 << 7) + (IPSecFlood_en3 << 6) + (ICMPFlood_en3 << 5) + (DNSFlood_en3 << 4) + (UDPFlood_en3 << 3) + (LANDATTACK_en3 << 2) + (SYNFlood_en3 << 1) + DefenderPort_en_3;
+    break;
+  case 4:
+    EnableDefender4 = (HTTPSGETFlood_en4 << 10) + (HTTPGETFlood_en4 << 9) + (UDPFragFlood_en4 << 8) + (TCPFragFlood_en4 << 7) + (IPSecFlood_en4 << 6) + (ICMPFlood_en4 << 5) + (DNSFlood_en4 << 4) + (UDPFlood_en4 << 3) + (LANDATTACK_en4 << 2) + (SYNFlood_en4 << 1) + DefenderPort_en_4;
+    break;
+  case 5:
+    EnableDefender5 = (HTTPSGETFlood_en5 << 10) + (HTTPGETFlood_en5 << 9) + (UDPFragFlood_en5 << 8) + (TCPFragFlood_en5 << 7) + (IPSecFlood_en5 << 6) + (ICMPFlood_en5 << 5) + (DNSFlood_en5 << 4) + (UDPFlood_en5 << 3) + (LANDATTACK_en5 << 2) + (SYNFlood_en5 << 1) + DefenderPort_en_5;
+    break;
+  case 6:
+    EnableDefender6 = (HTTPSGETFlood_en6 << 10) + (HTTPGETFlood_en6 << 9) + (UDPFragFlood_en6 << 8) + (TCPFragFlood_en6 << 7) + (IPSecFlood_en6 << 6) + (ICMPFlood_en6 << 5) + (DNSFlood_en6 << 4) + (UDPFlood_en6 << 3) + (LANDATTACK_en6 << 2) + (SYNFlood_en6 << 1) + DefenderPort_en_6;
+    break;
+  case 7:
+    EnableDefender7 = (HTTPSGETFlood_en7 << 10) + (HTTPGETFlood_en7 << 9) + (UDPFragFlood_en7 << 8) + (TCPFragFlood_en7 << 7) + (IPSecFlood_en7 << 6) + (ICMPFlood_en7 << 5) + (DNSFlood_en7 << 4) + (UDPFlood_en7 << 3) + (LANDATTACK_en7 << 2) + (SYNFlood_en7 << 1) + DefenderPort_en_7;
+    break;
+  case 8:
+    EnableDefender8 = (HTTPSGETFlood_en8 << 10) + (HTTPGETFlood_en8 << 9) + (UDPFragFlood_en8 << 8) + (TCPFragFlood_en8 << 7) + (IPSecFlood_en8 << 6) + (ICMPFlood_en8 << 5) + (DNSFlood_en8 << 4) + (UDPFlood_en8 << 3) + (LANDATTACK_en8 << 2) + (SYNFlood_en8 << 1) + DefenderPort_en_8;
+    break;
+  default:
+    break;
+  }
+  ReturnMode2(key1 - '0');
 }
 
 void SetICMPDefender()
@@ -10077,6 +10409,13 @@ void SetICMPDefender()
   // xil_printf("\r\n    Setting     | Do you want to enable ICMP flood protect now (Y/N)?: ");
   u8 key = 0;
   u8 done = 0;
+  u8 key1 = 0;
+  while (1)
+  {
+    key1 = XUartLite_RecvByte(0x40600000);
+    if (key1 == '1' || key1 == '2' || key1 == '3' || key1 == '4' || key1 == '5' || key1 == '6' || key1 == '7' || key1 == '8')
+      break;
+  }
   while (1)
   {
     key = XUartLite_RecvByte(0x40600000);
@@ -10084,15 +10423,69 @@ void SetICMPDefender()
     {
       // XUartLite_SendByte(0x40600000, 'Y');
       done = 1;
-      // xil_printf("%c",key);
-      ICMPFlood_en1 = 1;
+      switch (key1 - '0')
+      {
+      case 1:
+        ICMPFlood_en1 = 1;
+        break;
+      case 2:
+        ICMPFlood_en2 = 1;
+        break;
+      case 3:
+        ICMPFlood_en3 = 1;
+        break;
+      case 4:
+        ICMPFlood_en4 = 1;
+        break;
+      case 5:
+        ICMPFlood_en5 = 1;
+        break;
+      case 6:
+        ICMPFlood_en6 = 1;
+        break;
+      case 7:
+        ICMPFlood_en7 = 1;
+        break;
+      case 8:
+        ICMPFlood_en8 = 1;
+        break;
+      default:
+        break;
+      }
     }
     else if (key == 'n' || key == 'N')
     {
       // XUartLite_SendByte(0x40600000, 'N');
       done = 1;
-      // xil_printf("%c",key);
-      ICMPFlood_en1 = 0;
+      switch (key1 - '0')
+      {
+      case 1:
+        ICMPFlood_en1 = 0;
+        break;
+      case 2:
+        ICMPFlood_en2 = 0;
+        break;
+      case 3:
+        ICMPFlood_en3 = 0;
+        break;
+      case 4:
+        ICMPFlood_en4 = 0;
+        break;
+      case 5:
+        ICMPFlood_en5 = 0;
+        break;
+      case 6:
+        ICMPFlood_en6 = 0;
+        break;
+      case 7:
+        ICMPFlood_en7 = 0;
+        break;
+      case 8:
+        ICMPFlood_en8 = 0;
+        break;
+      default:
+        break;
+      }
     }
     else if (key == 03)
     {
@@ -10107,8 +10500,36 @@ void SetICMPDefender()
   }
   // xil_printf("\r\n\t\t|                                                                                                                                                                        |");
   // xil_printf("\r\n\t\t+------------------------------------------------------------------------------------------------------------------------------------------------------------------------+");
-  EnableDefender1 = (HTTPSGETFlood_en1 << 13) + (HTTPGETFlood_en1 << 12) + (DefenderPort_en_5 << 11) + (DefenderPort_en_4 << 10) + (DefenderPort_en_1 << 9) + (DefenderPort_en1 << 8) + (UDPFragFlood_en1 << 7) + (TCPFragFlood_en1 << 6) + (IPSecFlood_en1 << 5) + (ICMPFlood_en1 << 4) + (DNSFlood_en1 << 3) + (UDPFlood_en1 << 2) + (LANDATTACK_en1 << 1) + SYNFlood_en1;
-  ReturnMode2();
+  switch (key1 - '0')
+  {
+  case 1:
+    EnableDefender1 = (HTTPSGETFlood_en1 << 10) + (HTTPGETFlood_en1 << 9) + (UDPFragFlood_en1 << 8) + (TCPFragFlood_en1 << 7) + (IPSecFlood_en1 << 6) + (ICMPFlood_en1 << 5) + (DNSFlood_en1 << 4) + (UDPFlood_en1 << 3) + (LANDATTACK_en1 << 2) + (SYNFlood_en1 << 1) + DefenderPort_en_1;
+    break;
+  case 2:
+    EnableDefender2 = (HTTPSGETFlood_en2 << 10) + (HTTPGETFlood_en2 << 9) + (UDPFragFlood_en2 << 8) + (TCPFragFlood_en2 << 7) + (IPSecFlood_en2 << 6) + (ICMPFlood_en2 << 5) + (DNSFlood_en2 << 4) + (UDPFlood_en2 << 3) + (LANDATTACK_en2 << 2) + (SYNFlood_en2 << 1) + DefenderPort_en_2;
+    break;
+  case 3:
+    EnableDefender3 = (HTTPSGETFlood_en3 << 10) + (HTTPGETFlood_en3 << 9) + (UDPFragFlood_en3 << 8) + (TCPFragFlood_en3 << 7) + (IPSecFlood_en3 << 6) + (ICMPFlood_en3 << 5) + (DNSFlood_en3 << 4) + (UDPFlood_en3 << 3) + (LANDATTACK_en3 << 2) + (SYNFlood_en3 << 1) + DefenderPort_en_3;
+    break;
+  case 4:
+    EnableDefender4 = (HTTPSGETFlood_en4 << 10) + (HTTPGETFlood_en4 << 9) + (UDPFragFlood_en4 << 8) + (TCPFragFlood_en4 << 7) + (IPSecFlood_en4 << 6) + (ICMPFlood_en4 << 5) + (DNSFlood_en4 << 4) + (UDPFlood_en4 << 3) + (LANDATTACK_en4 << 2) + (SYNFlood_en4 << 1) + DefenderPort_en_4;
+    break;
+  case 5:
+    EnableDefender5 = (HTTPSGETFlood_en5 << 10) + (HTTPGETFlood_en5 << 9) + (UDPFragFlood_en5 << 8) + (TCPFragFlood_en5 << 7) + (IPSecFlood_en5 << 6) + (ICMPFlood_en5 << 5) + (DNSFlood_en5 << 4) + (UDPFlood_en5 << 3) + (LANDATTACK_en5 << 2) + (SYNFlood_en5 << 1) + DefenderPort_en_5;
+    break;
+  case 6:
+    EnableDefender6 = (HTTPSGETFlood_en6 << 10) + (HTTPGETFlood_en6 << 9) + (UDPFragFlood_en6 << 8) + (TCPFragFlood_en6 << 7) + (IPSecFlood_en6 << 6) + (ICMPFlood_en6 << 5) + (DNSFlood_en6 << 4) + (UDPFlood_en6 << 3) + (LANDATTACK_en6 << 2) + (SYNFlood_en6 << 1) + DefenderPort_en_6;
+    break;
+  case 7:
+    EnableDefender7 = (HTTPSGETFlood_en7 << 10) + (HTTPGETFlood_en7 << 9) + (UDPFragFlood_en7 << 8) + (TCPFragFlood_en7 << 7) + (IPSecFlood_en7 << 6) + (ICMPFlood_en7 << 5) + (DNSFlood_en7 << 4) + (UDPFlood_en7 << 3) + (LANDATTACK_en7 << 2) + (SYNFlood_en7 << 1) + DefenderPort_en_7;
+    break;
+  case 8:
+    EnableDefender8 = (HTTPSGETFlood_en8 << 10) + (HTTPGETFlood_en8 << 9) + (UDPFragFlood_en8 << 8) + (TCPFragFlood_en8 << 7) + (IPSecFlood_en8 << 6) + (ICMPFlood_en8 << 5) + (DNSFlood_en8 << 4) + (UDPFlood_en8 << 3) + (LANDATTACK_en8 << 2) + (SYNFlood_en8 << 1) + DefenderPort_en_8;
+    break;
+  default:
+    break;
+  }
+  ReturnMode2(key1 - '0');
 }
 
 void SetIPSecDefender()
@@ -10118,6 +10539,13 @@ void SetIPSecDefender()
   // xil_printf("\r\n    Setting     | Do you want to enable IPSec IKE flood protect now (Y/N)?: ");
   u8 key = 0;
   u8 done = 0;
+  u8 key1 = 0;
+  while (1)
+  {
+    key1 = XUartLite_RecvByte(0x40600000);
+    if (key1 == '1' || key1 == '2' || key1 == '3' || key1 == '4' || key1 == '5' || key1 == '6' || key1 == '7' || key1 == '8')
+      break;
+  }
   while (1)
   {
     key = XUartLite_RecvByte(0x40600000);
@@ -10125,15 +10553,70 @@ void SetIPSecDefender()
     {
       // XUartLite_SendByte(0x40600000, 'Y');
       done = 1;
-      // xil_printf("%c",key);
-      IPSecFlood_en1 = 1;
+
+      switch (key1 - '0')
+      {
+      case 1:
+        IPSecFlood_en1 = 1;
+        break;
+      case 2:
+        IPSecFlood_en2 = 1;
+        break;
+      case 3:
+        IPSecFlood_en3 = 1;
+        break;
+      case 4:
+        IPSecFlood_en4 = 1;
+        break;
+      case 5:
+        IPSecFlood_en5 = 1;
+        break;
+      case 6:
+        IPSecFlood_en6 = 1;
+        break;
+      case 7:
+        IPSecFlood_en7 = 1;
+        break;
+      case 8:
+        IPSecFlood_en8 = 1;
+        break;
+      default:
+        break;
+      }
     }
     else if (key == 'n' || key == 'N')
     {
       // XUartLite_SendByte(0x40600000, 'N');
       done = 1;
-      // xil_printf("%c",key);
-      IPSecFlood_en1 = 0;
+      switch (key1 - '0')
+      {
+      case 1:
+        IPSecFlood_en1 = 0;
+        break;
+      case 2:
+        IPSecFlood_en2 = 0;
+        break;
+      case 3:
+        IPSecFlood_en3 = 0;
+        break;
+      case 4:
+        IPSecFlood_en4 = 0;
+        break;
+      case 5:
+        IPSecFlood_en5 = 0;
+        break;
+      case 6:
+        IPSecFlood_en6 = 0;
+        break;
+      case 7:
+        IPSecFlood_en7 = 0;
+        break;
+      case 8:
+        IPSecFlood_en8 = 0;
+        break;
+      default:
+        break;
+      }
     }
     else if (key == 03)
     {
@@ -10148,8 +10631,36 @@ void SetIPSecDefender()
   }
   // xil_printf("\r\n\t\t|                                                                                                                                                                        |");
   // xil_printf("\r\n\t\t+------------------------------------------------------------------------------------------------------------------------------------------------------------------------+");
-  EnableDefender1 = (HTTPSGETFlood_en1 << 13) + (HTTPGETFlood_en1 << 12) + (DefenderPort_en_5 << 11) + (DefenderPort_en_4 << 10) + (DefenderPort_en_1 << 9) + (DefenderPort_en1 << 8) + (UDPFragFlood_en1 << 7) + (TCPFragFlood_en1 << 6) + (IPSecFlood_en1 << 5) + (ICMPFlood_en1 << 4) + (DNSFlood_en1 << 3) + (UDPFlood_en1 << 2) + (LANDATTACK_en1 << 1) + SYNFlood_en1;
-  ReturnMode2();
+  switch (key1 - '0')
+  {
+  case 1:
+    EnableDefender1 = (HTTPSGETFlood_en1 << 10) + (HTTPGETFlood_en1 << 9) + (UDPFragFlood_en1 << 8) + (TCPFragFlood_en1 << 7) + (IPSecFlood_en1 << 6) + (ICMPFlood_en1 << 5) + (DNSFlood_en1 << 4) + (UDPFlood_en1 << 3) + (LANDATTACK_en1 << 2) + (SYNFlood_en1 << 1) + DefenderPort_en_1;
+    break;
+  case 2:
+    EnableDefender2 = (HTTPSGETFlood_en2 << 10) + (HTTPGETFlood_en2 << 9) + (UDPFragFlood_en2 << 8) + (TCPFragFlood_en2 << 7) + (IPSecFlood_en2 << 6) + (ICMPFlood_en2 << 5) + (DNSFlood_en2 << 4) + (UDPFlood_en2 << 3) + (LANDATTACK_en2 << 2) + (SYNFlood_en2 << 1) + DefenderPort_en_2;
+    break;
+  case 3:
+    EnableDefender3 = (HTTPSGETFlood_en3 << 10) + (HTTPGETFlood_en3 << 9) + (UDPFragFlood_en3 << 8) + (TCPFragFlood_en3 << 7) + (IPSecFlood_en3 << 6) + (ICMPFlood_en3 << 5) + (DNSFlood_en3 << 4) + (UDPFlood_en3 << 3) + (LANDATTACK_en3 << 2) + (SYNFlood_en3 << 1) + DefenderPort_en_3;
+    break;
+  case 4:
+    EnableDefender4 = (HTTPSGETFlood_en4 << 10) + (HTTPGETFlood_en4 << 9) + (UDPFragFlood_en4 << 8) + (TCPFragFlood_en4 << 7) + (IPSecFlood_en4 << 6) + (ICMPFlood_en4 << 5) + (DNSFlood_en4 << 4) + (UDPFlood_en4 << 3) + (LANDATTACK_en4 << 2) + (SYNFlood_en4 << 1) + DefenderPort_en_4;
+    break;
+  case 5:
+    EnableDefender5 = (HTTPSGETFlood_en5 << 10) + (HTTPGETFlood_en5 << 9) + (UDPFragFlood_en5 << 8) + (TCPFragFlood_en5 << 7) + (IPSecFlood_en5 << 6) + (ICMPFlood_en5 << 5) + (DNSFlood_en5 << 4) + (UDPFlood_en5 << 3) + (LANDATTACK_en5 << 2) + (SYNFlood_en5 << 1) + DefenderPort_en_5;
+    break;
+  case 6:
+    EnableDefender6 = (HTTPSGETFlood_en6 << 10) + (HTTPGETFlood_en6 << 9) + (UDPFragFlood_en6 << 8) + (TCPFragFlood_en6 << 7) + (IPSecFlood_en6 << 6) + (ICMPFlood_en6 << 5) + (DNSFlood_en6 << 4) + (UDPFlood_en6 << 3) + (LANDATTACK_en6 << 2) + (SYNFlood_en6 << 1) + DefenderPort_en_6;
+    break;
+  case 7:
+    EnableDefender7 = (HTTPSGETFlood_en7 << 10) + (HTTPGETFlood_en7 << 9) + (UDPFragFlood_en7 << 8) + (TCPFragFlood_en7 << 7) + (IPSecFlood_en7 << 6) + (ICMPFlood_en7 << 5) + (DNSFlood_en7 << 4) + (UDPFlood_en7 << 3) + (LANDATTACK_en7 << 2) + (SYNFlood_en7 << 1) + DefenderPort_en_7;
+    break;
+  case 8:
+    EnableDefender8 = (HTTPSGETFlood_en8 << 10) + (HTTPGETFlood_en8 << 9) + (UDPFragFlood_en8 << 8) + (TCPFragFlood_en8 << 7) + (IPSecFlood_en8 << 6) + (ICMPFlood_en8 << 5) + (DNSFlood_en8 << 4) + (UDPFlood_en8 << 3) + (LANDATTACK_en8 << 2) + (SYNFlood_en8 << 1) + DefenderPort_en_8;
+    break;
+  default:
+    break;
+  }
+  ReturnMode2(key1 - '0');
 }
 
 void SetTCPFragDefender()
@@ -10159,6 +10670,13 @@ void SetTCPFragDefender()
   // xil_printf("\r\n    Setting     | Do you want to enable TCP Fragmentation flood protect now (Y/N)?: ");
   u8 key = 0;
   u8 done = 0;
+  u8 key1 = 0;
+  while (1)
+  {
+    key1 = XUartLite_RecvByte(0x40600000);
+    if (key1 == '1' || key1 == '2' || key1 == '3' || key1 == '4' || key1 == '5' || key1 == '6' || key1 == '7' || key1 == '8')
+      break;
+  }
   while (1)
   {
     key = XUartLite_RecvByte(0x40600000);
@@ -10166,15 +10684,69 @@ void SetTCPFragDefender()
     {
       // XUartLite_SendByte(0x40600000, 'Y');
       done = 1;
-      // xil_printf("%c",key);
-      TCPFragFlood_en1 = 1;
+      switch (key1 - '0')
+      {
+      case 1:
+        TCPFragFlood_en1 = 1;
+        break;
+      case 2:
+        TCPFragFlood_en2 = 1;
+        break;
+      case 3:
+        TCPFragFlood_en3 = 1;
+        break;
+      case 4:
+        TCPFragFlood_en4 = 1;
+        break;
+      case 5:
+        TCPFragFlood_en5 = 1;
+        break;
+      case 6:
+        TCPFragFlood_en6 = 1;
+        break;
+      case 7:
+        TCPFragFlood_en7 = 1;
+        break;
+      case 8:
+        TCPFragFlood_en8 = 1;
+        break;
+      default:
+        break;
+      }
     }
     else if (key == 'n' || key == 'N')
     {
       // XUartLite_SendByte(0x40600000, 'N');
       done = 1;
-      // xil_printf("%c",key);
-      TCPFragFlood_en1 = 0;
+      switch (key1 - '0')
+      {
+      case 1:
+        TCPFragFlood_en1 = 0;
+        break;
+      case 2:
+        TCPFragFlood_en2 = 0;
+        break;
+      case 3:
+        TCPFragFlood_en3 = 0;
+        break;
+      case 4:
+        TCPFragFlood_en4 = 0;
+        break;
+      case 5:
+        TCPFragFlood_en5 = 0;
+        break;
+      case 6:
+        TCPFragFlood_en6 = 0;
+        break;
+      case 7:
+        TCPFragFlood_en7 = 0;
+        break;
+      case 8:
+        TCPFragFlood_en8 = 0;
+        break;
+      default:
+        break;
+      }
     }
     else if (key == 03)
     {
@@ -10189,8 +10761,36 @@ void SetTCPFragDefender()
   }
   // xil_printf("\r\n\t\t|                                                                                                                                                                        |");
   // xil_printf("\r\n\t\t+------------------------------------------------------------------------------------------------------------------------------------------------------------------------+");
-  EnableDefender1 = (HTTPSGETFlood_en1 << 13) + (HTTPGETFlood_en1 << 12) + (DefenderPort_en_5 << 11) + (DefenderPort_en_4 << 10) + (DefenderPort_en_1 << 9) + (DefenderPort_en1 << 8) + (UDPFragFlood_en1 << 7) + (TCPFragFlood_en1 << 6) + (IPSecFlood_en1 << 5) + (ICMPFlood_en1 << 4) + (DNSFlood_en1 << 3) + (UDPFlood_en1 << 2) + (LANDATTACK_en1 << 1) + SYNFlood_en1;
-  ReturnMode2();
+  switch (key1 - '0')
+  {
+  case 1:
+    EnableDefender1 = (HTTPSGETFlood_en1 << 10) + (HTTPGETFlood_en1 << 9) + (UDPFragFlood_en1 << 8) + (TCPFragFlood_en1 << 7) + (IPSecFlood_en1 << 6) + (ICMPFlood_en1 << 5) + (DNSFlood_en1 << 4) + (UDPFlood_en1 << 3) + (LANDATTACK_en1 << 2) + (SYNFlood_en1 << 1) + DefenderPort_en_1;
+    break;
+  case 2:
+    EnableDefender2 = (HTTPSGETFlood_en2 << 10) + (HTTPGETFlood_en2 << 9) + (UDPFragFlood_en2 << 8) + (TCPFragFlood_en2 << 7) + (IPSecFlood_en2 << 6) + (ICMPFlood_en2 << 5) + (DNSFlood_en2 << 4) + (UDPFlood_en2 << 3) + (LANDATTACK_en2 << 2) + (SYNFlood_en2 << 1) + DefenderPort_en_2;
+    break;
+  case 3:
+    EnableDefender3 = (HTTPSGETFlood_en3 << 10) + (HTTPGETFlood_en3 << 9) + (UDPFragFlood_en3 << 8) + (TCPFragFlood_en3 << 7) + (IPSecFlood_en3 << 6) + (ICMPFlood_en3 << 5) + (DNSFlood_en3 << 4) + (UDPFlood_en3 << 3) + (LANDATTACK_en3 << 2) + (SYNFlood_en3 << 1) + DefenderPort_en_3;
+    break;
+  case 4:
+    EnableDefender4 = (HTTPSGETFlood_en4 << 10) + (HTTPGETFlood_en4 << 9) + (UDPFragFlood_en4 << 8) + (TCPFragFlood_en4 << 7) + (IPSecFlood_en4 << 6) + (ICMPFlood_en4 << 5) + (DNSFlood_en4 << 4) + (UDPFlood_en4 << 3) + (LANDATTACK_en4 << 2) + (SYNFlood_en4 << 1) + DefenderPort_en_4;
+    break;
+  case 5:
+    EnableDefender5 = (HTTPSGETFlood_en5 << 10) + (HTTPGETFlood_en5 << 9) + (UDPFragFlood_en5 << 8) + (TCPFragFlood_en5 << 7) + (IPSecFlood_en5 << 6) + (ICMPFlood_en5 << 5) + (DNSFlood_en5 << 4) + (UDPFlood_en5 << 3) + (LANDATTACK_en5 << 2) + (SYNFlood_en5 << 1) + DefenderPort_en_5;
+    break;
+  case 6:
+    EnableDefender6 = (HTTPSGETFlood_en6 << 10) + (HTTPGETFlood_en6 << 9) + (UDPFragFlood_en6 << 8) + (TCPFragFlood_en6 << 7) + (IPSecFlood_en6 << 6) + (ICMPFlood_en6 << 5) + (DNSFlood_en6 << 4) + (UDPFlood_en6 << 3) + (LANDATTACK_en6 << 2) + (SYNFlood_en6 << 1) + DefenderPort_en_6;
+    break;
+  case 7:
+    EnableDefender7 = (HTTPSGETFlood_en7 << 10) + (HTTPGETFlood_en7 << 9) + (UDPFragFlood_en7 << 8) + (TCPFragFlood_en7 << 7) + (IPSecFlood_en7 << 6) + (ICMPFlood_en7 << 5) + (DNSFlood_en7 << 4) + (UDPFlood_en7 << 3) + (LANDATTACK_en7 << 2) + (SYNFlood_en7 << 1) + DefenderPort_en_7;
+    break;
+  case 8:
+    EnableDefender8 = (HTTPSGETFlood_en8 << 10) + (HTTPGETFlood_en8 << 9) + (UDPFragFlood_en8 << 8) + (TCPFragFlood_en8 << 7) + (IPSecFlood_en8 << 6) + (ICMPFlood_en8 << 5) + (DNSFlood_en8 << 4) + (UDPFlood_en8 << 3) + (LANDATTACK_en8 << 2) + (SYNFlood_en8 << 1) + DefenderPort_en_8;
+    break;
+  default:
+    break;
+  }
+  ReturnMode2(key1 - '0');
 }
 
 void SetUDPFragDefender()
@@ -10205,17 +10805,71 @@ void SetUDPFragDefender()
     key = XUartLite_RecvByte(0x40600000);
     if (key == 'y' || key == 'Y')
     {
-      XUartLite_SendByte(0x40600000, 'Y');
+      // XUartLite_SendByte(0x40600000, 'Y');
       done = 1;
-      // xil_printf("%c",key);
-      UDPFragFlood_en1 = 1;
+      switch (key1 - '0')
+      {
+      case 1:
+        UDPFragFlood_en1 = 1;
+        break;
+      case 2:
+        UDPFragFlood_en2 = 1;
+        break;
+      case 3:
+        UDPFragFlood_en3 = 1;
+        break;
+      case 4:
+        UDPFragFlood_en4 = 1;
+        break;
+      case 5:
+        UDPFragFlood_en5 = 1;
+        break;
+      case 6:
+        UDPFragFlood_en6 = 1;
+        break;
+      case 7:
+        UDPFragFlood_en7 = 1;
+        break;
+      case 8:
+        UDPFragFlood_en8 = 1;
+        break;
+      default:
+        break;
+      }
     }
     else if (key == 'n' || key == 'N')
     {
       // XUartLite_SendByte(0x40600000, 'N');
       done = 1;
-      // xil_printf("%c",key);
-      UDPFragFlood_en1 = 0;
+      switch (key1 - '0')
+      {
+      case 1:
+        UDPFragFlood_en1 = 0;
+        break;
+      case 2:
+        UDPFragFlood_en2 = 0;
+        break;
+      case 3:
+        UDPFragFlood_en3 = 0;
+        break;
+      case 4:
+        UDPFragFlood_en4 = 0;
+        break;
+      case 5:
+        UDPFragFlood_en5 = 0;
+        break;
+      case 6:
+        UDPFragFlood_en6 = 0;
+        break;
+      case 7:
+        UDPFragFlood_en7 = 0;
+        break;
+      case 8:
+        UDPFragFlood_en8 = 0;
+        break;
+      default:
+        break;
+      }
     }
     else if (key == 03)
     {
@@ -10231,8 +10885,36 @@ void SetUDPFragDefender()
   }
   // xil_printf("\r\n\t\t|                                                                                                                                                                        |");
   // xil_printf("\r\n\t\t+------------------------------------------------------------------------------------------------------------------------------------------------------------------------+");
-  EnableDefender1 = (HTTPSGETFlood_en1 << 13) + (HTTPGETFlood_en1 << 12) + (DefenderPort_en_5 << 11) + (DefenderPort_en_4 << 10) + (DefenderPort_en_1 << 9) + (DefenderPort_en1 << 8) + (UDPFragFlood_en1 << 7) + (TCPFragFlood_en1 << 6) + (IPSecFlood_en1 << 5) + (ICMPFlood_en1 << 4) + (DNSFlood_en1 << 3) + (UDPFlood_en1 << 2) + (LANDATTACK_en1 << 1) + SYNFlood_en1;
-  ReturnMode2();
+  switch (key1 - '0')
+  {
+  case 1:
+    EnableDefender1 = (HTTPSGETFlood_en1 << 10) + (HTTPGETFlood_en1 << 9) + (UDPFragFlood_en1 << 8) + (TCPFragFlood_en1 << 7) + (IPSecFlood_en1 << 6) + (ICMPFlood_en1 << 5) + (DNSFlood_en1 << 4) + (UDPFlood_en1 << 3) + (LANDATTACK_en1 << 2) + (SYNFlood_en1 << 1) + DefenderPort_en_1;
+    break;
+  case 2:
+    EnableDefender2 = (HTTPSGETFlood_en2 << 10) + (HTTPGETFlood_en2 << 9) + (UDPFragFlood_en2 << 8) + (TCPFragFlood_en2 << 7) + (IPSecFlood_en2 << 6) + (ICMPFlood_en2 << 5) + (DNSFlood_en2 << 4) + (UDPFlood_en2 << 3) + (LANDATTACK_en2 << 2) + (SYNFlood_en2 << 1) + DefenderPort_en_2;
+    break;
+  case 3:
+    EnableDefender3 = (HTTPSGETFlood_en3 << 10) + (HTTPGETFlood_en3 << 9) + (UDPFragFlood_en3 << 8) + (TCPFragFlood_en3 << 7) + (IPSecFlood_en3 << 6) + (ICMPFlood_en3 << 5) + (DNSFlood_en3 << 4) + (UDPFlood_en3 << 3) + (LANDATTACK_en3 << 2) + (SYNFlood_en3 << 1) + DefenderPort_en_3;
+    break;
+  case 4:
+    EnableDefender4 = (HTTPSGETFlood_en4 << 10) + (HTTPGETFlood_en4 << 9) + (UDPFragFlood_en4 << 8) + (TCPFragFlood_en4 << 7) + (IPSecFlood_en4 << 6) + (ICMPFlood_en4 << 5) + (DNSFlood_en4 << 4) + (UDPFlood_en4 << 3) + (LANDATTACK_en4 << 2) + (SYNFlood_en4 << 1) + DefenderPort_en_4;
+    break;
+  case 5:
+    EnableDefender5 = (HTTPSGETFlood_en5 << 10) + (HTTPGETFlood_en5 << 9) + (UDPFragFlood_en5 << 8) + (TCPFragFlood_en5 << 7) + (IPSecFlood_en5 << 6) + (ICMPFlood_en5 << 5) + (DNSFlood_en5 << 4) + (UDPFlood_en5 << 3) + (LANDATTACK_en5 << 2) + (SYNFlood_en5 << 1) + DefenderPort_en_5;
+    break;
+  case 6:
+    EnableDefender6 = (HTTPSGETFlood_en6 << 10) + (HTTPGETFlood_en6 << 9) + (UDPFragFlood_en6 << 8) + (TCPFragFlood_en6 << 7) + (IPSecFlood_en6 << 6) + (ICMPFlood_en6 << 5) + (DNSFlood_en6 << 4) + (UDPFlood_en6 << 3) + (LANDATTACK_en6 << 2) + (SYNFlood_en6 << 1) + DefenderPort_en_6;
+    break;
+  case 7:
+    EnableDefender7 = (HTTPSGETFlood_en7 << 10) + (HTTPGETFlood_en7 << 9) + (UDPFragFlood_en7 << 8) + (TCPFragFlood_en7 << 7) + (IPSecFlood_en7 << 6) + (ICMPFlood_en7 << 5) + (DNSFlood_en7 << 4) + (UDPFlood_en7 << 3) + (LANDATTACK_en7 << 2) + (SYNFlood_en7 << 1) + DefenderPort_en_7;
+    break;
+  case 8:
+    EnableDefender8 = (HTTPSGETFlood_en8 << 10) + (HTTPGETFlood_en8 << 9) + (UDPFragFlood_en8 << 8) + (TCPFragFlood_en8 << 7) + (IPSecFlood_en8 << 6) + (ICMPFlood_en8 << 5) + (DNSFlood_en8 << 4) + (UDPFlood_en8 << 3) + (LANDATTACK_en8 << 2) + (SYNFlood_en8 << 1) + DefenderPort_en_8;
+    break;
+  default:
+    break;
+  }
+  ReturnMode2(key1 - '0');
 }
 
 void SetHTTPGETDefender()
@@ -10242,6 +10924,13 @@ void SetHTTPGETDefender()
   // xil_printf("\r\n    Setting     | Do you want to enable HTTP Flood flood protect now (Y/N)?: ");
   u8 key = 0;
   u8 done = 0;
+  u8 key1 = 0;
+  while (1)
+  {
+    key1 = XUartLite_RecvByte(0x40600000);
+    if (key1 == '1' || key1 == '2' || key1 == '3' || key1 == '4' || key1 == '5' || key1 == '6' || key1 == '7' || key1 == '8')
+      break;
+  }
   while (1)
   {
     key = XUartLite_RecvByte(0x40600000);
@@ -10249,15 +10938,69 @@ void SetHTTPGETDefender()
     {
       // XUartLite_SendByte(0x40600000, 'Y');
       done = 1;
-      // xil_printf("%c",key);
-      HTTPGETFlood_en1 = 1;
+      switch (key1 - '0')
+      {
+      case 1:
+        HTTPGETFlood_en1 = 1;
+        break;
+      case 2:
+        HTTPGETFlood_en2 = 1;
+        break;
+      case 3:
+        HTTPGETFlood_en3 = 1;
+        break;
+      case 4:
+        HTTPGETFlood_en4 = 1;
+        break;
+      case 5:
+        HTTPGETFlood_en5 = 1;
+        break;
+      case 6:
+        HTTPGETFlood_en6 = 1;
+        break;
+      case 7:
+        HTTPGETFlood_en7 = 1;
+        break;
+      case 8:
+        HTTPGETFlood_en8 = 1;
+        break;
+      default:
+        break;
+      }
     }
     else if (key == 'n' || key == 'N')
     {
       // XUartLite_SendByte(0x40600000, 'N');
       done = 1;
-      // xil_printf("%c",key);
-      HTTPGETFlood_en1 = 0;
+      switch (key1 - '0')
+      {
+      case 1:
+        HTTPGETFlood_en1 = 0;
+        break;
+      case 2:
+        HTTPGETFlood_en2 = 0;
+        break;
+      case 3:
+        HTTPGETFlood_en3 = 0;
+        break;
+      case 4:
+        HTTPGETFlood_en4 = 0;
+        break;
+      case 5:
+        HTTPGETFlood_en5 = 0;
+        break;
+      case 6:
+        HTTPGETFlood_en6 = 0;
+        break;
+      case 7:
+        HTTPGETFlood_en7 = 0;
+        break;
+      case 8:
+        HTTPGETFlood_en8 = 0;
+        break;
+      default:
+        break;
+      }
     }
     else if (key == 03)
     {
@@ -10271,10 +11014,36 @@ void SetHTTPGETDefender()
     }
     // XUartLite_SendByte(0x40600000, 'H');
   }
-  // xil_printf("\r\n\t\t|                                                                                                                                                                        |");
-  // xil_printf("\r\n\t\t+------------------------------------------------------------------------------------------------------------------------------------------------------------------------+");
-  EnableDefender1 = (HTTPSGETFlood_en1 << 13) + (HTTPGETFlood_en1 << 12) + (DefenderPort_en_5 << 11) + (DefenderPort_en_4 << 10) + (DefenderPort_en_1 << 9) + (DefenderPort_en1 << 8) + (UDPFragFlood_en1 << 7) + (TCPFragFlood_en1 << 6) + (IPSecFlood_en1 << 5) + (ICMPFlood_en1 << 4) + (DNSFlood_en1 << 3) + (UDPFlood_en1 << 2) + (LANDATTACK_en1 << 1) + SYNFlood_en1;
-  ReturnMode2();
+  switch (key1 - '0')
+  {
+  case 1:
+    EnableDefender1 = (HTTPSGETFlood_en1 << 10) + (HTTPGETFlood_en1 << 9) + (UDPFragFlood_en1 << 8) + (TCPFragFlood_en1 << 7) + (IPSecFlood_en1 << 6) + (ICMPFlood_en1 << 5) + (DNSFlood_en1 << 4) + (UDPFlood_en1 << 3) + (LANDATTACK_en1 << 2) + (SYNFlood_en1 << 1) + DefenderPort_en_1;
+    break;
+  case 2:
+    EnableDefender2 = (HTTPSGETFlood_en2 << 10) + (HTTPGETFlood_en2 << 9) + (UDPFragFlood_en2 << 8) + (TCPFragFlood_en2 << 7) + (IPSecFlood_en2 << 6) + (ICMPFlood_en2 << 5) + (DNSFlood_en2 << 4) + (UDPFlood_en2 << 3) + (LANDATTACK_en2 << 2) + (SYNFlood_en2 << 1) + DefenderPort_en_2;
+    break;
+  case 3:
+    EnableDefender3 = (HTTPSGETFlood_en3 << 10) + (HTTPGETFlood_en3 << 9) + (UDPFragFlood_en3 << 8) + (TCPFragFlood_en3 << 7) + (IPSecFlood_en3 << 6) + (ICMPFlood_en3 << 5) + (DNSFlood_en3 << 4) + (UDPFlood_en3 << 3) + (LANDATTACK_en3 << 2) + (SYNFlood_en3 << 1) + DefenderPort_en_3;
+    break;
+  case 4:
+    EnableDefender4 = (HTTPSGETFlood_en4 << 10) + (HTTPGETFlood_en4 << 9) + (UDPFragFlood_en4 << 8) + (TCPFragFlood_en4 << 7) + (IPSecFlood_en4 << 6) + (ICMPFlood_en4 << 5) + (DNSFlood_en4 << 4) + (UDPFlood_en4 << 3) + (LANDATTACK_en4 << 2) + (SYNFlood_en4 << 1) + DefenderPort_en_4;
+    break;
+  case 5:
+    EnableDefender5 = (HTTPSGETFlood_en5 << 10) + (HTTPGETFlood_en5 << 9) + (UDPFragFlood_en5 << 8) + (TCPFragFlood_en5 << 7) + (IPSecFlood_en5 << 6) + (ICMPFlood_en5 << 5) + (DNSFlood_en5 << 4) + (UDPFlood_en5 << 3) + (LANDATTACK_en5 << 2) + (SYNFlood_en5 << 1) + DefenderPort_en_5;
+    break;
+  case 6:
+    EnableDefender6 = (HTTPSGETFlood_en6 << 10) + (HTTPGETFlood_en6 << 9) + (UDPFragFlood_en6 << 8) + (TCPFragFlood_en6 << 7) + (IPSecFlood_en6 << 6) + (ICMPFlood_en6 << 5) + (DNSFlood_en6 << 4) + (UDPFlood_en6 << 3) + (LANDATTACK_en6 << 2) + (SYNFlood_en6 << 1) + DefenderPort_en_6;
+    break;
+  case 7:
+    EnableDefender7 = (HTTPSGETFlood_en7 << 10) + (HTTPGETFlood_en7 << 9) + (UDPFragFlood_en7 << 8) + (TCPFragFlood_en7 << 7) + (IPSecFlood_en7 << 6) + (ICMPFlood_en7 << 5) + (DNSFlood_en7 << 4) + (UDPFlood_en7 << 3) + (LANDATTACK_en7 << 2) + (SYNFlood_en7 << 1) + DefenderPort_en_7;
+    break;
+  case 8:
+    EnableDefender8 = (HTTPSGETFlood_en8 << 10) + (HTTPGETFlood_en8 << 9) + (UDPFragFlood_en8 << 8) + (TCPFragFlood_en8 << 7) + (IPSecFlood_en8 << 6) + (ICMPFlood_en8 << 5) + (DNSFlood_en8 << 4) + (UDPFlood_en8 << 3) + (LANDATTACK_en8 << 2) + (SYNFlood_en8 << 1) + DefenderPort_en_8;
+    break;
+  default:
+    break;
+  }
+  ReturnMode2(key1 - '0');
 }
 
 void SetHTTPSGETDefender()
@@ -10284,6 +11053,13 @@ void SetHTTPSGETDefender()
   // xil_printf("\r\n    Setting     | Do you want to enable HTTP Flood flood protect now (Y/N)?: ");
   u8 key = 0;
   u8 done = 0;
+  u8 key1 = 0;
+  while (1)
+  {
+    key1 = XUartLite_RecvByte(0x40600000);
+    if (key1 == '1' || key1 == '2' || key1 == '3' || key1 == '4' || key1 == '5' || key1 == '6' || key1 == '7' || key1 == '8')
+      break;
+  }
   while (1)
   {
     key = XUartLite_RecvByte(0x40600000);
@@ -10291,15 +11067,69 @@ void SetHTTPSGETDefender()
     {
       // XUartLite_SendByte(0x40600000, 'Y');
       done = 1;
-      // xil_printf("%c",key);
-      HTTPSGETFlood_en1 = 1;
+      switch (key1 - '0')
+      {
+      case 1:
+        HTTPSGETFlood_en1 = 1;
+        break;
+      case 2:
+        HTTPSGETFlood_en2 = 1;
+        break;
+      case 3:
+        HTTPSGETFlood_en3 = 1;
+        break;
+      case 4:
+        HTTPSGETFlood_en4 = 1;
+        break;
+      case 5:
+        HTTPSGETFlood_en5 = 1;
+        break;
+      case 6:
+        HTTPSGETFlood_en6 = 1;
+        break;
+      case 7:
+        HTTPSGETFlood_en7 = 1;
+        break;
+      case 8:
+        HTTPSGETFlood_en8 = 1;
+        break;
+      default:
+        break;
+      }
     }
     else if (key == 'n' || key == 'N')
     {
       // XUartLite_SendByte(0x40600000, 'N');
       done = 1;
-      // xil_printf("%c",key);
-      HTTPSGETFlood_en1 = 0;
+      switch (key1 - '0')
+      {
+      case 1:
+        HTTPSGETFlood_en1 = 0;
+        break;
+      case 2:
+        HTTPSGETFlood_en2 = 0;
+        break;
+      case 3:
+        HTTPSGETFlood_en3 = 0;
+        break;
+      case 4:
+        HTTPSGETFlood_en4 = 0;
+        break;
+      case 5:
+        HTTPSGETFlood_en5 = 0;
+        break;
+      case 6:
+        HTTPSGETFlood_en6 = 0;
+        break;
+      case 7:
+        HTTPSGETFlood_en7 = 0;
+        break;
+      case 8:
+        HTTPSGETFlood_en8 = 0;
+        break;
+      default:
+        break;
+      }
     }
     else if (key == 03)
     {
@@ -10315,9 +11145,36 @@ void SetHTTPSGETDefender()
   }
   // xil_printf("\r\n\t\t|                                                                                                                                                                        |");
   // xil_printf("\r\n\t\t+------------------------------------------------------------------------------------------------------------------------------------------------------------------------+");
-  EnableDefender1 = (HTTPSGETFlood_en1 << 13) + (HTTPGETFlood_en1 << 12) + (DefenderPort_en_5 << 11) + (DefenderPort_en_4 << 10) + (DefenderPort_en_1 << 9) + (DefenderPort_en1 << 8) + (UDPFragFlood_en1 << 7) + (TCPFragFlood_en1 << 6) + (IPSecFlood_en1 << 5) + (ICMPFlood_en1 << 4) + (DNSFlood_en1 << 3) + (UDPFlood_en1 << 2) + (LANDATTACK_en1 << 1) + SYNFlood_en1;
-
-  ReturnMode2();
+  switch (key1 - '0')
+  {
+  case 1:
+    EnableDefender1 = (HTTPSGETFlood_en1 << 10) + (HTTPGETFlood_en1 << 9) + (UDPFragFlood_en1 << 8) + (TCPFragFlood_en1 << 7) + (IPSecFlood_en1 << 6) + (ICMPFlood_en1 << 5) + (DNSFlood_en1 << 4) + (UDPFlood_en1 << 3) + (LANDATTACK_en1 << 2) + (SYNFlood_en1 << 1) + DefenderPort_en_1;
+    break;
+  case 2:
+    EnableDefender2 = (HTTPSGETFlood_en2 << 10) + (HTTPGETFlood_en2 << 9) + (UDPFragFlood_en2 << 8) + (TCPFragFlood_en2 << 7) + (IPSecFlood_en2 << 6) + (ICMPFlood_en2 << 5) + (DNSFlood_en2 << 4) + (UDPFlood_en2 << 3) + (LANDATTACK_en2 << 2) + (SYNFlood_en2 << 1) + DefenderPort_en_2;
+    break;
+  case 3:
+    EnableDefender3 = (HTTPSGETFlood_en3 << 10) + (HTTPGETFlood_en3 << 9) + (UDPFragFlood_en3 << 8) + (TCPFragFlood_en3 << 7) + (IPSecFlood_en3 << 6) + (ICMPFlood_en3 << 5) + (DNSFlood_en3 << 4) + (UDPFlood_en3 << 3) + (LANDATTACK_en3 << 2) + (SYNFlood_en3 << 1) + DefenderPort_en_3;
+    break;
+  case 4:
+    EnableDefender4 = (HTTPSGETFlood_en4 << 10) + (HTTPGETFlood_en4 << 9) + (UDPFragFlood_en4 << 8) + (TCPFragFlood_en4 << 7) + (IPSecFlood_en4 << 6) + (ICMPFlood_en4 << 5) + (DNSFlood_en4 << 4) + (UDPFlood_en4 << 3) + (LANDATTACK_en4 << 2) + (SYNFlood_en4 << 1) + DefenderPort_en_4;
+    break;
+  case 5:
+    EnableDefender5 = (HTTPSGETFlood_en5 << 10) + (HTTPGETFlood_en5 << 9) + (UDPFragFlood_en5 << 8) + (TCPFragFlood_en5 << 7) + (IPSecFlood_en5 << 6) + (ICMPFlood_en5 << 5) + (DNSFlood_en5 << 4) + (UDPFlood_en5 << 3) + (LANDATTACK_en5 << 2) + (SYNFlood_en5 << 1) + DefenderPort_en_5;
+    break;
+  case 6:
+    EnableDefender6 = (HTTPSGETFlood_en6 << 10) + (HTTPGETFlood_en6 << 9) + (UDPFragFlood_en6 << 8) + (TCPFragFlood_en6 << 7) + (IPSecFlood_en6 << 6) + (ICMPFlood_en6 << 5) + (DNSFlood_en6 << 4) + (UDPFlood_en6 << 3) + (LANDATTACK_en6 << 2) + (SYNFlood_en6 << 1) + DefenderPort_en_6;
+    break;
+  case 7:
+    EnableDefender7 = (HTTPSGETFlood_en7 << 10) + (HTTPGETFlood_en7 << 9) + (UDPFragFlood_en7 << 8) + (TCPFragFlood_en7 << 7) + (IPSecFlood_en7 << 6) + (ICMPFlood_en7 << 5) + (DNSFlood_en7 << 4) + (UDPFlood_en7 << 3) + (LANDATTACK_en7 << 2) + (SYNFlood_en7 << 1) + DefenderPort_en_7;
+    break;
+  case 8:
+    EnableDefender8 = (HTTPSGETFlood_en8 << 10) + (HTTPGETFlood_en8 << 9) + (UDPFragFlood_en8 << 8) + (TCPFragFlood_en8 << 7) + (IPSecFlood_en8 << 6) + (ICMPFlood_en8 << 5) + (DNSFlood_en8 << 4) + (UDPFlood_en8 << 3) + (LANDATTACK_en8 << 2) + (SYNFlood_en8 << 1) + DefenderPort_en_8;
+    break;
+  default:
+    break;
+  }
+  ReturnMode2(key1 - '0');
 }
 
 void SetTimeflood()
@@ -10330,6 +11187,13 @@ Return:
   // xil_printf("\r\n");
   // xil_printf("\r\n================+========================================================================================================================================================================+");
   // xil_printf("\r\n    Setting     | Enter attack detection time (s): ");
+  u8 key1 = 0;
+  while (1)
+  {
+    key1 = XUartLite_RecvByte(0x40600000);
+    if (key1 == '1' || key1 == '2' || key1 == '3' || key1 == '4' || key1 == '5' || key1 == '6' || key1 == '7' || key1 == '8')
+      break;
+  }
   while (key != 13 && count < 16)
   {
     key = XUartLite_RecvByte(0x40600000);
@@ -10359,8 +11223,36 @@ Return:
     // xil_printf("\r\n\t\t+------------------------------------------------------------------------------------------------------------------------------------------------------------------------+");
     // goto Return;
   }
-  TimeFlood1 = timeflood_valid;
-  ReturnMode2();
+  switch (key1 - '0')
+  {
+  case 1:
+    TimeFlood1 = timeflood_valid;
+    break;
+  case 2:
+    TimeFlood2 = timeflood_valid;
+    break;
+  case 3:
+    TimeFlood3 = timeflood_valid;
+    break;
+  case 4:
+    TimeFlood4 = timeflood_valid;
+    break;
+  case 5:
+    TimeFlood5 = timeflood_valid;
+    break;
+  case 6:
+    TimeFlood6 = timeflood_valid;
+    break;
+  case 7:
+    TimeFlood7 = timeflood_valid;
+    break;
+  case 8:
+    TimeFlood8 = timeflood_valid;
+    break;
+  default:
+    break;
+  }
+  ReturnMode2(key1 - '0');
 }
 
 void SetTimeDelete()

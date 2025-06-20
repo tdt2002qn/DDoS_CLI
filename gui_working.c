@@ -2541,7 +2541,10 @@ void process_key(int serial_port, char *ID, char *Value, int client_sock, char *
   }
 
   // Set en/dis SYN
-  else if (strcmp(ID, "SYN_EN_DIS") == 0)
+  else if (strcmp(ID, "PORT1_SYN_EN_DIS") == 0 || strcmp(ID, "PORT2_SYN_EN_DIS") == 0 ||
+           strcmp(ID, "PORT3_SYN_EN_DIS") == 0 || strcmp(ID, "PORT4_SYN_EN_DIS") == 0 ||
+           strcmp(ID, "PORT5_SYN_EN_DIS") == 0 || strcmp(ID, "PORT6_SYN_EN_DIS") == 0 ||
+           strcmp(ID, "PORT7_SYN_EN_DIS") == 0 || strcmp(ID, "PORT8_SYN_EN_DIS") == 0)
   {
     t = 0;
     write(serial_port, &key6, sizeof(key6));
@@ -2621,7 +2624,10 @@ void process_key(int serial_port, char *ID, char *Value, int client_sock, char *
   }
   //================================================================================================================
   // Set UDP_Threshould
-  else if (strcmp(ID, "UDP_THR") == 0)
+  else if (strcmp(ID, "PORT1_UDP_THR") == 0 || strcmp(ID, "PORT2_UDP_THR") == 0 ||
+           strcmp(ID, "PORT3_UDP_THR") == 0 || strcmp(ID, "PORT4_UDP_THR") == 0 ||
+           strcmp(ID, "PORT5_UDP_THR") == 0 || strcmp(ID, "PORT6_UDP_THR") == 0 ||
+           strcmp(ID, "PORT7_UDP_THR") == 0 || strcmp(ID, "PORT8_UDP_THR") == 0)
   {
     t = 0;
     write(serial_port, &keyC, sizeof(keyC));
@@ -2698,7 +2704,10 @@ void process_key(int serial_port, char *ID, char *Value, int client_sock, char *
   }
 
   // Set UDP_Threashold_perSecond
-  else if (strcmp(ID, "UDP_THR_PS") == 0)
+  else if (strcmp(ID, "PORT1_UDP_THR_PS") == 0 || strcmp(ID, "PORT2_UDP_THR_PS") == 0 ||
+           strcmp(ID, "PORT3_UDP_THR_PS") == 0 || strcmp(ID, "PORT4_UDP_THR_PS") == 0 ||
+           strcmp(ID, "PORT5_UDP_THR_PS") == 0 || strcmp(ID, "PORT6_UDP_THR_PS") == 0 ||
+           strcmp(ID, "PORT7_UDP_THR_PS") == 0 || strcmp(ID, "PORT8_UDP_THR_PS") == 0)
   {
     t = 0;
     write(serial_port, &keyD, sizeof(keyD));
@@ -2775,7 +2784,10 @@ void process_key(int serial_port, char *ID, char *Value, int client_sock, char *
     }
   }
   // Set en/dis UDP
-  else if (strcmp(ID, "UDP_EN_DIS") == 0)
+  else if (strcmp(ID, "PORT1_UDP_EN_DIS") == 0 || strcmp(ID, "PORT2_UDP_EN_DIS") == 0 ||
+           strcmp(ID, "PORT3_UDP_EN_DIS") == 0 || strcmp(ID, "PORT4_UDP_EN_DIS") == 0 ||
+           strcmp(ID, "PORT5_UDP_EN_DIS") == 0 || strcmp(ID, "PORT6_UDP_EN_DIS") == 0 ||
+           strcmp(ID, "PORT7_UDP_EN_DIS") == 0 || strcmp(ID, "PORT8_UDP_EN_DIS") == 0)
   {
     t = 0;
     write(serial_port, &keyB, sizeof(keyB));
@@ -2854,13 +2866,49 @@ void process_key(int serial_port, char *ID, char *Value, int client_sock, char *
   }
   //=================================================================================================================
   // Set ICMP_Threshould
-  else if (strcmp(ID, "ICMP_THR") == 0)
+  else if (strcmp(ID, "PORT1_ICMP_THR") == 0 || strcmp(ID, "PORT2_ICMP_THR") == 0 ||
+           strcmp(ID, "PORT3_ICMP_THR") == 0 || strcmp(ID, "PORT4_ICMP_THR") == 0 ||
+           strcmp(ID, "PORT5_ICMP_THR") == 0 || strcmp(ID, "PORT6_ICMP_THR") == 0 ||
+           strcmp(ID, "PORT7_ICMP_THR") == 0 || strcmp(ID, "PORT8_ICMP_THR") == 0)
   {
     t = 0;
     write(serial_port, &keyH, sizeof(keyH));
     usleep(1000);
     write(serial_port, &enter, sizeof(enter));
     usleep(100000);
+    if (ID[4] == '1')
+    {
+      write(serial_port, &key1, sizeof(key1));
+    }
+    else if (ID[4] == '2')
+    {
+      write(serial_port, &key2, sizeof(key2));
+    }
+    else if (ID[4] == '3')
+    {
+      write(serial_port, &key3, sizeof(key3));
+    }
+    else if (ID[4] == '4')
+    {
+      write(serial_port, &key4, sizeof(key4));
+    }
+    else if (ID[4] == '5')
+    {
+      write(serial_port, &key5, sizeof(key5));
+    }
+    else if (ID[4] == '6')
+    {
+      write(serial_port, &key6, sizeof(key6));
+    }
+    else if (ID[4] == '7')
+    {
+      write(serial_port, &key7, sizeof(key7));
+    }
+    else if (ID[4] == '8')
+    {
+      write(serial_port, &key8, sizeof(key8));
+    }
+    usleep(1000);
     int n = strlen(Value);
     for (int i = 0; i < n; i++)
     {
@@ -2896,14 +2944,49 @@ void process_key(int serial_port, char *ID, char *Value, int client_sock, char *
   }
 
   // Set ICMP_Threashold_perSecond
-  else if (strcmp(ID, "ICMP_THR_PS") == 0)
+  else if (strcmp(ID, "PORT1_ICMP_THR_PS") == 0 || strcmp(ID, "PORT2_ICMP_THR_PS") == 0 ||
+           strcmp(ID, "PORT3_ICMP_THR_PS") == 0 || strcmp(ID, "PORT4_ICMP_THR_PS") == 0 ||
+           strcmp(ID, "PORT5_ICMP_THR_PS") == 0 || strcmp(ID, "PORT6_ICMP_THR_PS") == 0 ||
+           strcmp(ID, "PORT7_ICMP_THR_PS") == 0 || strcmp(ID, "PORT8_ICMP_THR_PS") == 0)
   {
     t = 0;
     write(serial_port, &keyI, sizeof(keyI));
     usleep(1000);
     write(serial_port, &enter, sizeof(enter));
     usleep(100000);
-
+    if (ID[4] == '1')
+    {
+      write(serial_port, &key1, sizeof(key1));
+    }
+    else if (ID[4] == '2')
+    {
+      write(serial_port, &key2, sizeof(key2));
+    }
+    else if (ID[4] == '3')
+    {
+      write(serial_port, &key3, sizeof(key3));
+    }
+    else if (ID[4] == '4')
+    {
+      write(serial_port, &key4, sizeof(key4));
+    }
+    else if (ID[4] == '5')
+    {
+      write(serial_port, &key5, sizeof(key5));
+    }
+    else if (ID[4] == '6')
+    {
+      write(serial_port, &key6, sizeof(key6));
+    }
+    else if (ID[4] == '7')
+    {
+      write(serial_port, &key7, sizeof(key7));
+    }
+    else if (ID[4] == '8')
+    {
+      write(serial_port, &key8, sizeof(key8));
+    }
+    usleep(1000);
     int n = strlen(Value);
     for (int i = 0; i < n; i++)
     {
@@ -2940,13 +3023,49 @@ void process_key(int serial_port, char *ID, char *Value, int client_sock, char *
   }
 
   // Set en/dis ICMP
-  else if (strcmp(ID, "ICMP_EN_DIS") == 0)
+  else if (strcmp(ID, "PORT1_ICMP_EN_DIS") == 0 || strcmp(ID, "PORT2_ICMP_EN_DIS") == 0 ||
+           strcmp(ID, "PORT3_ICMP_EN_DIS") == 0 || strcmp(ID, "PORT4_ICMP_EN_DIS") == 0 ||
+           strcmp(ID, "PORT5_ICMP_EN_DIS") == 0 || strcmp(ID, "PORT6_ICMP_EN_DIS") == 0 ||
+           strcmp(ID, "PORT7_ICMP_EN_DIS") == 0 || strcmp(ID, "PORT8_ICMP_EN_DIS") == 0)
   {
     t = 0;
     write(serial_port, &keyG, sizeof(keyG));
     usleep(1000);
     write(serial_port, &enter, sizeof(enter));
     usleep(100000);
+    if (ID[4] == '1')
+    {
+      write(serial_port, &key1, sizeof(key1));
+    }
+    else if (ID[4] == '2')
+    {
+      write(serial_port, &key2, sizeof(key2));
+    }
+    else if (ID[4] == '3')
+    {
+      write(serial_port, &key3, sizeof(key3));
+    }
+    else if (ID[4] == '4')
+    {
+      write(serial_port, &key4, sizeof(key4));
+    }
+    else if (ID[4] == '5')
+    {
+      write(serial_port, &key5, sizeof(key5));
+    }
+    else if (ID[4] == '6')
+    {
+      write(serial_port, &key6, sizeof(key6));
+    }
+    else if (ID[4] == '7')
+    {
+      write(serial_port, &key7, sizeof(key7));
+    }
+    else if (ID[4] == '8')
+    {
+      write(serial_port, &key8, sizeof(key8));
+    }
+    usleep(1000);
     if (strcmp(Value, "1") == 0)
     {
       write(serial_port, &keyY, sizeof(keyY));
@@ -2987,13 +3106,49 @@ void process_key(int serial_port, char *ID, char *Value, int client_sock, char *
   }
   //=================================================================================================================
   // Set en/dis LAND
-  else if (strcmp(ID, "LAND_EN_DIS") == 0)
+  else if (strcmp(ID, "PORT1_LAND_EN_DIS") == 0 || strcmp(ID, "PORT2_LAND_EN_DIS") == 0 ||
+           strcmp(ID, "PORT3_LAND_EN_DIS") == 0 || strcmp(ID, "PORT4_LAND_EN_DIS") == 0 ||
+           strcmp(ID, "PORT5_LAND_EN_DIS") == 0 || strcmp(ID, "PORT6_LAND_EN_DIS") == 0 ||
+           strcmp(ID, "PORT7_LAND_EN_DIS") == 0 || strcmp(ID, "PORT8_LAND_EN_DIS") == 0)
   {
     t = 0;
     write(serial_port, &keyA, sizeof(keyA));
     usleep(1000);
     write(serial_port, &enter, sizeof(enter));
     usleep(100000);
+    if (ID[4] == '1')
+    {
+      write(serial_port, &key1, sizeof(key1));
+    }
+    else if (ID[4] == '2')
+    {
+      write(serial_port, &key2, sizeof(key2));
+    }
+    else if (ID[4] == '3')
+    {
+      write(serial_port, &key3, sizeof(key3));
+    }
+    else if (ID[4] == '4')
+    {
+      write(serial_port, &key4, sizeof(key4));
+    }
+    else if (ID[4] == '5')
+    {
+      write(serial_port, &key5, sizeof(key5));
+    }
+    else if (ID[4] == '6')
+    {
+      write(serial_port, &key6, sizeof(key6));
+    }
+    else if (ID[4] == '7')
+    {
+      write(serial_port, &key7, sizeof(key7));
+    }
+    else if (ID[4] == '8')
+    {
+      write(serial_port, &key8, sizeof(key8));
+    }
+    usleep(1000);
     if (strcmp(Value, "1") == 0)
     {
       write(serial_port, &keyY, sizeof(keyY));
@@ -3033,13 +3188,49 @@ void process_key(int serial_port, char *ID, char *Value, int client_sock, char *
   }
   //=================================================================================================================
   // Set en/dis DNS
-  else if (strcmp(ID, "DNS_EN_DIS") == 0)
+  else if (strcmp(ID, "PORT1_DNS_EN_DIS") == 0 || strcmp(ID, "PORT2_DNS_EN_DIS") == 0 ||
+           strcmp(ID, "PORT3_DNS_EN_DIS") == 0 || strcmp(ID, "PORT4_DNS_EN_DIS") == 0 ||
+           strcmp(ID, "PORT5_DNS_EN_DIS") == 0 || strcmp(ID, "PORT6_DNS_EN_DIS") == 0 ||
+           strcmp(ID, "PORT7_DNS_EN_DIS") == 0 || strcmp(ID, "PORT8_DNS_EN_DIS") == 0)
   {
     t = 0;
     write(serial_port, &keyE, sizeof(keyE));
     usleep(1000);
     write(serial_port, &enter, sizeof(enter));
     usleep(100000);
+    if (ID[4] == '1')
+    {
+      write(serial_port, &key1, sizeof(key1));
+    }
+    else if (ID[4] == '2')
+    {
+      write(serial_port, &key2, sizeof(key2));
+    }
+    else if (ID[4] == '3')
+    {
+      write(serial_port, &key3, sizeof(key3));
+    }
+    else if (ID[4] == '4')
+    {
+      write(serial_port, &key4, sizeof(key4));
+    }
+    else if (ID[4] == '5')
+    {
+      write(serial_port, &key5, sizeof(key5));
+    }
+    else if (ID[4] == '6')
+    {
+      write(serial_port, &key6, sizeof(key6));
+    }
+    else if (ID[4] == '7')
+    {
+      write(serial_port, &key7, sizeof(key7));
+    }
+    else if (ID[4] == '8')
+    {
+      write(serial_port, &key8, sizeof(key8));
+    }
+    usleep(1000);
     if (strcmp(Value, "1") == 0)
     {
       write(serial_port, &keyY, sizeof(keyY));
@@ -3079,14 +3270,49 @@ void process_key(int serial_port, char *ID, char *Value, int client_sock, char *
   }
 
   // Set DNS_Threshould
-  else if (strcmp(ID, "DNS_THR") == 0)
+  else if (strcmp(ID, "PORT1_DNS_THR") == 0 || strcmp(ID, "PORT2_DNS_THR") == 0 ||
+           strcmp(ID, "PORT3_DNS_THR") == 0 || strcmp(ID, "PORT4_DNS_THR") == 0 ||
+           strcmp(ID, "PORT5_DNS_THR") == 0 || strcmp(ID, "PORT6_DNS_THR") == 0 ||
+           strcmp(ID, "PORT7_DNS_THR") == 0 || strcmp(ID, "PORT8_DNS_THR") == 0)
   {
     t = 0;
     write(serial_port, &keyF, sizeof(keyF));
     usleep(1000);
     write(serial_port, &enter, sizeof(enter));
     usleep(100000);
-
+    if (ID[4] == '1')
+    {
+      write(serial_port, &key1, sizeof(key1));
+    }
+    else if (ID[4] == '2')
+    {
+      write(serial_port, &key2, sizeof(key2));
+    }
+    else if (ID[4] == '3')
+    {
+      write(serial_port, &key3, sizeof(key3));
+    }
+    else if (ID[4] == '4')
+    {
+      write(serial_port, &key4, sizeof(key4));
+    }
+    else if (ID[4] == '5')
+    {
+      write(serial_port, &key5, sizeof(key5));
+    }
+    else if (ID[4] == '6')
+    {
+      write(serial_port, &key6, sizeof(key6));
+    }
+    else if (ID[4] == '7')
+    {
+      write(serial_port, &key7, sizeof(key7));
+    }
+    else if (ID[4] == '8')
+    {
+      write(serial_port, &key8, sizeof(key8));
+    }
+    usleep(1000);
     int n = strlen(Value);
     for (int i = 0; i < n; i++)
     {
@@ -3126,7 +3352,10 @@ void process_key(int serial_port, char *ID, char *Value, int client_sock, char *
   //=================================================================================================================
 
   // Set en/dis IPSEC
-  else if (strcmp(ID, "IPSEC_IKE_EN_DIS") == 0)
+  else if (strcmp(ID, "PORT1_IPSEC_IKE_EN_DIS") == 0 || strcmp(ID, "PORT2_IPSEC_IKE_EN_DIS") == 0 ||
+           strcmp(ID, "PORT3_IPSEC_IKE_EN_DIS") == 0 || strcmp(ID, "PORT4_IPSEC_IKE_EN_DIS") == 0 ||
+           strcmp(ID, "PORT5_IPSEC_IKE_EN_DIS") == 0 || strcmp(ID, "PORT6_IPSEC_IKE_EN_DIS") == 0 ||
+           strcmp(ID, "PORT7_IPSEC_IKE_EN_DIS") == 0 || strcmp(ID, "PORT8_IPSEC_IKE_EN_DIS") == 0)
   {
     t = 0;
     write(serial_port, &keyJ, sizeof(keyJ));
@@ -3171,15 +3400,50 @@ void process_key(int serial_port, char *ID, char *Value, int client_sock, char *
     }
   }
 
-  // Set DNS_Threshould
-  else if (strcmp(ID, "IPSEC_IKE_THR") == 0)
+  // Set IPSEC_IKE_THR
+  else if (strcmp(ID, "PORT1_IPSEC_IKE_THR") == 0 || strcmp(ID, "PORT2_IPSEC_IKE_THR") == 0 ||
+           strcmp(ID, "PORT3_IPSEC_IKE_THR") == 0 || strcmp(ID, "PORT4_IPSEC_IKE_THR") == 0 ||
+           strcmp(ID, "PORT5_IPSEC_IKE_THR") == 0 || strcmp(ID, "PORT6_IPSEC_IKE_THR") == 0 ||
+           strcmp(ID, "PORT7_IPSEC_IKE_THR") == 0 || strcmp(ID, "PORT8_IPSEC_IKE_THR") == 0)
   {
     t = 0;
     write(serial_port, &keyK, sizeof(keyK));
     usleep(1000);
     write(serial_port, &enter, sizeof(enter));
     usleep(100000);
-
+    if (ID[4] == '1')
+    {
+      write(serial_port, &key1, sizeof(key1));
+    }
+    else if (ID[4] == '2')
+    {
+      write(serial_port, &key2, sizeof(key2));
+    }
+    else if (ID[4] == '3')
+    {
+      write(serial_port, &key3, sizeof(key3));
+    }
+    else if (ID[4] == '4')
+    {
+      write(serial_port, &key4, sizeof(key4));
+    }
+    else if (ID[4] == '5')
+    {
+      write(serial_port, &key5, sizeof(key5));
+    }
+    else if (ID[4] == '6')
+    {
+      write(serial_port, &key6, sizeof(key6));
+    }
+    else if (ID[4] == '7')
+    {
+      write(serial_port, &key7, sizeof(key7));
+    }
+    else if (ID[4] == '8')
+    {
+      write(serial_port, &key8, sizeof(key8));
+    }
+    usleep(1000);
     int n = strlen(Value);
     for (int i = 0; i < n; i++)
     {
@@ -3217,7 +3481,10 @@ void process_key(int serial_port, char *ID, char *Value, int client_sock, char *
 
   //=================================================================================================================
   // Set en/dis UDP Fragmentation
-  else if (strcmp(ID, "UDP_FRA_EN_DIS") == 0)
+  else if (strcmp(ID, "PORT1_UDP_FRA_EN_DIS") == 0 || strcmp(ID, "PORT2_UDP_FRA_EN_DIS") == 0 ||
+           strcmp(ID, "PORT3_UDP_FRA_EN_DIS") == 0 || strcmp(ID, "PORT4_UDP_FRA_EN_DIS") == 0 ||
+           strcmp(ID, "PORT5_UDP_FRA_EN_DIS") == 0 || strcmp(ID, "PORT6_UDP_FRA_EN_DIS") == 0 ||
+           strcmp(ID, "PORT7_UDP_FRA_EN_DIS") == 0 || strcmp(ID, "PORT8_UDP_FRA_EN_DIS") == 0)
   {
     t = 0;
     write(serial_port, &keyO, sizeof(keyO));
@@ -3225,7 +3492,39 @@ void process_key(int serial_port, char *ID, char *Value, int client_sock, char *
 
     write(serial_port, &enter, sizeof(enter));
     usleep(100000);
-
+    if (ID[4] == '1')
+    {
+      write(serial_port, &key1, sizeof(key1));
+    }
+    else if (ID[4] == '2')
+    {
+      write(serial_port, &key2, sizeof(key2));
+    }
+    else if (ID[4] == '3')
+    {
+      write(serial_port, &key3, sizeof(key3));
+    }
+    else if (ID[4] == '4')
+    {
+      write(serial_port, &key4, sizeof(key4));
+    }
+    else if (ID[4] == '5')
+    {
+      write(serial_port, &key5, sizeof(key5));
+    }
+    else if (ID[4] == '6')
+    {
+      write(serial_port, &key6, sizeof(key6));
+    }
+    else if (ID[4] == '7')
+    {
+      write(serial_port, &key7, sizeof(key7));
+    }
+    else if (ID[4] == '8')
+    {
+      write(serial_port, &key8, sizeof(key8));
+    }
+    usleep(1000);
     if (strcmp(Value, "1") == 0)
     {
       write(serial_port, &keyY, sizeof(keyY));
@@ -3269,13 +3568,49 @@ void process_key(int serial_port, char *ID, char *Value, int client_sock, char *
   //=============================================================================================================
   //=====================================================================================
   // Set en/dis TCP Fragmentation
-  else if (strcmp(ID, "TCP_FRA_EN_DIS") == 0)
+  else if (strcmp(ID, "PORT1_TCP_FRA_EN_DIS") == 0 || strcmp(ID, "PORT2_TCP_FRA_EN_DIS") == 0 ||
+           strcmp(ID, "PORT3_TCP_FRA_EN_DIS") == 0 || strcmp(ID, "PORT4_TCP_FRA_EN_DIS") == 0 ||
+           strcmp(ID, "PORT5_TCP_FRA_EN_DIS") == 0 || strcmp(ID, "PORT6_TCP_FRA_EN_DIS") == 0 ||
+           strcmp(ID, "PORT7_TCP_FRA_EN_DIS") == 0 || strcmp(ID, "PORT8_TCP_FRA_EN_DIS") == 0)
   {
     t = 0;
     write(serial_port, &keyN, sizeof(keyN));
     usleep(1000);
     write(serial_port, &enter, sizeof(enter));
     usleep(100000);
+    if (ID[4] == '1')
+    {
+      write(serial_port, &key1, sizeof(key1));
+    }
+    else if (ID[4] == '2')
+    {
+      write(serial_port, &key2, sizeof(key2));
+    }
+    else if (ID[4] == '3')
+    {
+      write(serial_port, &key3, sizeof(key3));
+    }
+    else if (ID[4] == '4')
+    {
+      write(serial_port, &key4, sizeof(key4));
+    }
+    else if (ID[4] == '5')
+    {
+      write(serial_port, &key5, sizeof(key5));
+    }
+    else if (ID[4] == '6')
+    {
+      write(serial_port, &key6, sizeof(key6));
+    }
+    else if (ID[4] == '7')
+    {
+      write(serial_port, &key7, sizeof(key7));
+    }
+    else if (ID[4] == '8')
+    {
+      write(serial_port, &key8, sizeof(key8));
+    }
+    usleep(1000);
     if (strcmp(Value, "1") == 0)
     {
       write(serial_port, &keyY, sizeof(keyY));
@@ -3364,14 +3699,49 @@ void process_key(int serial_port, char *ID, char *Value, int client_sock, char *
 
   //=================================================================================================================
   // Set Time_Detect_Actack
-  else if (strcmp(ID, "TIME_DETECT_ATTACK") == 0)
+  else if (strcmp(ID, "PORT1_TIME_DETECT_ATTACK") == 0 || strcmp(ID, "PORT2_TIME_DETECT_ATTACK") == 0 ||
+           strcmp(ID, "PORT3_TIME_DETECT_ATTACK") == 0 || strcmp(ID, "PORT4_TIME_DETECT_ATTACK") == 0 ||
+           strcmp(ID, "PORT5_TIME_DETECT_ATTACK") == 0 || strcmp(ID, "PORT6_TIME_DETECT_ATTACK") == 0 ||
+           strcmp(ID, "PORT7_TIME_DETECT_ATTACK") == 0 || strcmp(ID, "PORT8_TIME_DETECT_ATTACK") == 0)
   {
     t = 0;
     write(serial_port, &key5, sizeof(key5));
     usleep(1000);
     write(serial_port, &enter, sizeof(enter));
     usleep(100000);
-
+    if (ID[4] == '1')
+    {
+      write(serial_port, &key1, sizeof(key1));
+    }
+    else if (ID[4] == '2')
+    {
+      write(serial_port, &key2, sizeof(key2));
+    }
+    else if (ID[4] == '3')
+    {
+      write(serial_port, &key3, sizeof(key3));
+    }
+    else if (ID[4] == '4')
+    {
+      write(serial_port, &key4, sizeof(key4));
+    }
+    else if (ID[4] == '5')
+    {
+      write(serial_port, &key5, sizeof(key5));
+    }
+    else if (ID[4] == '6')
+    {
+      write(serial_port, &key6, sizeof(key6));
+    }
+    else if (ID[4] == '7')
+    {
+      write(serial_port, &key7, sizeof(key7));
+    }
+    else if (ID[4] == '8')
+    {
+      write(serial_port, &key8, sizeof(key8));
+    }
+    usleep(1000);
     int n = strlen(Value);
     for (int i = 0; i < n; i++)
     {
@@ -4063,13 +4433,49 @@ void process_key(int serial_port, char *ID, char *Value, int client_sock, char *
   }
   // Set en/dis HTTPS
 
-  else if (strcmp(ID, "HTTPS_EN_DIS") == 0)
+  else if (strcmp(ID, "PORT1_HTTPS_EN_DIS") == 0 || strcmp(ID, "PORT2_HTTPS_EN_DIS") == 0 ||
+           strcmp(ID, "PORT3_HTTPS_EN_DIS") == 0 || strcmp(ID, "PORT4_HTTPS_EN_DIS") == 0 ||
+           strcmp(ID, "PORT5_HTTPS_EN_DIS") == 0 || strcmp(ID, "PORT6_HTTPS_EN_DIS") == 0 ||
+           strcmp(ID, "PORT7_HTTPS_EN_DIS") == 0 || strcmp(ID, "PORT8_HTTPS_EN_DIS") == 0)
   {
     t = 0;
     write(serial_port, &key_FF, sizeof(key_FF));
     usleep(1000);
     write(serial_port, &enter, sizeof(enter));
     usleep(100000);
+    if (ID[4] == '1')
+    {
+      write(serial_port, &key1, sizeof(key1));
+    }
+    else if (ID[4] == '2')
+    {
+      write(serial_port, &key2, sizeof(key2));
+    }
+    else if (ID[4] == '3')
+    {
+      write(serial_port, &key3, sizeof(key3));
+    }
+    else if (ID[4] == '4')
+    {
+      write(serial_port, &key4, sizeof(key4));
+    }
+    else if (ID[4] == '5')
+    {
+      write(serial_port, &key5, sizeof(key5));
+    }
+    else if (ID[4] == '6')
+    {
+      write(serial_port, &key6, sizeof(key6));
+    }
+    else if (ID[4] == '7')
+    {
+      write(serial_port, &key7, sizeof(key7));
+    }
+    else if (ID[4] == '8')
+    {
+      write(serial_port, &key8, sizeof(key8));
+    }
+    usleep(1000);
     if (strcmp(Value, "1") == 0)
     {
       write(serial_port, &keyY, sizeof(keyY));
@@ -4111,13 +4517,51 @@ void process_key(int serial_port, char *ID, char *Value, int client_sock, char *
 
   // Set en/dis HTTP
 
-  else if (strcmp(ID, "HTTP_EN_DIS") == 0)
+  else if (strcmp(ID, "PORT1_HTTP_EN_DIS") == 0 || strcmp(ID, "PORT2_HTTP_EN_DIS") == 0 ||
+           strcmp(ID, "PORT3_HTTP_EN_DIS") == 0 || strcmp(ID, "PORT4_HTTP_EN_DIS") == 0 ||
+           strcmp(ID, "PORT5_HTTP_EN_DIS") == 0 || strcmp(ID, "PORT6_HTTP_EN_DIS") == 0 ||
+           strcmp(ID, "PORT7_HTTP_EN_DIS") == 0 || strcmp(ID, "PORT8_HTTP_EN_DIS") == 0)
   {
     t = 0;
     write(serial_port, &keyP, sizeof(keyP));
     usleep(1000);
     write(serial_port, &enter, sizeof(enter));
     usleep(100000);
+
+    if (ID[4] == '1')
+    {
+      write(serial_port, &key1, sizeof(key1));
+    }
+    else if (ID[4] == '2')
+    {
+      write(serial_port, &key2, sizeof(key2));
+    }
+    else if (ID[4] == '3')
+    {
+      write(serial_port, &key3, sizeof(key3));
+    }
+    else if (ID[4] == '4')
+    {
+      write(serial_port, &key4, sizeof(key4));
+    }
+    else if (ID[4] == '5')
+    {
+      write(serial_port, &key5, sizeof(key5));
+    }
+    else if (ID[4] == '6')
+    {
+      write(serial_port, &key6, sizeof(key6));
+    }
+    else if (ID[4] == '7')
+    {
+      write(serial_port, &key7, sizeof(key7));
+    }
+    else if (ID[4] == '8')
+    {
+      write(serial_port, &key8, sizeof(key8));
+    }
+    usleep(1000);
+
     if (strcmp(Value, "1") == 0)
     {
       write(serial_port, &keyY, sizeof(keyY));
@@ -5552,6 +5996,7 @@ void process_key(int serial_port, char *ID, char *Value, int client_sock, char *
       t++;
     }
   }
+
   // =================================================================================================================
   // Add IPv4 vào port
 
