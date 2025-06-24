@@ -7323,6 +7323,8 @@ void process_key(int serial_port, char *ID, char *Value, int client_sock, char *
   // PORT MONITORED 1
   else if (strcmp(ID, "PORT1_MONITORED") == 0 || strcmp(ID, "PORT2_MONITORED") == 0 || strcmp(ID, "PORT3_MONITORED") == 0 || strcmp(ID, "PORT4_MONITORED") == 0 || strcmp(ID, "PORT5_MONITORED") == 0 || strcmp(ID, "PORT6_MONITORED") == 0 || strcmp(ID, "PORT7_MONITORED") == 0 || strcmp(ID, "PORT8_MONITORED") == 0)
   {
+    printf("helooo1");
+
     t = 0;
     write(serial_port, &key_08, sizeof(key_08));
     usleep(1000);
@@ -7330,6 +7332,9 @@ void process_key(int serial_port, char *ID, char *Value, int client_sock, char *
     usleep(1000);
     write(serial_port, &keyX, sizeof(keyX));
     usleep(100000);
+    printf("\nID: %c\n", ID[4]);
+    printf("\nID: %c\n", ID[4]);
+    printf("\nID: %c\n", ID[4]);
     if (ID[4] == '1')
     {
       write(serial_port, &key1, sizeof(key1));
@@ -7362,7 +7367,7 @@ void process_key(int serial_port, char *ID, char *Value, int client_sock, char *
     {
       write(serial_port, &key8, sizeof(key8));
     }
-
+    usleep(10000);
     if (strcmp(Value, "1") == 0)
     {
       write(serial_port, &key1, sizeof(key1));
@@ -7381,7 +7386,7 @@ void process_key(int serial_port, char *ID, char *Value, int client_sock, char *
         strcat(buffer, "$");
         strcat(buffer, Value);
         strcat(buffer, "$OK$");
-        printf("\nENABLE PORT%s_MONITORED done\n", ID[4]);
+        printf("\nENABLE PORT%c_MONITORED done\n", ID[4]);
         break;
       }
       else if ((strchr(data1, 'N') != NULL) || (t == 10))
@@ -7390,7 +7395,7 @@ void process_key(int serial_port, char *ID, char *Value, int client_sock, char *
         strcat(buffer, "$");
         strcat(buffer, Value);
         strcat(buffer, "$ERROR$");
-        printf("\nENABLE PORT%s_MONITORED ERROR\n", ID[4]);
+        printf("\nENABLE PORT%c_MONITORED ERROR\n", ID[4]);
         break;
       }
       t++;
@@ -7886,6 +7891,7 @@ void process_key(int serial_port, char *ID, char *Value, int client_sock, char *
     write(serial_port, &keyG, sizeof(keyG));
 
     usleep(10000);
+    printf("ID NE:%S", ID[4]);
     if (ID[4] == '1')
     {
       write(serial_port, &key1, sizeof(key1));
@@ -7924,10 +7930,9 @@ void process_key(int serial_port, char *ID, char *Value, int client_sock, char *
     {
       char data = Value[i];
       send_data(serial_port, &data, sizeof(data));
-      // printf("IP:%c\n", data);
+      printf("IP:%c\n", data);
       usleep(100000);
     }
-
     write(serial_port, &enter, sizeof(enter));
     while (1)
     {
@@ -9949,7 +9954,7 @@ int main()
   pthread_mutex_unlock(&run_mutex);
   /******************************************************************/
   // Sync Time
-  send_data_sync_time(serial_port);
+  // send_data_sync_time(serial_port);
 
   // Sync GUI
   // send_data_sync_gui(serial_port);
@@ -9966,8 +9971,7 @@ int main()
   }
   close(serial_port);
   close_connection();
-
   return 0;
 }
 
-// 31/3 thi
+// 24/6 thi

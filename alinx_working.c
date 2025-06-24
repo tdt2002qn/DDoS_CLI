@@ -533,7 +533,7 @@ void change_user_pass();
 void reconfig();
 // Configure IPCore
 void SetDateTime();
-void ConfigurationIPcore();
+void ConfigurationIPcore(int port);
 void SetIPTarget();
 void Add_IPv4_Protect_Server();
 void Add_IPv6_Protect_Server();
@@ -678,7 +678,7 @@ void Set_src_IP4_Mirroring(const char *ip_str, int i);
 void Port_mirroring_dst_ipv4();
 void Set_dst_IP4_Mirroring(const char *ip_str, int i);
 void Port_mirroring_src_dst_ipv6(int dst_or_src);
-void Write_IPv6_into_port_mirroring(int IPv6_Protect_ADD_0_addr, int IPv6_Protect_ADD_1_addr, int IPv6_Protect_ADD_2_addr, int IPv6_Protect_ADD_3_addr, int IPv6_Protect_ADD_0, int IPv6_Protect_ADD_1, int IPv6_Protect_ADD_2, int IPv6_Protect_ADD_3, int ip_ver_addr, int signal_en_addr, int ver_ip_val, int signal_en);
+void Write_IPv6_into_port_mirroring(int IPv6_Protect_ADD_0_addr, int IPv6_Protect_ADD_1_addr, int IPv6_Protect_ADD_2_addr, int IPv6_Protect_ADD_3_addr, int IPv6_Protect_ADD_0, int IPv6_Protect_ADD_1, int IPv6_Protect_ADD_2, int IPv6_Protect_ADD_3);
 void Port_mirroring_src_dst_port();
 void Port_mirroring_protocol();
 void Port_mirroring_mode();
@@ -1132,7 +1132,7 @@ Return:
   Xil_Out32(XPAR_DDOS_DEFENDER_0_BASEADDR + 8, timestamp);
   Xil_Out32(XPAR_DDOS_DEFENDER_0_BASEADDR + 352, 1);
   Xil_Out32(XPAR_DDOS_DEFENDER_0_BASEADDR + 352, 0);
-  ReturnMode2();
+  ReturnMode2(1);
 }
 
 void mydelay(int a)
@@ -1158,7 +1158,7 @@ int main()
   LoadEEPROM();
   //   EnableDefender1 = 12543;
   load_default();
-  ConfigurationIPcore();
+  // ConfigurationIPcore();
 
   Xil_Out32(XPAR_DDOS_DEFENDER_0_BASEADDR + 600, 0x00000007);
 
@@ -1856,7 +1856,7 @@ void mode_login_config_user()
     {
       XUartLite_SendByte(0x40600000, 'Y');
       check_account();
-      ConfigurationIPcore();
+      ConfigurationIPcore(1);
       break;
     }
     else if (key == 'n' || key == 'N')
@@ -1975,7 +1975,7 @@ void SetIPv6Target()
   IPv6Target[3] = (IPv6Segment[6] << 16) | IPv6Segment[7];
 
   // XUartLite_SendByte(0x40600000, 'I');
-  ReturnMode2();
+  ReturnMode2(1);
 }
 void Add_IPv6_Protect_Server()
 {
@@ -3112,6 +3112,7 @@ void Port_mode(int port_value)
 {
   u8 key = 0;
   u8 done = 0;
+
   while (1)
   {
     key = XUartLite_RecvByte(0x40600000);
@@ -3217,7 +3218,7 @@ void Port_mode(int port_value)
   default:
     break;
   }
-  ReturnMode2(key1 - '0');
+  ReturnMode2(key - '0');
 }
 //
 void Add_or_Remove_IPv4_into_port(const char *ip_str, int part_ip1_addr, int part_ip2_addr, int part_ip3_addr, int part_ip4_addr, int ver_ip_addr, int signal_en_addr, int ver_ip_val, int signal_en)
@@ -3405,7 +3406,7 @@ void Write_IPv6_into_port(int IPv6_Protect_ADD_0_addr, int IPv6_Protect_ADD_1_ad
 
   XUartLite_SendByte(0x40600000, 'Y');
 }
-void Write_IPv6_into_port_mirroring(int IPv6_Protect_ADD_0_addr, int IPv6_Protect_ADD_1_addr, int IPv6_Protect_ADD_2_addr, int IPv6_Protect_ADD_3_addr, int IPv6_Protect_ADD_0, int IPv6_Protect_ADD_1, int IPv6_Protect_ADD_2, int IPv6_Protect_ADD_3, int ip_ver_addr, int signal_en_addr, int ver_ip_val, int signal_en)
+void Write_IPv6_into_port_mirroring(int IPv6_Protect_ADD_0_addr, int IPv6_Protect_ADD_1_addr, int IPv6_Protect_ADD_2_addr, int IPv6_Protect_ADD_3_addr, int IPv6_Protect_ADD_0, int IPv6_Protect_ADD_1, int IPv6_Protect_ADD_2, int IPv6_Protect_ADD_3)
 {
 
   Xil_Out32(XPAR_DDOS_DEFENDER_0_BASEADDR + IPv6_Protect_ADD_0_addr, IPv6_Protect_ADD_0);
@@ -4719,6 +4720,8 @@ void Choose_port_monitored()
   u8 key1;
   char buffer[16] = {0};
   int idx = 0;
+  u8 value;
+  uint8_t port_monitored;
   while (1)
   {
     key = XUartLite_RecvByte(0x40600000);
@@ -4743,51 +4746,51 @@ void Choose_port_monitored()
     {
     case 1:
       port_monitored_1 = 1;
-      uint8_t port_monitored = (uint8_t)((port_monitored_1 << 3) | (port_monitored_2 << 2) | (port_monitored_3 << 1) | (port_monitored_4 << 0));
-      u8 value = ((port_monitored & 0x0F) << 2) | (mode_monitored & 0x03);
+      port_monitored = (uint8_t)((port_monitored_1 << 3) | (port_monitored_2 << 2) | (port_monitored_3 << 1) | (port_monitored_4 << 0));
+      value = ((port_monitored & 0x0F) << 2) | (mode_monitored & 0x03);
       Xil_Out32(XPAR_DDOS_DEFENDER_0_BASEADDR + 676, value);
       break;
     case 2:
       port_monitored_2 = 1;
-      uint8_t port_monitored = (uint8_t)((port_monitored_1 << 3) | (port_monitored_2 << 2) | (port_monitored_3 << 1) | (port_monitored_4 << 0));
-      u8 value = ((port_monitored & 0x0F) << 2) | (mode_monitored & 0x03);
+      port_monitored = (uint8_t)((port_monitored_1 << 3) | (port_monitored_2 << 2) | (port_monitored_3 << 1) | (port_monitored_4 << 0));
+      value = ((port_monitored & 0x0F) << 2) | (mode_monitored & 0x03);
       Xil_Out32(XPAR_DDOS_DEFENDER_0_BASEADDR + 676, value);
       break;
     case 3:
       port_monitored_3 = 1;
-      uint8_t port_monitored = (uint8_t)((port_monitored_1 << 3) | (port_monitored_2 << 2) | (port_monitored_3 << 1) | (port_monitored_4 << 0));
-      u8 value = ((port_monitored & 0x0F) << 2) | (mode_monitored & 0x03);
+      port_monitored = (uint8_t)((port_monitored_1 << 3) | (port_monitored_2 << 2) | (port_monitored_3 << 1) | (port_monitored_4 << 0));
+      value = ((port_monitored & 0x0F) << 2) | (mode_monitored & 0x03);
       Xil_Out32(XPAR_DDOS_DEFENDER_0_BASEADDR + 676, value);
 
       break;
     case 4:
       port_monitored_4 = 1;
-      uint8_t port_monitored = (uint8_t)((port_monitored_1 << 3) | (port_monitored_2 << 2) | (port_monitored_3 << 1) | (port_monitored_4 << 0));
-      u8 value = ((port_monitored & 0x0F) << 2) | (mode_monitored & 0x03);
+      port_monitored = (uint8_t)((port_monitored_1 << 3) | (port_monitored_2 << 2) | (port_monitored_3 << 1) | (port_monitored_4 << 0));
+      value = ((port_monitored & 0x0F) << 2) | (mode_monitored & 0x03);
       Xil_Out32(XPAR_DDOS_DEFENDER_0_BASEADDR + 676, value);
       break;
     case 5:
       port_monitored_1 = 1;
-      uint8_t port_monitored = (uint8_t)((port_monitored_1 << 3) | (port_monitored_2 << 2) | (port_monitored_3 << 1) | (port_monitored_4 << 0));
-      u8 value = ((port_monitored & 0x0F) << 2) | (mode_monitored & 0x03);
+      port_monitored = (uint8_t)((port_monitored_1 << 3) | (port_monitored_2 << 2) | (port_monitored_3 << 1) | (port_monitored_4 << 0));
+      value = ((port_monitored & 0x0F) << 2) | (mode_monitored & 0x03);
       Xil_Out32(XPAR_DDOS_DEFENDER_0_BASEADDR + 676, value);
       break;
     case 6:
       port_monitored_1 = 1;
-      uint8_t port_monitored = (uint8_t)((port_monitored_1 << 3) | (port_monitored_2 << 2) | (port_monitored_3 << 1) | (port_monitored_4 << 0));
-      u8 value = ((port_monitored & 0x0F) << 2) | (mode_monitored & 0x03);
+      port_monitored = (uint8_t)((port_monitored_1 << 3) | (port_monitored_2 << 2) | (port_monitored_3 << 1) | (port_monitored_4 << 0));
+      value = ((port_monitored & 0x0F) << 2) | (mode_monitored & 0x03);
       Xil_Out32(XPAR_DDOS_DEFENDER_0_BASEADDR + 676, value);
       break;
     case 7:
       port_monitored_1 = 1;
-      uint8_t port_monitored = (uint8_t)((port_monitored_1 << 3) | (port_monitored_2 << 2) | (port_monitored_3 << 1) | (port_monitored_4 << 0));
-      u8 value = ((port_monitored & 0x0F) << 2) | (mode_monitored & 0x03);
+      port_monitored = (uint8_t)((port_monitored_1 << 3) | (port_monitored_2 << 2) | (port_monitored_3 << 1) | (port_monitored_4 << 0));
+      value = ((port_monitored & 0x0F) << 2) | (mode_monitored & 0x03);
       Xil_Out32(XPAR_DDOS_DEFENDER_0_BASEADDR + 676, value);
       break;
     case 8:
       port_monitored_1 = 1;
-      uint8_t port_monitored = (uint8_t)((port_monitored_1 << 3) | (port_monitored_2 << 2) | (port_monitored_3 << 1) | (port_monitored_4 << 0));
-      u8 value = ((port_monitored & 0x0F) << 2) | (mode_monitored & 0x03);
+      port_monitored = (uint8_t)((port_monitored_1 << 3) | (port_monitored_2 << 2) | (port_monitored_3 << 1) | (port_monitored_4 << 0));
+      value = ((port_monitored & 0x0F) << 2) | (mode_monitored & 0x03);
       Xil_Out32(XPAR_DDOS_DEFENDER_0_BASEADDR + 676, value);
       break;
     default:
@@ -4796,55 +4799,54 @@ void Choose_port_monitored()
   }
   else if (key1 == "0")
   {
-
     switch (key - '0')
     {
     case 1:
       port_monitored_1 = 0;
-      uint8_t port_monitored = (uint8_t)((port_monitored_1 << 3) | (port_monitored_2 << 2) | (port_monitored_3 << 1) | (port_monitored_4 << 0));
-      u8 value = ((port_monitored & 0x0F) << 2) | (mode_monitored & 0x03);
+      port_monitored = (uint8_t)((port_monitored_1 << 3) | (port_monitored_2 << 2) | (port_monitored_3 << 1) | (port_monitored_4 << 0));
+      value = ((port_monitored & 0x0F) << 2) | (mode_monitored & 0x03);
       Xil_Out32(XPAR_DDOS_DEFENDER_0_BASEADDR + 676, value);
       break;
     case 2:
       port_monitored_2 = 0;
-      uint8_t port_monitored = (uint8_t)((port_monitored_1 << 3) | (port_monitored_2 << 2) | (port_monitored_3 << 1) | (port_monitored_4 << 0));
-      u8 value = ((port_monitored & 0x0F) << 2) | (mode_monitored & 0x03);
+      port_monitored = (uint8_t)((port_monitored_1 << 3) | (port_monitored_2 << 2) | (port_monitored_3 << 1) | (port_monitored_4 << 0));
+      value = ((port_monitored & 0x0F) << 2) | (mode_monitored & 0x03);
       Xil_Out32(XPAR_DDOS_DEFENDER_0_BASEADDR + 676, value);
       break;
     case 3:
       port_monitored_3 = 0;
-      uint8_t port_monitored = (uint8_t)((port_monitored_1 << 3) | (port_monitored_2 << 2) | (port_monitored_3 << 1) | (port_monitored_4 << 0));
-      u8 value = ((port_monitored & 0x0F) << 2) | (mode_monitored & 0x03);
+      port_monitored = (uint8_t)((port_monitored_1 << 3) | (port_monitored_2 << 2) | (port_monitored_3 << 1) | (port_monitored_4 << 0));
+      value = ((port_monitored & 0x0F) << 2) | (mode_monitored & 0x03);
       Xil_Out32(XPAR_DDOS_DEFENDER_0_BASEADDR + 676, value);
       break;
     case 4:
       port_monitored_4 = 0;
-      uint8_t port_monitored = (uint8_t)((port_monitored_1 << 3) | (port_monitored_2 << 2) | (port_monitored_3 << 1) | (port_monitored_4 << 0));
-      u8 value = ((port_monitored & 0x0F) << 2) | (mode_monitored & 0x03);
+      port_monitored = (uint8_t)((port_monitored_1 << 3) | (port_monitored_2 << 2) | (port_monitored_3 << 1) | (port_monitored_4 << 0));
+      value = ((port_monitored & 0x0F) << 2) | (mode_monitored & 0x03);
       Xil_Out32(XPAR_DDOS_DEFENDER_0_BASEADDR + 676, value);
       break;
     case 5:
       port_monitored_1 = 1;
-      uint8_t port_monitored = (uint8_t)((port_monitored_1 << 3) | (port_monitored_2 << 2) | (port_monitored_3 << 1) | (port_monitored_4 << 0));
-      u8 value = ((port_monitored & 0x0F) << 2) | (mode_monitored & 0x03);
+      port_monitored = (uint8_t)((port_monitored_1 << 3) | (port_monitored_2 << 2) | (port_monitored_3 << 1) | (port_monitored_4 << 0));
+      value = ((port_monitored & 0x0F) << 2) | (mode_monitored & 0x03);
       Xil_Out32(XPAR_DDOS_DEFENDER_0_BASEADDR + 676, value);
       break;
     case 6:
       port_monitored_1 = 1;
-      uint8_t port_monitored = (uint8_t)((port_monitored_1 << 3) | (port_monitored_2 << 2) | (port_monitored_3 << 1) | (port_monitored_4 << 0));
-      u8 value = ((port_monitored & 0x0F) << 2) | (mode_monitored & 0x03);
+      port_monitored = (uint8_t)((port_monitored_1 << 3) | (port_monitored_2 << 2) | (port_monitored_3 << 1) | (port_monitored_4 << 0));
+      value = ((port_monitored & 0x0F) << 2) | (mode_monitored & 0x03);
       Xil_Out32(XPAR_DDOS_DEFENDER_0_BASEADDR + 676, value);
       break;
     case 7:
       port_monitored_1 = 1;
-      uint8_t port_monitored = (uint8_t)((port_monitored_1 << 3) | (port_monitored_2 << 2) | (port_monitored_3 << 1) | (port_monitored_4 << 0));
-      u8 value = ((port_monitored & 0x0F) << 2) | (mode_monitored & 0x03);
+      port_monitored = (uint8_t)((port_monitored_1 << 3) | (port_monitored_2 << 2) | (port_monitored_3 << 1) | (port_monitored_4 << 0));
+      value = ((port_monitored & 0x0F) << 2) | (mode_monitored & 0x03);
       Xil_Out32(XPAR_DDOS_DEFENDER_0_BASEADDR + 676, value);
       break;
     case 8:
       port_monitored_1 = 1;
-      uint8_t port_monitored = (uint8_t)((port_monitored_1 << 3) | (port_monitored_2 << 2) | (port_monitored_3 << 1) | (port_monitored_4 << 0));
-      u8 value = ((port_monitored & 0x0F) << 2) | (mode_monitored & 0x03);
+      port_monitored = (uint8_t)((port_monitored_1 << 3) | (port_monitored_2 << 2) | (port_monitored_3 << 1) | (port_monitored_4 << 0));
+      value = ((port_monitored & 0x0F) << 2) | (mode_monitored & 0x03);
       Xil_Out32(XPAR_DDOS_DEFENDER_0_BASEADDR + 676, value);
       break;
     default:
@@ -4854,7 +4856,7 @@ void Choose_port_monitored()
 }
 //
 
-void void Open_port()
+void Open_port()
 {
   u8 key = 0;
   u8 key_rst = 0;
@@ -5212,11 +5214,11 @@ void ModeStart()
     }
     // Block IP Client
     //=========================
-    else if (key1 == 0x08)
-    {
-      Add_IPv4_Block_Attacker();
-      goto start;
-    }
+    // else if (key1 == 0x08)
+    // {
+    //   Add_IPv4_Block_Attacker();
+    //   goto start;
+    // }
     else if (key1 == 0x09)
     {
 
@@ -5583,7 +5585,7 @@ Return:
 
   AssignData();
   SaveEEPROM();
-  ConfigurationIPcore();
+  ConfigurationIPcore(1);
   // ReturnMode2();
 }
 void ConfigurationIPcore(int port)
@@ -5606,11 +5608,13 @@ void ConfigurationIPcore(int port)
 
   // Set time condition timeout white list
   Xil_Out32(XPAR_DDOS_DEFENDER_0_BASEADDR + 140, TimeDelete);
+
+  u32 TimeFloodCore;
   switch (port)
   {
   case 1:
     // Set Timeflood
-    u32 TimeFloodCore = TimeFlood1 * 1000;
+    TimeFloodCore = TimeFlood1 * 1000;
     Xil_Out32(XPAR_DDOS_DEFENDER_0_BASEADDR + 16, TimeFloodCore);
     // Set Syn Threshold
     Xil_Out32(XPAR_DDOS_DEFENDER_0_BASEADDR + 20, SynThreshold1);
@@ -5634,7 +5638,7 @@ void ConfigurationIPcore(int port)
     break;
   case 2:
     // Set Timeflood
-    u32 TimeFloodCore = TimeFlood2 * 1000;
+    TimeFloodCore = TimeFlood2 * 1000;
     Xil_Out32(XPAR_DDOS_DEFENDER_0_BASEADDR + 740, TimeFloodCore);
     // Set Syn Threshold
     Xil_Out32(XPAR_DDOS_DEFENDER_0_BASEADDR + 744, SynThreshold2);
@@ -5658,7 +5662,7 @@ void ConfigurationIPcore(int port)
     break;
   case 3:
     // Set Timeflood
-    u32 TimeFloodCore = TimeFlood3 * 1000;
+    TimeFloodCore = TimeFlood3 * 1000;
     Xil_Out32(XPAR_DDOS_DEFENDER_0_BASEADDR + 780, TimeFloodCore);
     // Set Syn Threshold
     Xil_Out32(XPAR_DDOS_DEFENDER_0_BASEADDR + 784, SynThreshold3);
@@ -5682,7 +5686,7 @@ void ConfigurationIPcore(int port)
     break;
   case 4:
     // Set Timeflood
-    u32 TimeFloodCore = TimeFlood4 * 1000;
+    TimeFloodCore = TimeFlood4 * 1000;
     Xil_Out32(XPAR_DDOS_DEFENDER_0_BASEADDR + 820, TimeFloodCore);
     // Set Syn Threshold
     Xil_Out32(XPAR_DDOS_DEFENDER_0_BASEADDR + 824, SynThreshold4);
@@ -7391,7 +7395,7 @@ void load_default()
   // xil_printf("\r\n Manufacturer information.                                             |");
   // xil_printf("\r\n");
   LoadEEPROM();
-  ConfigurationIPcore();
+  ConfigurationIPcore(1);
   // DisplayTable();
   isCompleted_load_default = 1;
 }
@@ -7832,7 +7836,7 @@ void reconfig()
           //	xil_printf("%c",key);
           AssignData();
           SaveEEPROM();
-          ConfigurationIPcore();
+          ConfigurationIPcore(1);
           count++;
         }
         else if (key == 'n' || key == 'N')
@@ -7892,7 +7896,7 @@ void SetDefenderPort()
   // xil_printf("\r\n\t\t|                                                                                                                                                                        |");
   // xil_printf("\r\n\t\t+------------------------------------------------------------------------------------------------------------------------------------------------------------------------+");
   EnableDefender1 = (HTTPSGETFlood_en1 << 13) + (HTTPGETFlood_en1 << 12) + (DefenderPort_en_5 << 11) + (DefenderPort_en_4 << 10) + (DefenderPort_en_1 << 9) + (DefenderPort_en1 << 8) + (UDPFragFlood_en1 << 7) + (TCPFragFlood_en1 << 6) + (IPSecFlood_en1 << 5) + (ICMPFlood_en1 << 4) + (DNSFlood_en1 << 3) + (UDPFlood_en1 << 2) + (LANDATTACK_en1 << 1) + SYNFlood_en1;
-  ReturnMode2();
+  ReturnMode2(1);
 }
 
 void SetPortDefender()
@@ -7946,7 +7950,7 @@ Return:
   else
     DefenderPort = portnumber_valid;
   EnableDefender1 = (HTTPSGETFlood_en1 << 13) + (HTTPGETFlood_en1 << 12) + (DefenderPort_en_5 << 11) + (DefenderPort_en_4 << 10) + (DefenderPort_en_1 << 9) + (DefenderPort_en1 << 8) + (UDPFragFlood_en1 << 7) + (TCPFragFlood_en1 << 6) + (IPSecFlood_en1 << 5) + (ICMPFlood_en1 << 4) + (DNSFlood_en1 << 3) + (UDPFlood_en1 << 2) + (LANDATTACK_en1 << 1) + SYNFlood_en1;
-  ReturnMode2();
+  ReturnMode2(1);
 }
 
 //============================================================================
@@ -9090,12 +9094,13 @@ void SetDNSThresh()
 {
   u8 key;
   u8 count;
+  u8 key1;
 Return:
   key = 0;
   count = 0;
   u32 dnsthresh_valid = 0;
 start:
-  u8 key1 = 0;
+  key1 = 0;
   while (1)
   {
     key1 = XUartLite_RecvByte(0x40600000);
@@ -9169,6 +9174,7 @@ void SetIPSecThresh()
 {
   u8 key;
   u8 count;
+  u8 key1;
 Return:
   key = 0;
   count = 0;
@@ -9177,7 +9183,7 @@ start:
   // xil_printf("\r\n");
   // xil_printf("\r\n================+========================================================================================================================================================================+");
   // xil_printf("\r\n    Setting     | Enter the value of incoming IPSec IKE packet threshold (PPS): ");
-  u8 key1 = 0;
+  key1 = 0;
   while (1)
   {
     key1 = XUartLite_RecvByte(0x40600000);
@@ -10800,6 +10806,13 @@ void SetUDPFragDefender()
   // xil_printf("\r\n    Setting     | Do you want to enable UDP Fragmentation flood protect now (Y/N)?: ");
   u8 key = 0;
   u8 done = 0;
+  u8 key1 = 0;
+  while (1)
+  {
+    key1 = XUartLite_RecvByte(0x40600000);
+    if (key1 == '1' || key1 == '2' || key1 == '3' || key1 == '4' || key1 == '5' || key1 == '6' || key1 == '7' || key1 == '8')
+      break;
+  }
   while (1)
   {
     key = XUartLite_RecvByte(0x40600000);
@@ -11299,7 +11312,7 @@ Return:
   {
     TimeDelete = timedelete_valid;
   }
-  ReturnMode2();
+  ReturnMode2(1);
 }
 
 void ReturnMode2(int port)
@@ -11618,7 +11631,7 @@ start:
   {
     Reset_System();
   }
-  ReturnMode2();
+  ReturnMode2(1);
 }
 
 void show_Atk_IP_Table()
@@ -13075,4 +13088,4 @@ void reset_HTTP_Table(struct IP_Connection *IP_Conn_Table, struct URL_Connection
   Atk_URL.url = 0;
   Atk_URL.max_URL_cnt = 0;
 }
-// main.c 31-3
+// main.c 24/6
