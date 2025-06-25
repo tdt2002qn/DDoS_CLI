@@ -674,7 +674,7 @@ void Choose_port_monitored();
 void Port_mirroring_src_mac();
 void Port_mirroring_dst_mac();
 void Port_mirroring_src_ipv4();
-void Set_src_IP4_Mirroring(const char *ip_str, int i);
+void Set_src_IP4_Mirroring(const char *ip_str, int i, int add_or_remove);
 void Port_mirroring_dst_ipv4();
 void Set_dst_IP4_Mirroring(const char *ip_str, int i);
 void Port_mirroring_src_dst_ipv6(int dst_or_src);
@@ -3144,6 +3144,9 @@ void Port_mode(int port_value)
       case 7:
         DefenderPort_en_7 = 0;
         break;
+      case 8:
+        DefenderPort_en_8 = 0;
+        break;
       default:
         break;
       }
@@ -3174,6 +3177,9 @@ void Port_mode(int port_value)
         break;
       case 7:
         DefenderPort_en_7 = 1;
+        break;
+      case 8:
+        DefenderPort_en_8 = 1;
         break;
       default:
         break;
@@ -3660,37 +3666,74 @@ void Port_mirroring()
 
     if (key == 'A')
     {
-      Port_mirroring_src_mac();
+      Port_mirroring_src_mac(1); // 1 la them
+      break;
+    }
+    if (key == '1')
+    {
+      Port_mirroring_src_mac(0); // 0 la xoa
       break;
     }
     else if (key == 'B')
     {
-      Port_mirroring_dst_mac();
+      Port_mirroring_dst_mac(1);
+      break;
+    }
+    else if (key == '2')
+    {
+      Port_mirroring_dst_mac(0); //
       break;
     }
     else if (key == 'C')
     {
-      Port_mirroring_src_ipv4();
+      Port_mirroring_src_ipv4(1);
+      break;
+    }
+    else if (key == '3')
+    {
+      Port_mirroring_src_ipv4(0);
       break;
     }
     else if (key == 'D')
     {
-      Port_mirroring_dst_ipv4();
+      Port_mirroring_dst_ipv4(1);
       break;
     }
-    else if (key == 'E')
+    else if (key == '4')
     {
-      Port_mirroring_src_dst_ipv6(0);
+      Port_mirroring_dst_ipv4(0);
       break;
     }
-    else if (key == 'F')
+
+    else if (key == 'E') // them
     {
-      Port_mirroring_src_dst_ipv6(1);
+      Port_mirroring_src_dst_ipv6(0, 1);
       break;
     }
+    else if (key == 'L') // xoa
+    {
+      Port_mirroring_src_dst_ipv6(0, 0);
+      break;
+    }
+    else if (key == 'F') // them
+    {
+      Port_mirroring_src_dst_ipv6(1, 1);
+      break;
+    }
+    else if (key == 'M') // xoa
+    {
+      Port_mirroring_src_dst_ipv6(1, 0);
+      break;
+    }
+    //
     else if (key == 'G')
     {
-      Port_mirroring_src_dst_port();
+      Port_mirroring_src_dst_port(1); // them
+      break;
+    }
+    else if (key == '7')
+    {
+      Port_mirroring_src_dst_port(0); // xoa
       break;
     }
     else if (key == 'H')
@@ -3700,12 +3743,22 @@ void Port_mirroring()
     }
     else if (key == 'I')
     {
-      Port_mirroring_protocol();
+      Port_mirroring_protocol(1); // them
+      break;
+    }
+    else if (key == '8')
+    {
+      Port_mirroring_protocol(0); // xoa
       break;
     }
     else if (key == 'K')
     {
-      Port_mirroring_mode();
+      Port_mirroring_mode(1); // them
+      break;
+    }
+    else if (key == '9')
+    {
+      Port_mirroring_mode(0); // xoa
       break;
     }
     else if (key == 'X')
@@ -3713,12 +3766,16 @@ void Port_mirroring()
       Choose_port_monitored();
       break;
     }
+    else if (key == 03)
+    {
+      Reset_System();
+    }
   }
   XUartLite_SendByte(0x40600000, 'Y');
 }
 
 // Port mirroring src mac
-void Port_mirroring_src_mac()
+void Port_mirroring_src_mac(int add_or_remove)
 {
   u8 key = 0;
   while (1)
@@ -3813,8 +3870,16 @@ void Port_mirroring_src_mac()
   }
   else
   {
-    SRC_MAC[0] = (SRC_MACSegment[0] << 24) | SRC_MACSegment[1] << 16 | (SRC_MACSegment[2] << 8) | SRC_MACSegment[3];
-    SRC_MAC[1] = (SRC_MACSegment[4] << 8) | SRC_MACSegment[5];
+    if (add_or_remove)
+    {
+      SRC_MAC[0] = (SRC_MACSegment[0] << 24) | SRC_MACSegment[1] << 16 | (SRC_MACSegment[2] << 8) | SRC_MACSegment[3];
+      SRC_MAC[1] = (SRC_MACSegment[4] << 8) | SRC_MACSegment[5];
+    }
+    else
+    {
+      SRC_MAC[0] = 0x00000000;
+      SRC_MAC[1] = 0x0000;
+    }
     delay_1ms();
     switch (key - '0')
     {
@@ -3856,7 +3921,7 @@ void Port_mirroring_src_mac()
 }
 
 // Port mirroring dst mac
-void Port_mirroring_dst_mac()
+void Port_mirroring_dst_mac(int add_or_remove)
 {
   u8 key = 0;
   while (1)
@@ -3951,8 +4016,16 @@ void Port_mirroring_dst_mac()
   }
   else
   {
-    DST_MAC[0] = (DST_MACSegment[0] << 24) | DST_MACSegment[1] << 16 | (DST_MACSegment[2] << 8) | DST_MACSegment[3];
-    DST_MAC[1] = (DST_MACSegment[4] << 8) | DST_MACSegment[5];
+    if (add_or_remove)
+    {
+      DST_MAC[0] = (DST_MACSegment[0] << 24) | DST_MACSegment[1] << 16 | (DST_MACSegment[2] << 8) | DST_MACSegment[3];
+      DST_MAC[1] = (DST_MACSegment[4] << 8) | DST_MACSegment[5];
+    }
+    else
+    {
+      DST_MAC[0] = 0x00000000;
+      DST_MAC[1] = 0x00000000;
+    }
     delay_1ms();
     switch (key - '0')
     {
@@ -3993,7 +4066,7 @@ void Port_mirroring_dst_mac()
   }
 }
 // Port mirroring src ipv4
-void Set_src_IP4_Mirroring(const char *ip_str, int i)
+void Set_src_IP4_Mirroring(const char *ip_str, int i, int add_or_remove)
 {
   u16 IPlayerA = 0;
   u16 IPlayerB = 0;
@@ -4011,59 +4084,67 @@ void Set_src_IP4_Mirroring(const char *ip_str, int i)
     XUartLite_SendByte(0x40600000, 'N');
     return;
   }
+  if (add_or_remove)
+  {
+    IPTarget1 = IPlayerA * 16777216 + IPlayerB * 65536 + IPlayerC * 256 + IPlayerD;
+  }
+  else
+  {
+    IPTarget1 = 0x00000000;
+  }
   switch (i)
   {
   case 1:
-    IPTarget1 = IPlayerA * 16777216 + IPlayerB * 65536 + IPlayerC * 256 + IPlayerD;
+
     Xil_Out32(XPAR_DDOS_DEFENDER_0_BASEADDR + 700, 0x00000000);
     Xil_Out32(XPAR_DDOS_DEFENDER_0_BASEADDR + 704, 0x00000000);
     Xil_Out32(XPAR_DDOS_DEFENDER_0_BASEADDR + 708, 0x00000000); // ip_src_filter_mirror
     Xil_Out32(XPAR_DDOS_DEFENDER_0_BASEADDR + 712, IPTarget1);
     break;
   case 2:
-    IPTarget1 = IPlayerA * 16777216 + IPlayerB * 65536 + IPlayerC * 256 + IPlayerD;
+
     Xil_Out32(XPAR_DDOS_DEFENDER_0_BASEADDR + 700, 0x00000000);
     Xil_Out32(XPAR_DDOS_DEFENDER_0_BASEADDR + 704, 0x00000000);
     Xil_Out32(XPAR_DDOS_DEFENDER_0_BASEADDR + 708, 0x00000000); // ip_src_filter_mirror
     Xil_Out32(XPAR_DDOS_DEFENDER_0_BASEADDR + 712, IPTarget1);
     break;
   case 3:
-    IPTarget1 = IPlayerA * 16777216 + IPlayerB * 65536 + IPlayerC * 256 + IPlayerD;
+
     Xil_Out32(XPAR_DDOS_DEFENDER_0_BASEADDR + 700, 0x00000000);
     Xil_Out32(XPAR_DDOS_DEFENDER_0_BASEADDR + 704, 0x00000000);
     Xil_Out32(XPAR_DDOS_DEFENDER_0_BASEADDR + 708, 0x00000000); // ip_src_filter_mirror
     Xil_Out32(XPAR_DDOS_DEFENDER_0_BASEADDR + 712, IPTarget1);
     break;
   case 4:
-    IPTarget1 = IPlayerA * 16777216 + IPlayerB * 65536 + IPlayerC * 256 + IPlayerD;
+
     Xil_Out32(XPAR_DDOS_DEFENDER_0_BASEADDR + 700, 0x00000000);
     Xil_Out32(XPAR_DDOS_DEFENDER_0_BASEADDR + 704, 0x00000000);
     Xil_Out32(XPAR_DDOS_DEFENDER_0_BASEADDR + 708, 0x00000000); // ip_src_filter_mirror
     Xil_Out32(XPAR_DDOS_DEFENDER_0_BASEADDR + 712, IPTarget1);
     break;
   case 5:
-    IPTarget1 = IPlayerA * 16777216 + IPlayerB * 65536 + IPlayerC * 256 + IPlayerD;
+
     Xil_Out32(XPAR_DDOS_DEFENDER_0_BASEADDR + 700, 0x00000000);
     Xil_Out32(XPAR_DDOS_DEFENDER_0_BASEADDR + 704, 0x00000000);
     Xil_Out32(XPAR_DDOS_DEFENDER_0_BASEADDR + 708, 0x00000000); // ip_src_filter_mirror
     Xil_Out32(XPAR_DDOS_DEFENDER_0_BASEADDR + 712, IPTarget1);
     break;
   case 6:
-    IPTarget1 = IPlayerA * 16777216 + IPlayerB * 65536 + IPlayerC * 256 + IPlayerD;
+
     Xil_Out32(XPAR_DDOS_DEFENDER_0_BASEADDR + 700, 0x00000000);
     Xil_Out32(XPAR_DDOS_DEFENDER_0_BASEADDR + 704, 0x00000000);
     Xil_Out32(XPAR_DDOS_DEFENDER_0_BASEADDR + 708, 0x00000000); // ip_src_filter_mirror
     Xil_Out32(XPAR_DDOS_DEFENDER_0_BASEADDR + 712, IPTarget1);
     break;
   case 7:
-    IPTarget1 = IPlayerA * 16777216 + IPlayerB * 65536 + IPlayerC * 256 + IPlayerD;
+
     Xil_Out32(XPAR_DDOS_DEFENDER_0_BASEADDR + 700, 0x00000000);
     Xil_Out32(XPAR_DDOS_DEFENDER_0_BASEADDR + 704, 0x00000000);
     Xil_Out32(XPAR_DDOS_DEFENDER_0_BASEADDR + 708, 0x00000000); // ip_src_filter_mirror
     Xil_Out32(XPAR_DDOS_DEFENDER_0_BASEADDR + 712, IPTarget1);
     break;
   case 8:
-    IPTarget1 = IPlayerA * 16777216 + IPlayerB * 65536 + IPlayerC * 256 + IPlayerD;
+
     Xil_Out32(XPAR_DDOS_DEFENDER_0_BASEADDR + 700, 0x00000000);
     Xil_Out32(XPAR_DDOS_DEFENDER_0_BASEADDR + 704, 0x00000000);
     Xil_Out32(XPAR_DDOS_DEFENDER_0_BASEADDR + 708, 0x00000000); // ip_src_filter_mirror
@@ -4076,7 +4157,7 @@ void Set_src_IP4_Mirroring(const char *ip_str, int i)
 }
 
 // Port mirroring src ipv4
-void Port_mirroring_src_ipv4()
+void Port_mirroring_src_ipv4(int add_or_remove)
 {
   u8 key = 0;
   char buffer_IPV4[BUFFER_SIZE_IPV4];
@@ -4092,7 +4173,7 @@ void Port_mirroring_src_ipv4()
   }
 
   ReceiveIPv4String_protect(buffer_IPV4, header_buffer_IPV4, BUFFER_SIZE_IPV4);
-  Set_src_IP4_Mirroring(buffer_IPV4, key - '0');
+  Set_src_IP4_Mirroring(buffer_IPV4, key - '0', add_or_remove);
 }
 
 // set dst ip4 mir
@@ -4114,59 +4195,67 @@ void Set_dst_IP4_Mirroring(const char *ip_str, int i)
     XUartLite_SendByte(0x40600000, 'N');
     return;
   }
+  if (add_or_remove)
+  {
+    IPTarget1 = IPlayerA * 16777216 + IPlayerB * 65536 + IPlayerC * 256 + IPlayerD;
+  }
+  else
+  {
+    IPTarget1 = 0x00000000;
+  }
   switch (i)
   {
   case 1:
-    IPTarget1 = IPlayerA * 16777216 + IPlayerB * 65536 + IPlayerC * 256 + IPlayerD;
+
     Xil_Out32(XPAR_DDOS_DEFENDER_0_BASEADDR + 716, 0x00000000);
     Xil_Out32(XPAR_DDOS_DEFENDER_0_BASEADDR + 720, 0x00000000);
     Xil_Out32(XPAR_DDOS_DEFENDER_0_BASEADDR + 724, 0x00000000); // ip_dst_filter_mirror
     Xil_Out32(XPAR_DDOS_DEFENDER_0_BASEADDR + 728, IPTarget1);
     break;
   case 2:
-    IPTarget1 = IPlayerA * 16777216 + IPlayerB * 65536 + IPlayerC * 256 + IPlayerD;
+
     Xil_Out32(XPAR_DDOS_DEFENDER_0_BASEADDR + 716, 0x00000000);
     Xil_Out32(XPAR_DDOS_DEFENDER_0_BASEADDR + 720, 0x00000000);
     Xil_Out32(XPAR_DDOS_DEFENDER_0_BASEADDR + 724, 0x00000000); // ip_dst_filter_mirror
     Xil_Out32(XPAR_DDOS_DEFENDER_0_BASEADDR + 728, IPTarget1);
     break;
   case 3:
-    IPTarget1 = IPlayerA * 16777216 + IPlayerB * 65536 + IPlayerC * 256 + IPlayerD;
+
     Xil_Out32(XPAR_DDOS_DEFENDER_0_BASEADDR + 716, 0x00000000);
     Xil_Out32(XPAR_DDOS_DEFENDER_0_BASEADDR + 720, 0x00000000);
     Xil_Out32(XPAR_DDOS_DEFENDER_0_BASEADDR + 724, 0x00000000); // ip_dst_filter_mirror
     Xil_Out32(XPAR_DDOS_DEFENDER_0_BASEADDR + 728, IPTarget1);
     break;
   case 4:
-    IPTarget1 = IPlayerA * 16777216 + IPlayerB * 65536 + IPlayerC * 256 + IPlayerD;
+
     Xil_Out32(XPAR_DDOS_DEFENDER_0_BASEADDR + 716, 0x00000000);
     Xil_Out32(XPAR_DDOS_DEFENDER_0_BASEADDR + 720, 0x00000000);
     Xil_Out32(XPAR_DDOS_DEFENDER_0_BASEADDR + 724, 0x00000000); // ip_dst_filter_mirror
     Xil_Out32(XPAR_DDOS_DEFENDER_0_BASEADDR + 728, IPTarget1);
     break;
   case 5:
-    IPTarget1 = IPlayerA * 16777216 + IPlayerB * 65536 + IPlayerC * 256 + IPlayerD;
+
     Xil_Out32(XPAR_DDOS_DEFENDER_0_BASEADDR + 716, 0x00000000);
     Xil_Out32(XPAR_DDOS_DEFENDER_0_BASEADDR + 720, 0x00000000);
     Xil_Out32(XPAR_DDOS_DEFENDER_0_BASEADDR + 724, 0x00000000); // ip_dst_filter_mirror
     Xil_Out32(XPAR_DDOS_DEFENDER_0_BASEADDR + 728, IPTarget1);
     break;
   case 6:
-    IPTarget1 = IPlayerA * 16777216 + IPlayerB * 65536 + IPlayerC * 256 + IPlayerD;
+
     Xil_Out32(XPAR_DDOS_DEFENDER_0_BASEADDR + 716, 0x00000000);
     Xil_Out32(XPAR_DDOS_DEFENDER_0_BASEADDR + 720, 0x00000000);
     Xil_Out32(XPAR_DDOS_DEFENDER_0_BASEADDR + 724, 0x00000000); // ip_dst_filter_mirror
     Xil_Out32(XPAR_DDOS_DEFENDER_0_BASEADDR + 728, IPTarget1);
     break;
   case 7:
-    IPTarget1 = IPlayerA * 16777216 + IPlayerB * 65536 + IPlayerC * 256 + IPlayerD;
+
     Xil_Out32(XPAR_DDOS_DEFENDER_0_BASEADDR + 716, 0x00000000);
     Xil_Out32(XPAR_DDOS_DEFENDER_0_BASEADDR + 720, 0x00000000);
     Xil_Out32(XPAR_DDOS_DEFENDER_0_BASEADDR + 724, 0x00000000); // ip_dst_filter_mirror
     Xil_Out32(XPAR_DDOS_DEFENDER_0_BASEADDR + 728, IPTarget1);
     break;
   case 8:
-    IPTarget1 = IPlayerA * 16777216 + IPlayerB * 65536 + IPlayerC * 256 + IPlayerD;
+
     Xil_Out32(XPAR_DDOS_DEFENDER_0_BASEADDR + 716, 0x00000000);
     Xil_Out32(XPAR_DDOS_DEFENDER_0_BASEADDR + 720, 0x00000000);
     Xil_Out32(XPAR_DDOS_DEFENDER_0_BASEADDR + 724, 0x00000000); // ip_dst_filter_mirror
@@ -4179,7 +4268,7 @@ void Set_dst_IP4_Mirroring(const char *ip_str, int i)
 }
 
 // Port mirroring dst ipv4
-void Port_mirroring_dst_ipv4()
+void Port_mirroring_dst_ipv4(int add_or_remove)
 {
   u8 key = 0;
   while (1)
@@ -4195,11 +4284,11 @@ void Port_mirroring_dst_ipv4()
   char buffer_IPV4[BUFFER_SIZE_IPV4];
   char header_buffer_IPV4[1];
   ReceiveIPv4String_protect(buffer_IPV4, header_buffer_IPV4, BUFFER_SIZE_IPV4);
-  Set_dst_IP4_Mirroring(buffer_IPV4, key - '0');
+  Set_dst_IP4_Mirroring(buffer_IPV4, key - '0', add_or_remove);
 }
 
 // set src ipv6 mir
-void Port_mirroring_src_dst_ipv6(int dst_or_src)
+void Port_mirroring_src_dst_ipv6(int dst_or_src, int add_or_remove)
 {
   u8 key = 0;
   while (1)
@@ -4216,7 +4305,17 @@ void Port_mirroring_src_dst_ipv6(int dst_or_src)
   int ipv6_2 = 0;
   int ipv6_3 = 0;
   int ipv6_4 = 0;
-  Cacul_IPv6_into_port(&ipv6_1, &ipv6_2, &ipv6_3, &ipv6_4);
+  if (add_or_remove == 0)
+  {
+    ipv6_1 = 0;
+    ipv6_2 = 0;
+    ipv6_3 = 0;
+    ipv6_4 = 0;
+  }
+  else
+  {
+    Cacul_IPv6_into_port(&ipv6_1, &ipv6_2, &ipv6_3, &ipv6_4);
+  }
 
   if (dst_or_src)
   {
@@ -4288,7 +4387,7 @@ void Port_mirroring_src_dst_ipv6(int dst_or_src)
 }
 
 // port mirroring src port
-void Port_mirroring_src_dst_port()
+void Port_mirroring_src_dst_port(int add_or_remove)
 {
   char buffer[16] = {0};
   u8 key;
@@ -4357,7 +4456,7 @@ void Port_mirroring_src_dst_port()
 }
 
 // Port_mirroring_protocol
-void Port_mirroring_protocol()
+void Port_mirroring_protocol(int add_or_remove)
 {
   u8 key = 0;
   char buffer[16] = {0};
@@ -4382,128 +4481,134 @@ void Port_mirroring_protocol()
       break;
     }
   }
-
-  switch (key - '0')
+  if (add_or_remove == 0)
   {
-  case 1:
-    if (protocol == '1')
+    Xil_Out32(XPAR_DDOS_DEFENDER_0_BASEADDR + 736, 0x00000000); // Clear previous protocol
+  }
+  else
+  {
+    switch (key - '0')
     {
-      Xil_Out32(XPAR_DDOS_DEFENDER_0_BASEADDR + 736, 0x00000006); // TCP
-    }
-    else if (protocol == '2')
-    {
-      Xil_Out32(XPAR_DDOS_DEFENDER_0_BASEADDR + 736, 0x00000011); // UDP
-    }
-    else if (protocol == '3')
-    {
-      Xil_Out32(XPAR_DDOS_DEFENDER_0_BASEADDR + 736, 0x00000001); // ICMP
-    }
+    case 1:
+      if (protocol == '1')
+      {
+        Xil_Out32(XPAR_DDOS_DEFENDER_0_BASEADDR + 736, 0x00000006); // TCP
+      }
+      else if (protocol == '2')
+      {
+        Xil_Out32(XPAR_DDOS_DEFENDER_0_BASEADDR + 736, 0x00000011); // UDP
+      }
+      else if (protocol == '3')
+      {
+        Xil_Out32(XPAR_DDOS_DEFENDER_0_BASEADDR + 736, 0x00000001); // ICMP
+      }
 
-    break;
-  case 2:
-    if (protocol == '1')
-    {
-      Xil_Out32(XPAR_DDOS_DEFENDER_0_BASEADDR + 736, 0x00000006); // TCP
+      break;
+    case 2:
+      if (protocol == '1')
+      {
+        Xil_Out32(XPAR_DDOS_DEFENDER_0_BASEADDR + 736, 0x00000006); // TCP
+      }
+      else if (protocol == '2')
+      {
+        Xil_Out32(XPAR_DDOS_DEFENDER_0_BASEADDR + 736, 0x00000011); // UDP
+      }
+      else if (protocol == '3')
+      {
+        Xil_Out32(XPAR_DDOS_DEFENDER_0_BASEADDR + 736, 0x00000001); // ICMP
+      }
+      break;
+    case 3:
+      if (protocol == '1')
+      {
+        Xil_Out32(XPAR_DDOS_DEFENDER_0_BASEADDR + 736, 0x00000006); // TCP
+      }
+      else if (protocol == '2')
+      {
+        Xil_Out32(XPAR_DDOS_DEFENDER_0_BASEADDR + 736, 0x00000011); // UDP
+      }
+      else if (protocol == '3')
+      {
+        Xil_Out32(XPAR_DDOS_DEFENDER_0_BASEADDR + 736, 0x00000001); // ICMP
+      }
+      break;
+    case 4:
+      if (protocol == '1')
+      {
+        Xil_Out32(XPAR_DDOS_DEFENDER_0_BASEADDR + 736, 0x00000006); // TCP
+      }
+      else if (protocol == '2')
+      {
+        Xil_Out32(XPAR_DDOS_DEFENDER_0_BASEADDR + 736, 0x00000011); // UDP
+      }
+      else if (protocol == '3')
+      {
+        Xil_Out32(XPAR_DDOS_DEFENDER_0_BASEADDR + 736, 0x00000001); // ICMP
+      }
+      break;
+    case 5:
+      if (protocol == '1')
+      {
+        Xil_Out32(XPAR_DDOS_DEFENDER_0_BASEADDR + 736, 0x00000006); // TCP
+      }
+      else if (protocol == '2')
+      {
+        Xil_Out32(XPAR_DDOS_DEFENDER_0_BASEADDR + 736, 0x00000011); // UDP
+      }
+      else if (protocol == '3')
+      {
+        Xil_Out32(XPAR_DDOS_DEFENDER_0_BASEADDR + 736, 0x00000001); // ICMP
+      }
+      break;
+    case 6:
+      if (protocol == '1')
+      {
+        Xil_Out32(XPAR_DDOS_DEFENDER_0_BASEADDR + 736, 0x00000006); // TCP
+      }
+      else if (protocol == '2')
+      {
+        Xil_Out32(XPAR_DDOS_DEFENDER_0_BASEADDR + 736, 0x00000011); // UDP
+      }
+      else if (protocol == '3')
+      {
+        Xil_Out32(XPAR_DDOS_DEFENDER_0_BASEADDR + 736, 0x00000001); // ICMP
+      }
+      break;
+    case 7:
+      if (protocol == '1')
+      {
+        Xil_Out32(XPAR_DDOS_DEFENDER_0_BASEADDR + 736, 0x00000006); // TCP
+      }
+      else if (protocol == '2')
+      {
+        Xil_Out32(XPAR_DDOS_DEFENDER_0_BASEADDR + 736, 0x00000011); // UDP
+      }
+      else if (protocol == '3')
+      {
+        Xil_Out32(XPAR_DDOS_DEFENDER_0_BASEADDR + 736, 0x00000001); // ICMP
+      }
+      break;
+    case 8:
+      if (protocol == '1')
+      {
+        Xil_Out32(XPAR_DDOS_DEFENDER_0_BASEADDR + 736, 0x00000006); // TCP
+      }
+      else if (protocol == '2')
+      {
+        Xil_Out32(XPAR_DDOS_DEFENDER_0_BASEADDR + 736, 0x00000011); // UDP
+      }
+      else if (protocol == '3')
+      {
+        Xil_Out32(XPAR_DDOS_DEFENDER_0_BASEADDR + 736, 0x00000001); // ICMP
+      }
+      break;
+    default:
+      break;
     }
-    else if (protocol == '2')
-    {
-      Xil_Out32(XPAR_DDOS_DEFENDER_0_BASEADDR + 736, 0x00000011); // UDP
-    }
-    else if (protocol == '3')
-    {
-      Xil_Out32(XPAR_DDOS_DEFENDER_0_BASEADDR + 736, 0x00000001); // ICMP
-    }
-    break;
-  case 3:
-    if (protocol == '1')
-    {
-      Xil_Out32(XPAR_DDOS_DEFENDER_0_BASEADDR + 736, 0x00000006); // TCP
-    }
-    else if (protocol == '2')
-    {
-      Xil_Out32(XPAR_DDOS_DEFENDER_0_BASEADDR + 736, 0x00000011); // UDP
-    }
-    else if (protocol == '3')
-    {
-      Xil_Out32(XPAR_DDOS_DEFENDER_0_BASEADDR + 736, 0x00000001); // ICMP
-    }
-    break;
-  case 4:
-    if (protocol == '1')
-    {
-      Xil_Out32(XPAR_DDOS_DEFENDER_0_BASEADDR + 736, 0x00000006); // TCP
-    }
-    else if (protocol == '2')
-    {
-      Xil_Out32(XPAR_DDOS_DEFENDER_0_BASEADDR + 736, 0x00000011); // UDP
-    }
-    else if (protocol == '3')
-    {
-      Xil_Out32(XPAR_DDOS_DEFENDER_0_BASEADDR + 736, 0x00000001); // ICMP
-    }
-    break;
-  case 5:
-    if (protocol == '1')
-    {
-      Xil_Out32(XPAR_DDOS_DEFENDER_0_BASEADDR + 736, 0x00000006); // TCP
-    }
-    else if (protocol == '2')
-    {
-      Xil_Out32(XPAR_DDOS_DEFENDER_0_BASEADDR + 736, 0x00000011); // UDP
-    }
-    else if (protocol == '3')
-    {
-      Xil_Out32(XPAR_DDOS_DEFENDER_0_BASEADDR + 736, 0x00000001); // ICMP
-    }
-    break;
-  case 6:
-    if (protocol == '1')
-    {
-      Xil_Out32(XPAR_DDOS_DEFENDER_0_BASEADDR + 736, 0x00000006); // TCP
-    }
-    else if (protocol == '2')
-    {
-      Xil_Out32(XPAR_DDOS_DEFENDER_0_BASEADDR + 736, 0x00000011); // UDP
-    }
-    else if (protocol == '3')
-    {
-      Xil_Out32(XPAR_DDOS_DEFENDER_0_BASEADDR + 736, 0x00000001); // ICMP
-    }
-    break;
-  case 7:
-    if (protocol == '1')
-    {
-      Xil_Out32(XPAR_DDOS_DEFENDER_0_BASEADDR + 736, 0x00000006); // TCP
-    }
-    else if (protocol == '2')
-    {
-      Xil_Out32(XPAR_DDOS_DEFENDER_0_BASEADDR + 736, 0x00000011); // UDP
-    }
-    else if (protocol == '3')
-    {
-      Xil_Out32(XPAR_DDOS_DEFENDER_0_BASEADDR + 736, 0x00000001); // ICMP
-    }
-    break;
-  case 8:
-    if (protocol == '1')
-    {
-      Xil_Out32(XPAR_DDOS_DEFENDER_0_BASEADDR + 736, 0x00000006); // TCP
-    }
-    else if (protocol == '2')
-    {
-      Xil_Out32(XPAR_DDOS_DEFENDER_0_BASEADDR + 736, 0x00000011); // UDP
-    }
-    else if (protocol == '3')
-    {
-      Xil_Out32(XPAR_DDOS_DEFENDER_0_BASEADDR + 736, 0x00000001); // ICMP
-    }
-    break;
-  default:
-    break;
   }
 }
 // Port_mirroring_protocol
-void Port_mirroring_mode()
+void Port_mirroring_mode(int add_or_remove)
 {
   u8 key = 0;
   char buffer[16] = {0};
@@ -4523,7 +4628,7 @@ void Port_mirroring_mode()
   while (1)
   {
     mode = XUartLite_RecvByte(0x40600000);
-    if (mode == '1' || mode == '2' || mode == '3')
+    if (mode == '1' || mode == '2' || mode == '3' || mode == '0')
     {
       break;
     }
@@ -4926,6 +5031,12 @@ void Open_port()
     {
       // MODE PORT 7
       Port_mode(7);
+      break;
+    }
+    else if (key1 == 0xFF)
+    {
+      // MODE PORT 8
+      Port_mode(8);
       break;
     }
     // Add ipv4 vao port
@@ -7866,6 +7977,7 @@ void SetDefenderPort()
   // xil_printf("\r\n    Setting     | Do you want to enable protect by interface port now (Y/N)?: ");
   u8 key = 0;
   u8 done3 = 0;
+
   while (1)
   {
     key = XUartLite_RecvByte(0x40600000);
@@ -13088,4 +13200,4 @@ void reset_HTTP_Table(struct IP_Connection *IP_Conn_Table, struct URL_Connection
   Atk_URL.url = 0;
   Atk_URL.max_URL_cnt = 0;
 }
-// main.c 24/6
+// main.c 31-3
