@@ -30,6 +30,33 @@
 #include <sys/wait.h>
 #include <sys/types.h>
 #include <glib.h>
+#include <sqlite3.h>
+#include <curl/curl.h>
+#include <cjson/cJSON.h>
+// sudo apt-get install libcurl4-openssl-dev libcjson-dev
+typedef struct
+{
+  char interface_name[20];
+  int is_mirroring;
+  int monitor_target_id; // InterfaceToMonitorInterfaceId
+  char mirror_setting[20];
+  char mirror_type[128];
+  char value[256];
+} PortMirroringConfig;
+// Add at the top after includes
+static int current_port = 0; // Global variable to track current port
+
+// Add after current_port declaration
+#define CONFIG_FILE_PORT "port_config.txt"
+#define AUTO_MANUAL_CONFIG_FILE "/home/acs/DDoS_HUY/Setting/config_auto_manual.conf"
+#define DB_PATH "./GUI_HUY/server/database/sysnetdef.db"
+
+// Function prototypes
+void SetHTTPSDefender(int serial_port);
+void new_menu(int serial_port);
+void port_mirroring_menu(int serial_port);
+void SetABCDefenderMode(int serial_port);
+void SetABCThresholdMode(int serial_port);
 
 void send_reset(int serial_port);
 void *key_listener(void *arg);
@@ -38,8 +65,8 @@ int send_data(int serial_port, const char *data, size_t size);
 char *receive_data(int serial_port);
 void ModeStart_cnt(int serial_port);
 void ModeStart(int serial_port);
-vo, ,
-    int kbhit(void);
+void options_mode1(int serial_port);
+int kbhit(void);
 void mode_select_login(int serial_port);
 void reconfig(int serial_port);
 void change_info_acc_admin_mode(int serial_port);
@@ -92,10 +119,11 @@ void SetIPSecDefender(int serial_port);
 void SetTCPFragDefender(int serial_port);
 void SetUDPFragDefender(int serial_port);
 void SetHTTPDefender(int serial_port);
-void SetHTTPSDefender(int serial_port);
+void SetHTTPDefender(int serial_port);
 void set_HTTP_IP_Table(int serial_port);
 void remove_ip_HTTP_from_hash(const char *ip);
 void remove_ip_from_file(const char *filename, const char *ip);
+void display_port_mirroring_config_from_db(int serial_port);
 //
 void SetTimeflood(int serial_port);
 void SetSynThresh(int serial_port);
@@ -112,6 +140,22 @@ void RemoveIPv4VPN(int serial_port);
 void AddIPv6VPN(int serial_port);
 void RemoveIPv6VPN(int serial_port);
 void SetDurationTime(int serial_port);
+void ConfigTypePacket(int serial_port, PortMirroringConfig *cfg);
+void Select_traffic_mirroring_mode(int serial_port, PortMirroringConfig *cfg);
+void Add_port_mirroring(int serial_port);
+void save_port_mirroring_to_db(const PortMirroringConfig *cfg);
+void InputDestMAC(char *mac);
+void InputSourceMAC(char *mac);
+void InputDestIP(char *ip);
+void InputProtocol(int *protocol, char *protocol_str);
+void InputDestMAC(char *mac);
+void InputSourceIP(char *ip);
+void InputSourceMAC(char *mac);
+void InputDestPort(char *port);
+void InputSourcePort(char *port);
+void Delete_port_mirroring(int serial_port);
+void Update_port_mirroring(int serial_port);
+// void display_port_mirroring_config_api(int serial_port);
 //
 void DisplayAccount(int serial_port);
 void reset_account(int serial_port);
@@ -191,7 +235,7 @@ void uart_send(const char *data, int serial_port);
 #define LOGFILE_HTTP_IPv6 "HTTP_ip_table/http_ipv6.log"
 #define MAX_LOG_DAYS 5
 #define SAMPLING_RATE 1
-//
+
 #define KRED "\x1B[31m"
 #define KGRN "\x1B[32m"
 #define KYEL "\x1B[33m"
@@ -205,11 +249,11 @@ void uart_send(const char *data, int serial_port);
 int serial_port;
 float Threshold_SD;
 int Threshold_time_counter;
-const char *previous_mode = "/home/antiddos/DDoS_HUY/Setting/mode.conf";
+const char *previous_mode = "/home/acs/DDoS_HUY/Setting/mode.conf";
 // const char *time_check_create_log = "/home/antiddos/DDoS_V1/Setting/time_check_create_log.txt";
-const char *threshold_logfile = "/home/antiddos/DDoS_HUY/Setting/threshold_logfile.conf";
-const char *time_counter = "/home/antiddos/DDoS_HUY/Setting/time_counter.conf";
-#define CONFIG_FILE "/home/antiddos/DDoS_HUY/Setting/config_auto_manual.conf"
+const char *threshold_logfile = "/home/acs/DDoS_HUY/Setting/threshold_logfile.conf";
+const char *time_counter = "/home/acs/DDoS_HUY/Setting/time_counter.conf";
+#define CONFIG_FILE "/home/acs/DDoS_HUY/Setting/config_auto_manual.conf"
 volatile bool auto_delete_logs;
 volatile int stop_scrolling = 0;
 bool reset_program = false;
@@ -253,6 +297,12 @@ typedef struct
   pthread_cond_t cond;
 } MessageQueue;
 MessageQueue lcd_queue;
+
+// struct MemoryStruct
+// {
+//   char *memory;
+//   size_t size;
+// };
 
 // Packet queue
 #define PACKET_QUEUE_SIZE 4096
@@ -460,7 +510,7 @@ start:
   if (key == '1')
   {
     sleep(1);
-    reconfig(serial_port);
+    // reconfig(serial_port);
     system("clear");
     goto start;
   }
@@ -845,10 +895,349 @@ void check_username_change_pass(int serial_port)
   ReturnMode3();
 }
 
+// void reconfig(int serial_port)
+// {
+// start:
+//   display_logo1();
+//   char key = 0;
+//   char enter = '\r';
+//   printf("\r\n *************************************************************************************************************************************************************************************************************");
+//   printf("\r\n");
+//   printf("\r\n ============================================================================================================================================================================================================+");
+//   printf("\r\n ==> Mode 2 is selected                                                                                                                                                                                      |");
+//   printf("\r\n");
+//   printf(" ===============+===========+================================================================================================================================================================================+\r\n");
+//   printf("    DISPLAY     |           |                                                                                                                                                                                |\r\n");
+//   printf("\t\t| Key Enter | Please choose 1 option below:                                                                                                                                                  |\r\n");
+//   printf("\t\t+-----------+--------------------------------------------------------------------------------------------------------------------------------------------------------------------------------+\r\n");
+//   printf("\t\t|     1.    | Setting RTC.                                                                                                                                                                   |\r\n");
+//   printf("\t\t+-----------+--------------------------------------------------------------------------------------------------------------------------------------------------------------------------------+\r\n");
+//   printf("\t\t|     2.    | Setting Anti by Port mode(*).                                                                                                                                                  |\r\n");
+//   printf("\t\t|           | 	->(Info: When Port protection mode(*) is enabled, IP protected mode (**) is disabled and vice versa).                                                                        |\r\n");
+//   printf("\t\t|     3.    | Setting interface Port is protect.                                                                                                                                             |\r\n");
+//   printf("\t\t|           | 	->(Info: Protected default Port interface is 1).                                                                                                                             |\r\n");
+//   printf("\t\t+-----------+--------------------------------------------------------------------------------------------------------------------------------------------------------------------------------+\r\n");
+//   printf("\t\t|     4.    | Setting IPv4 Server to protect(**).                                                                                                                                            |\r\n");
+//   printf("\t\t+-----------+--------------------------------------------------------------------------------------------------------------------------------------------------------------------------------+\r\n");
+//   printf("\t\t|     R.    | Setting IPv6 Server to protect(**).                                                                                                                                            |\r\n");
+//   printf("\t\t+-----------+--------------------------------------------------------------------------------------------------------------------------------------------------------------------------------+\r\n");
+//   printf("\t\t|     5.    | Setting attack detection time.                                                                                                                                                 |\r\n");
+//   printf("\t\t|           | 	->(Info: The default value is: 1 second).                                                                                                                                    |\r\n");
+//   printf("\t\t+-----------+--------------------------------------------------------------------------------------------------------------------------------------------------------------------------------+\r\n");
+//   printf("\t\t|     6.    | Setting Anti-SYN flood.                                                                                                                                                        |\r\n");
+//   printf("\t\t|     7.    | Setting SYN flood attack detection threshold.                                                                                                                                  |\r\n");
+//   printf("\t\t|           | 	->(Info: The default value is: 1000 PPS).                                                                                                                                    |\r\n");
+//   printf("\t\t+-----------+--------------------------------------------------------------------------------------------------------------------------------------------------------------------------------+\r\n");
+//   printf("\t\t|     8.    | Setting ACK flood attack detection threshold.                                                                                                                                  |\r\n");
+//   printf("\t\t|           | 	->(Info: The default value is: 1000 PPS).                                                                                                                                    |\r\n");
+//   printf("\t\t+-----------+--------------------------------------------------------------------------------------------------------------------------------------------------------------------------------+\r\n");
+//   printf("\t\t|     9.    | Setting the time to automatically delete the connection session information in the white list.                                                                                 |\r\n");
+//   printf("\t\t|           | 	->(Info: The default value is: 30 second).                                                                                                                                   |\r\n");
+//   printf("\t\t+-----------+--------------------------------------------------------------------------------------------------------------------------------------------------------------------------------+\r\n");
+//   printf("\t\t|     A.    | Setting Anti-LAND Attack.                                                                                                                                                      |\r\n");
+//   printf("\t\t+-----------+--------------------------------------------------------------------------------------------------------------------------------------------------------------------------------+\r\n");
+//   printf("\t\t|     B.    | Setting Anti-UDP flood.                                                                                                                                                        |\r\n");
+//   printf("\t\t|     C.    | Setting UDP flood attack detection threshold.                                                                                                                                  |\r\n");
+//   printf("\t\t|           | 	->(Info: The default value is: 1000 PPS).                                                                                                                                    |\r\n");
+//   printf("\t\t|     D.    | Setting threshold of valid UDP packer per second allowed.                                                                                                                      |\r\n");
+//   printf("\t\t|           | 	->(Info: The default value is: 1000 PPS).                                                                                                                                    |\r\n");
+//   printf("\t\t+-----------+--------------------------------------------------------------------------------------------------------------------------------------------------------------------------------+\r\n");
+//   printf("\t\t|     E.    | Setting Anti-DNS Amplification attack.                                                                                                                                         |\r\n");
+//   printf("\t\t|     F.    | Setting DNS Amplification attack detection threshold.                                                                                                                          |\r\n");
+//   printf("\t\t|           | 	->(Info: The default value is: 1000 PPS).                                                                                                                                    |\r\n");
+//   printf("\t\t+-----------+--------------------------------------------------------------------------------------------------------------------------------------------------------------------------------+\r\n");
+//   printf("\t\t|     G.    | Setting Anti-ICMP flood.                                                                                                                                                       |\r\n");
+//   printf("\t\t|     H.    | Setting ICMP flood attack detection threshold.                                                                                                                                 |\r\n");
+//   printf("\t\t|           | 	->(Info: The default value is: 1000 PPS).                                                                                                                                    |\r\n");
+//   printf("\t\t|     I.    | Setting threshold of valid ICMP packer per second allowed.                                                                                                                     |\r\n");
+//   printf("\t\t|           | 	->(Info: The default value is: 1000 PPS).                                                                                                                                    |\r\n");
+//   printf("\t\t+-----------+--------------------------------------------------------------------------------------------------------------------------------------------------------------------------------+\r\n");
+//   printf("\t\t|     J.    | Setting Anti-IPSec IKE flood.                                                                                                                                                  |\r\n");
+//   printf("\t\t|     K.    | Setting IPSEC IKE flood attack detection threshold.                                                                                                                            |\r\n");
+//   printf("\t\t|           | 	->(Info: The default value is: 1000 PPS).                                                                                                                                    |\r\n");
+//   printf("\t\t+-----------+--------------------------------------------------------------------------------------------------------------------------------------------------------------------------------+\r\n");
+//   printf("\t\t|     L.    | Add VPN server name or address to legitimate VPN list.                                                                                                                         |\r\n");
+//   printf("\t\t|     M.    | Remove the VPN server name or address from the legal VPN list.                                                                                                                 |\r\n");
+//   printf("\t\t|     S.    | Add VPN server name or address IPv6 to legitimate VPN list.                                                                                                                    |\r\n");
+//   printf("\t\t|     T.    | Remove the VPN server name or address IPv6 from the legal VPN list.                                                                                                            |\r\n");
+//   printf("\t\t+-----------+--------------------------------------------------------------------------------------------------------------------------------------------------------------------------------+\r\n");
+//   printf("\t\t|     N.    | Setting Anti-TCP fragmentation flood.                                                                                                                                          |\r\n");
+//   printf("\t\t+-----------+--------------------------------------------------------------------------------------------------------------------------------------------------------------------------------+\r\n");
+//   printf("\t\t|     O.    | Setting Anti-UDP fragmentation flood.                                                                                                                                          |\r\n");
+//   printf("\t\t+-----------+--------------------------------------------------------------------------------------------------------------------------------------------------------------------------------+\r\n");
+//   printf("\t\t|     P.    | Setting HTTP GET flood.                                                                                                                                                        |\r\n");
+//   printf("\t\t|     Q.    | Setting Attacker's IP Table.                                                                                                                                                   |\r\n");
+//   printf("\t\t+-----------+--------------------------------------------------------------------------------------------------------------------------------------------------------------------------------+\r\n");
+//   printf("\t\t|     X.    | Setting HTTPS GET flood.                                                                                                                                                        |\r\n");
+//   printf("\t\t+-----------+--------------------------------------------------------------------------------------------------------------------------------------------------------------------------------+\r\n");
+//   printf("\t\t|     Z.    | => Exit.                                                                                                                                                                       |\r\n");
+//   printf("----------------+-----------+--------------------------------------------------------------------------------------------------------------------------------------------------------------------------------+\r\n");
+//   printf("    SETTING    | --> Your choice: ");
+
+//   while (1)
+//   {
+//     scanf("%c", &key);
+//     if (key == '1' || key == '2' || key == '3' || key == '4' || key == '5' || key == '6' || key == '7' || key == '8' || key == '9' || key == 'A' || key == 'a' || key == 'B' || key == 'b' || key == 'C' || key == 'c' || key == 'D' || key == 'd' || key == 'E' || key == 'e' || key == 'F' || key == 'f' || key == 'G' || key == 'g' || key == 'H' || key == 'h' || key == 'I' || key == 'i' || key == 'J' || key == 'j' || key == 'K' || key == 'k' || key == 'L' || key == 'l' || key == 'M' || key == 'm' || key == 'N' || key == 'n' || key == 'O' || key == 'o' || key == 'Z' || key == 'z' || key == 'P' || key == 'p' || key == 'Q' || key == 'q' || key == 'r' || key == 'R' || key == 's' || key == 'S' || key == 't' || key == 'T' || key == 'X')
+//     {
+//       break;
+//     }
+//     if (key != '1' || key != '2' || key != '3' || key != '4' || key != '5' || key != '6' || key != '7' || key != '8' || key != '9' || key != 'A' || key != 'a' || key != 'B' || key != 'b' || key != 'C' || key != 'c' || key != 'D' || key != 'd' || key != 'E' || key == 'e' || key == 'F' || key == 'f' || key == 'G' || key == 'g' || key == 'H' || key == 'h' || key == 'I' || key == 'i' || key != 'J' || key != 'j' || key != 'K' || key != 'k' || key != 'L' || key != 'l' || key != 'M' || key != 'm' || key != 'N' || key != 'n' || key != 'O' || key != 'o' || key != 'P' || key != 'p' || key != 'Q' || key != 'q' || key != 'Z' || key != 'z' || key != 'r' || key != 'R' || key != 'S' || key != 's' || key != 't' || key != 'T' || key == 'X')
+//     {
+//       printf("\r     SETTING    | --> Your choice: ");
+//     }
+//   }
+
+//   usleep(500000);
+//   if (key == '1')
+//   {
+//     system("clear");
+//     display_logo1();
+//     display_table(serial_port);
+//     SetDateTime(serial_port);
+//     goto start;
+//   }
+//   else if (key == '2')
+//   {
+//     system("clear");
+//     display_logo1();
+//     display_table(serial_port);
+//     SetDefenderPort(serial_port);
+//     goto start;
+//   }
+//   else if (key == '3')
+//   {
+//     system("clear");
+//     display_logo1();
+//     display_table(serial_port);
+//     SetPortDefender(serial_port);
+//     goto start;
+//   }
+//   else if (key == '4')
+//   {
+//     system("clear");
+//     display_logo1();
+//     display_table(serial_port);
+//     SetIPv4Target(serial_port);
+//     goto start;
+//   }
+//   else if (key == 'r' || key == 'R')
+//   {
+//     system("clear");
+//     display_logo1();
+//     display_table(serial_port);
+//     SetIPv6Target(serial_port);
+//     goto start;
+//   }
+//   else if (key == '5')
+//   {
+//     system("clear");
+//     display_logo1();
+//     display_table(serial_port);
+//     SetTimeflood(serial_port);
+//     goto start;
+//   }
+//   else if (key == '6')
+//   {
+//     system("clear");
+//     display_logo1();
+//     display_table(serial_port);
+//     SetSynDefender(serial_port);
+//     goto start;
+//   }
+//   else if (key == '7')
+//   {
+//     system("clear");
+//     display_logo1();
+//     display_table(serial_port);
+//     SetSynThresh(serial_port);
+//     goto start;
+//   }
+//   else if (key == '8')
+//   {
+//     system("clear");
+//     display_logo1();
+//     display_table(serial_port);
+//     SetAckThresh(serial_port);
+//     goto start;
+//   }
+//   else if (key == '9')
+//   {
+//     system("clear");
+//     display_logo1();
+//     display_table(serial_port);
+//     SetTimeDelete(serial_port);
+//     goto start;
+//   }
+//   else if (key == 'A' || key == 'a')
+//   {
+//     system("clear");
+//     display_logo1();
+//     display_table(serial_port);
+//     SetSynonymousDefender(serial_port);
+//     goto start;
+//   }
+//   else if (key == 'B' || key == 'b')
+//   {
+//     system("clear");
+//     display_logo1();
+//     display_table(serial_port);
+//     SetUDPDefender(serial_port);
+//     goto start;
+//   }
+//   else if (key == 'C' || key == 'c')
+//   {
+//     system("clear");
+//     display_logo1();
+//     display_table(serial_port);
+//     SetUDPThresh(serial_port);
+//     goto start;
+//   }
+//   else if (key == 'd' || key == 'D')
+//   {
+//     system("clear");
+//     display_logo1();
+//     display_table(serial_port);
+//     SetUDPThresh1s(serial_port);
+//     goto start;
+//   }
+//   else if (key == 'e' || key == 'E')
+//   {
+//     system("clear");
+//     display_logo1();
+//     display_table(serial_port);
+//     SetDNSDefender(serial_port);
+//     goto start;
+//   }
+//   else if (key == 'F' || key == 'f')
+//   {
+//     system("clear");
+//     display_logo1();
+//     display_table(serial_port);
+//     SetDNSThresh(serial_port);
+//     goto start;
+//   }
+//   else if (key == 'G' || key == 'g')
+//   {
+//     system("clear");
+//     display_logo1();
+//     display_table(serial_port);
+//     SetICMPDefender(serial_port);
+//     goto start;
+//   }
+//   else if (key == 'H' || key == 'h')
+//   {
+//     system("clear");
+//     display_logo1();
+//     display_table(serial_port);
+//     SetICMPThresh(serial_port);
+//     goto start;
+//   }
+//   else if (key == 'I' || key == 'i')
+//   {
+//     system("clear");
+//     display_logo1();
+//     display_table(serial_port);
+//     SetICMPThresh1s(serial_port);
+//     goto start;
+//   }
+//   else if (key == 'J' || key == 'j')
+//   {
+//     system("clear");
+//     display_logo1();
+//     display_table(serial_port);
+//     SetIPSecDefender(serial_port);
+//     goto start;
+//   }
+//   else if (key == 'K' || key == 'k')
+//   {
+//     system("clear");
+//     display_logo1();
+//     display_table(serial_port);
+//     SetIPSecThresh(serial_port);
+//     goto start;
+//   }
+//   else if (key == 'L' || key == 'l')
+//   {
+//     system("clear");
+//     display_logo1();
+//     display_table(serial_port);
+//     AddIPv4VPN(serial_port);
+//     goto start;
+//   }
+//   else if (key == 'M' || key == 'm')
+//   {
+//     system("clear");
+//     display_logo1();
+//     display_table(serial_port);
+//     RemoveIPv4VPN(serial_port);
+//     goto start;
+//   }
+//   else if (key == 'S' || key == 's')
+//   {
+//     system("clear");
+//     display_logo1();
+//     display_table(serial_port);
+//     AddIPv6VPN(serial_port);
+//     goto start;
+//   }
+//   else if (key == 'T' || key == 't')
+//   {
+//     system("clear");
+//     display_logo1();
+//     display_table(serial_port);
+//     RemoveIPv6VPN(serial_port);
+//     goto start;
+//   }
+//   else if (key == 'N' || key == 'n')
+//   {
+//     system("clear");
+//     display_logo1();
+//     display_table(serial_port);
+//     SetTCPFragDefender(serial_port);
+//     goto start;
+//   }
+//   else if (key == 'O' || key == 'o')
+//   {
+//     system("clear");
+//     display_logo1();
+//     display_table(serial_port);
+//     SetUDPFragDefender(serial_port);
+//     goto start;
+//   }
+//   else if (key == 'P' || key == 'p')
+//   {
+//     system("clear");
+//     display_logo1();
+//     display_table(serial_port);
+//     SetHTTPDefender(serial_port);
+//     goto start;
+//   }
+//   else if (key == 'Q' || key == 'q')
+//   {
+//     system("clear");
+//     display_logo1();
+//     display_table(serial_port);
+//     set_HTTP_IP_Table(serial_port);
+//     goto start;
+//   }
+//   else if (key == 'x' || key == 'X')
+//   {
+//     system("clear");
+//     display_logo1();
+//     display_table(serial_port);
+//     SetHTTPSDefender(serial_port);
+//     goto start;
+//   }
+//   else if (key == 'Z' || key == 'z')
+//   {
+//     system("clear");
+//     display_logo1();
+//     new_menu(serial_port);
+//   }
+// }
 void reconfig(int serial_port)
 {
 start:
-  // system("clear");
   display_logo1();
   char key = 0;
   char enter = '\r';
@@ -861,8 +1250,6 @@ start:
   printf("    DISPLAY     |           |                                                                                                                                                                                |\r\n");
   printf("\t\t| Key Enter | Please choose 1 option below:                                                                                                                                                  |\r\n");
   printf("\t\t+-----------+--------------------------------------------------------------------------------------------------------------------------------------------------------------------------------+\r\n");
-  printf("\t\t|     1.    | Setting RTC.                                                                                                                                                                   |\r\n");
-  printf("\t\t+-----------+--------------------------------------------------------------------------------------------------------------------------------------------------------------------------------+\r\n");
   printf("\t\t|     2.    | Setting Anti by Port mode(*).                                                                                                                                                  |\r\n");
   printf("\t\t|           | 	->(Info: When Port protection mode(*) is enabled, IP protected mode (**) is disabled and vice versa).                                                                        |\r\n");
   printf("\t\t|     3.    | Setting interface Port is protect.                                                                                                                                             |\r\n");
@@ -871,9 +1258,6 @@ start:
   printf("\t\t|     4.    | Setting IPv4 Server to protect(**).                                                                                                                                            |\r\n");
   printf("\t\t+-----------+--------------------------------------------------------------------------------------------------------------------------------------------------------------------------------+\r\n");
   printf("\t\t|     R.    | Setting IPv6 Server to protect(**).                                                                                                                                            |\r\n");
-  printf("\t\t+-----------+--------------------------------------------------------------------------------------------------------------------------------------------------------------------------------+\r\n");
-  printf("\t\t|     5.    | Setting attack detection time.                                                                                                                                                 |\r\n");
-  printf("\t\t|           | 	->(Info: The default value is: 1 second).                                                                                                                                    |\r\n");
   printf("\t\t+-----------+--------------------------------------------------------------------------------------------------------------------------------------------------------------------------------+\r\n");
   printf("\t\t|     6.    | Setting Anti-SYN flood.                                                                                                                                                        |\r\n");
   printf("\t\t|     7.    | Setting SYN flood attack detection threshold.                                                                                                                                  |\r\n");
@@ -907,10 +1291,14 @@ start:
   printf("\t\t|     K.    | Setting IPSEC IKE flood attack detection threshold.                                                                                                                            |\r\n");
   printf("\t\t|           | 	->(Info: The default value is: 1000 PPS).                                                                                                                                    |\r\n");
   printf("\t\t+-----------+--------------------------------------------------------------------------------------------------------------------------------------------------------------------------------+\r\n");
+  /* Removed options L and M: VPN IPv4 list.
   printf("\t\t|     L.    | Add VPN server name or address to legitimate VPN list.                                                                                                                         |\r\n");
   printf("\t\t|     M.    | Remove the VPN server name or address from the legal VPN list.                                                                                                                 |\r\n");
+  */
+  /* Removed options S and T: VPN IPv6 list.
   printf("\t\t|     S.    | Add VPN server name or address IPv6 to legitimate VPN list.                                                                                                                    |\r\n");
   printf("\t\t|     T.    | Remove the VPN server name or address IPv6 from the legal VPN list.                                                                                                            |\r\n");
+  */
   printf("\t\t+-----------+--------------------------------------------------------------------------------------------------------------------------------------------------------------------------------+\r\n");
   printf("\t\t|     N.    | Setting Anti-TCP fragmentation flood.                                                                                                                                          |\r\n");
   printf("\t\t+-----------+--------------------------------------------------------------------------------------------------------------------------------------------------------------------------------+\r\n");
@@ -925,28 +1313,54 @@ start:
   printf("----------------+-----------+--------------------------------------------------------------------------------------------------------------------------------------------------------------------------------+\r\n");
   printf("    SETTING    | --> Your choice: ");
 
+  // Updated valid keys (removed '1', '5', 'L', 'M', 'S', 'T')
   while (1)
   {
     scanf("%c", &key);
-    if (key == '1' || key == '2' || key == '3' || key == '4' || key == '5' || key == '6' || key == '7' || key == '8' || key == '9' || key == 'A' || key == 'a' || key == 'B' || key == 'b' || key == 'C' || key == 'c' || key == 'D' || key == 'd' || key == 'E' || key == 'e' || key == 'F' || key == 'f' || key == 'G' || key == 'g' || key == 'H' || key == 'h' || key == 'I' || key == 'i' || key == 'J' || key == 'j' || key == 'K' || key == 'k' || key == 'L' || key == 'l' || key == 'M' || key == 'm' || key == 'N' || key == 'n' || key == 'O' || key == 'o' || key == 'Z' || key == 'z' || key == 'P' || key == 'p' || key == 'Q' || key == 'q' || key == 'r' || key == 'R' || key == 's' || key == 'S' || key == 't' || key == 'T' || key == 'X')
+    if (key == '2' || key == '3' || key == '4' ||
+        key == '6' || key == '7' || key == '8' || key == '9' ||
+        key == 'A' || key == 'a' || key == 'B' || key == 'b' ||
+        key == 'C' || key == 'c' || key == 'D' || key == 'd' ||
+        key == 'E' || key == 'e' || key == 'F' || key == 'f' ||
+        key == 'G' || key == 'g' || key == 'H' || key == 'h' ||
+        key == 'I' || key == 'i' || key == 'J' || key == 'j' ||
+        key == 'K' || key == 'k' || key == 'N' || key == 'n' ||
+        key == 'O' || key == 'o' || key == 'Z' || key == 'z' ||
+        key == 'P' || key == 'p' || key == 'Q' || key == 'q' ||
+        key == 'r' || key == 'R' || key == 'X' || key == 'x' || key == 'W' || key == 'w' ||
+        key == 'Y' || key == 'y')
     {
       break;
     }
-    if (key != '1' || key != '2' || key != '3' || key != '4' || key != '5' || key != '6' || key != '7' || key != '8' || key != '9' || key != 'A' || key != 'a' || key != 'B' || key != 'b' || key != 'C' || key != 'c' || key != 'D' || key != 'd' || key != 'E' || key == 'e' || key == 'F' || key == 'f' || key == 'G' || key == 'g' || key == 'H' || key == 'h' || key == 'I' || key == 'i' || key != 'J' || key != 'j' || key != 'K' || key != 'k' || key != 'L' || key != 'l' || key != 'M' || key != 'm' || key != 'N' || key != 'n' || key != 'O' || key != 'o' || key != 'P' || key != 'p' || key != 'Q' || key != 'q' || key != 'Z' || key != 'z' || key != 'r' || key != 'R' || key != 'S' || key != 's' || key != 't' || key != 'T' || key == 'X')
+    // Also update the invalid key check accordingly.
+    if (key != '2' && key != '3' && key != '4' &&
+        key != '6' && key != '7' && key != '8' && key != '9' &&
+        key != 'A' && key != 'a' && key != 'B' && key != 'b' &&
+        key != 'C' && key != 'c' && key != 'D' && key != 'd' &&
+        key != 'E' && key != 'e' && key != 'F' && key != 'f' &&
+        key != 'G' && key != 'g' && key != 'H' && key != 'h' &&
+        key != 'I' && key != 'i' && key != 'J' && key != 'j' &&
+        key != 'K' && key != 'k' && key != 'N' && key != 'n' &&
+        key != 'O' && key != 'o' && key != 'Z' && key != 'z' &&
+        key != 'P' && key != 'p' && key != 'Q' && key != 'q' &&
+        key != 'r' && key != 'R' && key != 'X' && key != 'x' && key != 'W' && key != 'w' && key != 'Y' && key != 'y')
     {
       printf("\r     SETTING    | --> Your choice: ");
     }
   }
 
   usleep(500000);
+  /* Removed branch for key '1'
   if (key == '1')
   {
     system("clear");
     display_logo1();
+    display_table(serial_port);
     SetDateTime(serial_port);
     goto start;
   }
-  else if (key == '2')
+  */
+  if (key == '2')
   {
     system("clear");
     display_logo1();
@@ -967,10 +1381,10 @@ start:
     system("clear");
     display_logo1();
     display_table(serial_port);
-    // Check_Table_IPv4();
     SetIPv4Target(serial_port);
     goto start;
   }
+
   else if (key == 'r' || key == 'R')
   {
     system("clear");
@@ -979,6 +1393,7 @@ start:
     SetIPv6Target(serial_port);
     goto start;
   }
+  /* Removed branch for key '5'
   else if (key == '5')
   {
     system("clear");
@@ -987,7 +1402,7 @@ start:
     SetTimeflood(serial_port);
     goto start;
   }
-
+  */
   else if (key == '6')
   {
     system("clear");
@@ -1108,6 +1523,7 @@ start:
     SetIPSecThresh(serial_port);
     goto start;
   }
+  /* Removed branches for keys 'L'/'l', 'M'/'m', 'S'/'s', 'T'/'t'
   else if (key == 'L' || key == 'l')
   {
     system("clear");
@@ -1140,6 +1556,7 @@ start:
     RemoveIPv6VPN(serial_port);
     goto start;
   }
+  */
   else if (key == 'N' || key == 'n')
   {
     system("clear");
@@ -1182,48 +1599,25 @@ start:
   }
   else if (key == 'Z' || key == 'z')
   {
-    // printf("Received messag");
     system("clear");
     display_logo1();
-    ////printf("Received message: %s\n", data);
+    new_menu(serial_port);
+  }
+  else if (key == 'W' || key == 'w')
+  {
+    system("clear");
+    display_logo1();
     display_table(serial_port);
-
-    char key;
-    char enter = '\r';
-    // printf("\r\n");
-    // clear_screen();
-
-    // DisplayTable();
-    printf("\r\n================+============================================================================================================================================================================================+\n");
-    printf("\r\n    SETTING     | Do you want to save your setting changes? (Y/N) ?: ");
-    while (1)
-    {
-      scanf("%c", &key);
-      if (key == 'y' || key == 'Y' || key == 'n' || key == 'N')
-      {
-        break;
-      }
-      if (key != 'y' || key != 'Y' || key != 'n' || key != 'N')
-      {
-        printf("\r    SETTING     | Do you want to save your setting changes? (Y/N) : ");
-      }
-    }
-    if (key == 'y' || key == 'Y')
-    {
-      system("clear");
-      display_logo1();
-      // sleep(2);
-      // user_mode(serial_port);
-      //  options_mode1(serial_port);
-    }
-    else if (key == 'n' || key == 'N')
-    {
-      system("clear");
-      display_logo1();
-      // sleep(1);
-      // user_mode(serial_port);
-      // options_mode1(serial_port);
-    }
+    SetABCDefenderMode(serial_port);
+    goto start;
+  }
+  else if (key == 'Y' || key == 'y')
+  {
+    system("clear");
+    display_logo1();
+    display_table(serial_port);
+    SetABCThresholdMode(serial_port);
+    goto start;
   }
 }
 
@@ -1292,14 +1686,12 @@ void SetDefenderPort(int serial_port)
   usleep(100000);
   write(serial_port, &key_enter, sizeof(key_enter));
   usleep(100000);
-  // receive_and_print_uart( serial_port);
-  //		sleep(1);
 
   char key;
   char enter = '\r';
   printf("\r\n");
   printf("\r\n================+============================================================================================================================================================================================+\n");
-  printf("\r\n    SETTING       | Do you want to enable protect by interface port now (Y/N)? ");
+  printf("\r\n    SETTING       | Do you want to enable protect by interface port %d now (Y/N)? ", current_port);
   while (1)
   {
     scanf("%c", &key);
@@ -1335,7 +1727,7 @@ void SetPortDefender(int serial_port)
   usleep(100000);
   printf("\r\n");
   printf("\r\n================+============================================================================================================================================================================================+\n");
-  printf("\r   SETTING   | Enter port number for clinet side (Internet side) (1/2):  ");
+  printf("\r   SETTING   | Enter port number for client side (Internet side) for Port %d (1/2):  ", current_port);
   while (1)
   {
     scanf("%c", &key);
@@ -1357,7 +1749,7 @@ void SetPortDefender(int serial_port)
     }
     if (key != '1' || key != '2')
     {
-      printf("\r   SETTING   | Enter port number for clinet side (Internet side) (1/2):  ");
+      printf("\r   SETTING   | Enter port number for client side (Internet side) for Port %d (1/2):  ", current_port);
     }
   }
 
@@ -1421,6 +1813,51 @@ void SetSynThresh(int serial_port)
   send_array(serial_port);
   ReturnMode2(serial_port);
 }
+
+//////////////////////////////////////////////////////////////////////
+void SetABCDefenderMode(int serial_port)
+{
+  char key;
+  char enter = '\r';
+  char key_mode = 'W';
+  write(serial_port, &key_mode, sizeof(key_mode));
+  usleep(100000);
+  write(serial_port, &key_enter, sizeof(key_enter));
+  printf("\r\n");
+  printf("\r\n================+============================================================================================================================================================================================+\n");
+  printf("\r\n    SETTING       | Do you want to enable ABC flood protect now (Y/N)?:  ");
+  while (1)
+  {
+    scanf("%c", &key);
+    if (key == 'y' || key == 'Y' || key == 'n' || key == 'N')
+    {
+      write(serial_port, &key, sizeof(key));
+      usleep(100000);
+      write(serial_port, &enter, sizeof(enter));
+      usleep(1000000);
+      break;
+    }
+    if (key != 'y' || key != 'Y' || key != 'n' || key != 'N')
+    {
+      printf("\r  SETTING       | Do you want to enable ABC flood protect now (Y/N)?:   ");
+    }
+  }
+  ReturnMode2(serial_port);
+}
+
+void SetABCThresholdMode(int serial_port)
+{
+  char key_mode = 'Y';
+  write(serial_port, &key_mode, sizeof(key_mode));
+  usleep(100000);
+  write(serial_port, &key_enter, sizeof(key_enter));
+  printf("\r\n");
+  printf("\r\n================+============================================================================================================================================================================================+\n");
+  printf("\r\n    SETTING     | Enter the value of incoming ABC packet threshold (PPS): ");
+  send_array(serial_port);
+  ReturnMode2(serial_port);
+}
+//////////////////////////////////////////////////////////////////////////////////////////////////
 
 void SetAckThresh(int serial_port)
 {
@@ -1865,6 +2302,7 @@ void SetHTTPDefender(int serial_port)
   }
   ReturnMode2(serial_port);
 }
+
 // Enable/Disnable HTTPS
 void SetHTTPSDefender(int serial_port)
 {
@@ -2053,6 +2491,27 @@ int validate_ip_address(const char *ip_address)
     }
   }
 
+  return 1;
+}
+
+int is_valid_mac_address(const char *mac)
+{
+  if (strlen(mac) != 17)
+    return 0;
+
+  for (int i = 0; i < 17; i++)
+  {
+    if ((i + 1) % 3 == 0)
+    {
+      if (mac[i] != ':' && mac[i] != '-')
+        return 0; // cho phép cả ":" và "-"
+    }
+    else
+    {
+      if (!isxdigit(mac[i]))
+        return 0; // phải là ký tự hex: 0-9, a-f, A-F
+    }
+  }
   return 1;
 }
 
@@ -3011,16 +3470,15 @@ void setload_default(int serial_port)
       usleep(100000);
       write(serial_port, &key_enter, sizeof(key_enter));
       usleep(500000);
-      // system("clear");
+
       write(serial_port, &key, sizeof(key));
       usleep(100000);
-      // write(serial_port,&enter,sizeof(enter));
-      // usleep(1000000);
+
       break;
     }
     if (key != 'y' || key != 'Y' || key != 'n' || key != 'N')
     {
-      // system("clear");
+
       printf("\r   SETTING     | Do you want to load default device configuration from manufacturer? (Y/N): ");
     }
   }
@@ -3028,22 +3486,6 @@ void setload_default(int serial_port)
   display_logo1();
   display_table(serial_port);
   ReturnMode3();
-  // display_table(serial_port);
-  //   ReturnMode3 ();
-  //  char *data = receive_data(serial_port);
-  //  if (data == NULL)
-  //  {
-  //    printf("Error receiving data\n");
-  //    return;
-  //  }
-  //  if ((strchr(data, 'N') != NULL))
-  //  {
-  //    system("clear");
-  //  }
-  //  else if ((strchr(data, 'Y') != NULL))
-  //  {
-  //    system("clear");
-  //  }
 }
 
 int kbhit(void)
@@ -3688,15 +4130,14 @@ start:
 }
 void read_config_mode_save_logfile()
 {
-  FILE *config_fp = fopen(CONFIG_FILE, "r");
+  FILE *config_fp = fopen(AUTO_MANUAL_CONFIG_FILE, "r");
   if (config_fp == NULL)
   {
-
-    config_fp = fopen(CONFIG_FILE, "w");
+    config_fp = fopen(AUTO_MANUAL_CONFIG_FILE, "w");
     if (config_fp == NULL)
     {
-      printf("Error creating config file: %s\n", CONFIG_FILE);
-      exit(1);
+      printf("Error creating config file: %s\n", AUTO_MANUAL_CONFIG_FILE);
+      return;
     }
     fprintf(config_fp, "true");
     fclose(config_fp);
@@ -3724,11 +4165,11 @@ void read_config_mode_save_logfile()
 
 void write_config_mode_save_logfile()
 {
-  FILE *config_fp = fopen(CONFIG_FILE, "w");
+  FILE *config_fp = fopen(AUTO_MANUAL_CONFIG_FILE, "w");
   if (config_fp == NULL)
   {
-    printf("Error opening config file: %s\n", CONFIG_FILE);
-    exit(1);
+    printf("Error opening config file: %s\n", AUTO_MANUAL_CONFIG_FILE);
+    return;
   }
 
   if (auto_delete_logs)
@@ -5029,7 +5470,7 @@ void *memory_check_thread_function(void *arg)
 
           if (file_count > 0 && oldest_file[0] != '\0')
           {
-            printf("Deleted oldest file: %s\n", oldest_file);
+            // printf("Deleted oldest file: %s\n", oldest_file);
             unlink(oldest_file);
           }
           else if (file_count == 0)
@@ -5065,7 +5506,7 @@ void *memory_check_thread_function(void *arg)
 
           if (file_count > 1 && oldest_file[0] != '\0')
           {
-            printf("Deleted oldest file: %s\n", oldest_file);
+            // printf("Deleted oldest file: %s\n", oldest_file);
             unlink(oldest_file);
           }
           else if (file_count == 1)
@@ -5644,7 +6085,1280 @@ void *run(void *arg)
   pthread_cond_destroy(&lcd_queue.cond);
 }
 
-// Main C
+void new_menu(int serial_port)
+{
+start:
+  display_logo1();
+  char key = 0;
+  char enter = '\r';
+  printf("\r\n *************************************************************************************************************************************************************************************************************");
+  printf("\r\n");
+  printf("\r\n ============================================================================================================================================================================================================+");
+  printf("\r\n ==> New Menu Selected                                                                                                                                                                                       |");
+  printf("\r\n");
+  printf(" ===============+===========+================================================================================================================================================================================+\r\n");
+  printf("    DISPLAY     |           |                                                                                                                                                                                |\r\n");
+  printf("\t\t| Key Enter | Please choose 1 option below:                                                                                                                                                  |\r\n");
+  printf("\t\t+-----------+--------------------------------------------------------------------------------------------------------------------------------------------------------------------------------+\r\n");
+  printf("\t\t|     1.    | Setting RTC.                                                                                                                                                                   |\r\n");
+  printf("\t\t+-----------+--------------------------------------------------------------------------------------------------------------------------------------------------------------------------------+\r\n");
+  printf("\t\t|     2.    | Port 1 Settings                                                                                                                                                                |\r\n");
+  printf("\t\t+-----------+--------------------------------------------------------------------------------------------------------------------------------------------------------------------------------+\r\n");
+  printf("\t\t|     3.    | Port 2 Settings                                                                                                                                                                |\r\n");
+  printf("\t\t+-----------+--------------------------------------------------------------------------------------------------------------------------------------------------------------------------------+\r\n");
+  printf("\t\t|     4.    | Port 3 Settings                                                                                                                                                                |\r\n");
+  printf("\t\t+-----------+--------------------------------------------------------------------------------------------------------------------------------------------------------------------------------+\r\n");
+  printf("\t\t|     5.    | Port 4 Settings                                                                                                                                                                |\r\n");
+  printf("\t\t+-----------+--------------------------------------------------------------------------------------------------------------------------------------------------------------------------------+\r\n");
+  printf("\t\t|     6.    | Port Mirroring Settings.                                                                                                                                                       |\r\n");
+  printf("\t\t|           | 	->(Info: Configure port mirroring for network monitoring).                                                                                                                   |\r\n");
+  printf("\t\t+-----------+--------------------------------------------------------------------------------------------------------------------------------------------------------------------------------+\r\n");
+  printf("\t\t|     7.    | Setting attack detection time.                                                                                                                                                 |\r\n");
+  printf("\t\t|           | 	->(Info: The default value is: 1 second).                                                                                                                                    |\r\n");
+  printf("\t\t+-----------+--------------------------------------------------------------------------------------------------------------------------------------------------------------------------------+\r\n");
+  printf("\t\t|     8.    | Add VPN server name or address to legitimate VPN list.                                                                                                                         |\r\n");
+  printf("\t\t|     9.    | Remove the VPN server name or address from the legal VPN list.                                                                                                                 |\r\n");
+  printf("\t\t|     A.    | Add VPN server name or address IPv6 to legitimate VPN list.                                                                                                                    |\r\n");
+  printf("\t\t|     B.    | Remove the VPN server name or address IPv6 from the legal VPN list.                                                                                                            |\r\n");
+  printf("\t\t+-----------+--------------------------------------------------------------------------------------------------------------------------------------------------------------------------------+\r\n");
+  printf("\t\t|     Z.    | Exit.                                                                                                                                                                          |\r\n");
+  printf("----------------+-----------+--------------------------------------------------------------------------------------------------------------------------------------------------------------------------------+\r\n");
+  printf("    SETTING     | Your choice: ");
+
+  while (1)
+  {
+    scanf("%c", &key);
+    if (key == '1' || key == '2' || key == '3' || key == '4' || key == '5' || key == '6' || key == '7' ||
+        key == 'L' || key == 'l' || key == 'M' || key == 'm' || key == 'S' || key == 's' || key == 'T' ||
+        key == 't' || key == 'Z' || key == 'z')
+    {
+      break;
+    }
+    if (key != '1' && key != '2' && key != '3' && key != '4' && key != '5' && key != '6' && key != '7' &&
+        key != 'L' && key != 'l' && key != 'M' && key != 'm' && key != 'S' && key != 's' && key != 'T' &&
+        key != 't' && key != 'Z' && key != 'z')
+    {
+      printf("\r     SETTING    | --> Your choice: ");
+    }
+  }
+
+  usleep(500000);
+  if (key == '1')
+  {
+    system("clear");
+    display_logo1();
+    SetDateTime(serial_port);
+    goto start;
+  }
+  else if (key == '2')
+  {
+    current_port = 1;
+    system("clear");
+    display_logo1();
+    printf("\r\n ==> Port 1 Configuration\n");
+    reconfig(serial_port);
+    goto start;
+  }
+  else if (key == '3')
+  {
+    current_port = 2;
+    system("clear");
+    ;
+    printf("\r\n ==> Port 2 Configuration\n");
+    reconfig(serial_port);
+    goto start;
+  }
+  else if (key == '4')
+  {
+    current_port = 3;
+    system("clear");
+
+    printf("\r\n ==> Port 3 Configuration\n");
+    reconfig(serial_port);
+    goto start;
+  }
+  else if (key == '5')
+  {
+    // system("clear");
+    // display_logo1();
+    // display_table(serial_port);
+    // SetTimeflood(serial_port);
+    // goto start;
+    current_port = 4;
+
+    display_logo1();
+    printf("\r\n ==> Port 4 Configuration\n");
+    reconfig(serial_port);
+    goto start;
+  }
+  else if (key == '6')
+  {
+    system("clear");
+    display_logo1();
+    port_mirroring_menu(serial_port);
+    goto start;
+  }
+  else if (key == '7')
+  {
+    system("clear");
+    display_logo1();
+    display_table(serial_port);
+    SetTimeflood(serial_port);
+    goto start;
+  }
+  else if (key == '8')
+  {
+    system("clear");
+    display_logo1();
+    display_table(serial_port);
+    AddIPv4VPN(serial_port);
+    goto start;
+  }
+  else if (key == '9')
+  {
+    system("clear");
+    display_logo1();
+    display_table(serial_port);
+    RemoveIPv4VPN(serial_port);
+    goto start;
+  }
+  else if (key == 'A' || key == 'a')
+  {
+    system("clear");
+    display_logo1();
+    display_table(serial_port);
+    AddIPv6VPN(serial_port);
+    goto start;
+  }
+  else if (key == 'B' || key == 'b')
+  {
+    system("clear");
+    display_logo1();
+    display_table(serial_port);
+    RemoveIPv6VPN(serial_port);
+    goto start;
+  }
+  else if (key == 'Z' || key == 'z')
+  {
+    system("clear");
+    display_logo1();
+    ReturnMode2(serial_port);
+  }
+}
+void wrap_field(const char *prefix, const char *content, int width)
+{
+  int len = strlen(content);
+  int i = 0;
+  while (i < len)
+  {
+    printf("%s%-*.*s\n", prefix, width, width, content + i);
+    i += width;
+  }
+}
+
+// Hàm tách chỉ các giá trị từ chuỗi JSON kiểu đơn giản
+void extract_json_values(const char *json, char *out, int out_size)
+{
+  int len = strlen(json);
+  int out_idx = 0;
+  int in_quotes = 0;
+  int is_key = 1;
+
+  for (int i = 0; i < len && out_idx < out_size - 1; i++)
+  {
+    if (json[i] == '"')
+    {
+      in_quotes = !in_quotes;
+      continue;
+    }
+
+    if (in_quotes && !is_key)
+    {
+      out[out_idx++] = json[i];
+    }
+
+    if (!in_quotes && json[i] == ':')
+    {
+      is_key = 0;
+    }
+
+    if (!in_quotes && json[i] == ',')
+    {
+      out[out_idx++] = ',';
+      out[out_idx++] = ' ';
+      is_key = 1;
+    }
+
+    if (!in_quotes && json[i] == '}')
+    {
+      break;
+    }
+  }
+
+  out[out_idx] = '\0';
+}
+
+void clean_json_array_string(const char *input, char *output, int out_size)
+{
+  int out_idx = 0;
+  for (int i = 0; input[i] != '\0' && out_idx < out_size - 1; i++)
+  {
+    char c = input[i];
+    if (c == '[' || c == ']' || c == '"')
+      continue;
+    output[out_idx++] = c;
+  }
+  output[out_idx] = '\0';
+}
+
+void display_port_mirroring_config_from_db(int serial_port)
+{
+  sqlite3 *db;
+  sqlite3_stmt *stmt;
+  int rc = sqlite3_open(DB_PATH, &db);
+  if (rc)
+  {
+    printf("\n cannot open database: %s\n", sqlite3_errmsg(db));
+    return;
+  }
+
+  const char *sql =
+      "SELECT di.InterfaceId, di.InterfaceIsMirroring, di.InterfaceName, "
+      "mi.InterfaceName AS MonitorInterfaceName, "
+      "di.InterfaceMirrorSetting, di.MirrorType, di.Value "
+      "FROM DeviceInterfaces di "
+      "LEFT JOIN DeviceInterfaces mi ON di.InterfaceToMonitorInterfaceId = mi.InterfaceId";
+
+  rc = sqlite3_prepare_v2(db, sql, -1, &stmt, NULL);
+  if (rc != SQLITE_OK)
+  {
+    printf("\nLỗi truy vấn: %s\n", sqlite3_errmsg(db));
+    sqlite3_close(db);
+    return;
+  }
+
+  printf("\n=============================================================================================================================================================================================================+\n");
+  printf("| %-3s | %-15s | %-10s | %-22s | %-22s | %-50s | %-62s |\n",
+         "No", "InterfaceName", "Mirroring", "Monitor Interface ID", "MirrorSetting", "MirrorType", "Value");
+  printf("|=====|=================|============|========================|========================|====================================================|================================================================|\n");
+
+  int idx = 1;
+  while (sqlite3_step(stmt) == SQLITE_ROW)
+  {
+    int mirroring = sqlite3_column_int(stmt, 1);
+    const unsigned char *interface_name = sqlite3_column_text(stmt, 2);
+    const unsigned char *monitor_name = sqlite3_column_text(stmt, 3);
+    const unsigned char *setting = sqlite3_column_text(stmt, 4);
+    const unsigned char *type = sqlite3_column_text(stmt, 5);
+    const unsigned char *value = sqlite3_column_text(stmt, 6);
+
+    const char *mirroring_str = mirroring ? "Active" : "Inactive";
+    const char *interface_name_str = interface_name ? (const char *)interface_name : "";
+    const char *monitor_name_str = monitor_name ? (const char *)monitor_name : "N/A";
+    const char *setting_str = setting ? (const char *)setting : "";
+    char cleaned_type[512] = "";
+    if (type)
+      clean_json_array_string((const char *)type, cleaned_type, sizeof(cleaned_type));
+    else
+      strcpy(cleaned_type, "");
+
+    const char *value_str = value ? (const char *)value : "";
+
+    char extracted_values[512] = "";
+    if (value_str && strlen(value_str) > 0)
+      extract_json_values(value_str, extracted_values, sizeof(extracted_values));
+    printf("| %-3d | %-15s | %-10s | %-22s | %-22s |", idx++, interface_name_str, mirroring_str, monitor_name_str, setting_str);
+
+    // In MirrorType và Value xuống dòng nếu dài
+    int max_width_type = 50;
+    int max_width_value = 62;
+
+    // In phần đầu tiên của MirrorType
+    printf(" %-*.*s |", max_width_type, max_width_type, cleaned_type);
+
+    printf(" %-*.*s |\n", max_width_value, max_width_value, extracted_values);
+
+    // In phần tiếp theo nếu MirrorType hoặc Value dài
+    int type_len = strlen(cleaned_type);
+    int value_len = strlen(extracted_values);
+    int line = 1;
+    while (line * max_width_type < type_len || line * max_width_value < value_len)
+    {
+      printf("| %-3s | %-15s | %-10s | %-22s | %-22s |", "", "", "", "", "");
+
+      if (line * max_width_type < type_len)
+        printf(" %-*.*s |", max_width_type, max_width_type, cleaned_type + line * max_width_type);
+      else
+        printf(" %-*s |", max_width_type, "");
+
+      if (line * max_width_value < value_len)
+        printf(" %-*.*s |\n", max_width_value, max_width_value, extracted_values + line * max_width_value);
+      else
+        printf(" %-*s |\n", max_width_value, "");
+
+      line++;
+    }
+    printf("|-----+-----------------+------------+------------------------+------------------------+----------------------------------------------------+----------------------------------------------------------------|\n");
+  }
+  sqlite3_finalize(stmt);
+  sqlite3_close(db);
+}
+
+
+void Update_port_mirroring(int serial_port)
+{
+  system("clear");
+  display_logo1();
+  printf("\nCurrent Port Mirroring Configurations:\n");
+  display_port_mirroring_config_from_db(serial_port);
+
+  char port_name[32];
+  printf("\nEnter InterfaceName to update (e.g. eth1): ");
+  scanf("%31s", port_name);
+
+  // Kiểm tra port có tồn tại không
+  sqlite3 *db;
+  int rc = sqlite3_open(DB_PATH, &db);
+  if (rc)
+  {
+    printf("Cannot open database: %s\n", sqlite3_errmsg(db));
+    return;
+  }
+  const char *sql = "SELECT InterfaceIsMirroring, InterfaceMirrorSetting, MirrorType, Value FROM DeviceInterfaces WHERE InterfaceName=?";
+  sqlite3_stmt *stmt;
+  rc = sqlite3_prepare_v2(db, sql, -1, &stmt, NULL);
+  if (rc != SQLITE_OK)
+  {
+    printf("SQL error: %s\n", sqlite3_errmsg(db));
+    sqlite3_close(db);
+    return;
+  }
+  sqlite3_bind_text(stmt, 1, port_name, -1, SQLITE_STATIC);
+  rc = sqlite3_step(stmt);
+  if (rc != SQLITE_ROW)
+  {
+    printf("No configuration found for %s.\n", port_name);
+    sqlite3_finalize(stmt);
+    sqlite3_close(db);
+    printf("Press Enter to return to menu...");
+    getchar();
+    getchar();
+    return;
+  }
+
+  // Lấy dữ liệu cũ
+  PortMirroringConfig cfg = {0};
+  strcpy(cfg.interface_name, port_name);
+  cfg.is_mirroring = sqlite3_column_int(stmt, 0);
+  const unsigned char *mirror_setting = sqlite3_column_text(stmt, 1);
+  const unsigned char *mirror_type = sqlite3_column_text(stmt, 2);
+  const unsigned char *value = sqlite3_column_text(stmt, 3);
+  if (mirror_setting)
+    strcpy(cfg.mirror_setting, (const char *)mirror_setting);
+  if (mirror_type)
+    strcpy(cfg.mirror_type, (const char *)mirror_type);
+  if (value)
+    strcpy(cfg.value, (const char *)value);
+
+  sqlite3_finalize(stmt);
+  sqlite3_close(db);
+
+  printf("\nUpdating configuration for %s...\n", port_name);
+
+  // Parse value JSON cũ thành map key-value để cập nhật lại giá trị mới nhất
+  cJSON *json_old = NULL;
+  if (cfg.value[0])
+  {
+    json_old = cJSON_Parse(cfg.value);
+  }
+  // Tạo struct lưu giá trị cuối cùng cho từng trường
+  char last_dest_mac[18] = "";
+  char last_src_mac[18] = "";
+  char last_dest_ip[40] = "";
+  char last_src_ip[40] = "";
+  char last_dest_port[6] = "";
+  char last_src_port[6] = "";
+  char last_protocol[16] = "";
+
+  if (json_old)
+  {
+    cJSON *item;
+    if ((item = cJSON_GetObjectItemCaseSensitive(json_old, "DestMac")) && cJSON_IsString(item))
+      strncpy(last_dest_mac, item->valuestring, sizeof(last_dest_mac));
+    if ((item = cJSON_GetObjectItemCaseSensitive(json_old, "SourceMac")) && cJSON_IsString(item))
+      strncpy(last_src_mac, item->valuestring, sizeof(last_src_mac));
+    if ((item = cJSON_GetObjectItemCaseSensitive(json_old, "DestIPv4")) && cJSON_IsString(item))
+      strncpy(last_dest_ip, item->valuestring, sizeof(last_dest_ip));
+    if ((item = cJSON_GetObjectItemCaseSensitive(json_old, "SourceIPv4")) && cJSON_IsString(item))
+      strncpy(last_src_ip, item->valuestring, sizeof(last_src_ip));
+    if ((item = cJSON_GetObjectItemCaseSensitive(json_old, "DestIPv6")) && cJSON_IsString(item) && strlen(item->valuestring) > 0)
+      strncpy(last_dest_ip, item->valuestring, sizeof(last_dest_ip));
+    if ((item = cJSON_GetObjectItemCaseSensitive(json_old, "SourceIPv6")) && cJSON_IsString(item) && strlen(item->valuestring) > 0)
+      strncpy(last_src_ip, item->valuestring, sizeof(last_src_ip));
+    if ((item = cJSON_GetObjectItemCaseSensitive(json_old, "DestPort")) && cJSON_IsString(item))
+      strncpy(last_dest_port, item->valuestring, sizeof(last_dest_port));
+    if ((item = cJSON_GetObjectItemCaseSensitive(json_old, "SourcePort")) && cJSON_IsString(item))
+      strncpy(last_src_port, item->valuestring, sizeof(last_src_port));
+    if ((item = cJSON_GetObjectItemCaseSensitive(json_old, "Protocol")) && cJSON_IsString(item))
+      strncpy(last_protocol, item->valuestring, sizeof(last_protocol));
+    cJSON_Delete(json_old);
+  }
+
+  // Truyền giá trị cũ vào để ConfigTypePacket cho phép sửa hoặc bổ sung
+  PortMirroringConfig cfg_update = cfg;
+  // Gán lại các trường đã có vào biến tạm để khi vào ConfigTypePacket sẽ hiển thị đúng
+  strcpy(cfg_update.value, cfg.value);
+  strcpy(cfg_update.mirror_type, cfg.mirror_type);
+
+  // Gọi hàm cấu hình lại, cho phép sửa hoặc bổ sung trường
+  ConfigTypePacket(serial_port, &cfg_update);
+
+  // Sau khi cấu hình xong, parse lại value mới để lấy giá trị mới nhất
+  cJSON *json_new = NULL;
+  if (cfg_update.value[0])
+  {
+    json_new = cJSON_Parse(cfg_update.value);
+  }
+  // Nếu trường nào không có trong value mới thì giữ lại giá trị cũ
+  if (json_new)
+  {
+    cJSON *item;
+    if (!(item = cJSON_GetObjectItemCaseSensitive(json_new, "DestMac")) && last_dest_mac[0])
+      cJSON_AddStringToObject(json_new, "DestMac", last_dest_mac);
+    if (!(item = cJSON_GetObjectItemCaseSensitive(json_new, "SourceMac")) && last_src_mac[0])
+      cJSON_AddStringToObject(json_new, "SourceMac", last_src_mac);
+    if (!(item = cJSON_GetObjectItemCaseSensitive(json_new, "DestIPv4")) && last_dest_ip[0])
+      cJSON_AddStringToObject(json_new, "DestIPv4", last_dest_ip);
+    if (!(item = cJSON_GetObjectItemCaseSensitive(json_new, "SourceIPv4")) && last_src_ip[0])
+      cJSON_AddStringToObject(json_new, "SourceIPv4", last_src_ip);
+    if (!(item = cJSON_GetObjectItemCaseSensitive(json_new, "DestPort")) && last_dest_port[0])
+      cJSON_AddStringToObject(json_new, "DestPort", last_dest_port);
+    if (!(item = cJSON_GetObjectItemCaseSensitive(json_new, "SourcePort")) && last_src_port[0])
+      cJSON_AddStringToObject(json_new, "SourcePort", last_src_port);
+    if (!(item = cJSON_GetObjectItemCaseSensitive(json_new, "Protocol")) && last_protocol[0])
+      cJSON_AddStringToObject(json_new, "Protocol", last_protocol);
+
+    // Ghi lại value mới đã merge đủ các trường
+    char *new_value_str = cJSON_PrintUnformatted(json_new);
+    strncpy(cfg_update.value, new_value_str, sizeof(cfg_update.value) - 1);
+    free(new_value_str);
+    cJSON_Delete(json_new);
+  }
+
+  // Lưu lại vào DB
+  save_port_mirroring_to_db(&cfg_update);
+
+  printf("Update completed. Press Enter to return to menu...");
+  getchar();
+  getchar();
+  system("clear");
+  display_logo1();
+}
+
+void port_mirroring_menu(int serial_port)
+{
+start:
+  char key = 0;
+  printf("\r\n *************************************************************************************************************************************************************************************************************");
+  printf("\r\n");
+  printf("\r\n ============================================================================================================================================================================================================+");
+  printf("\r\n ==> Port Mirroring Settings                                                                                                                                                                                 |");
+  printf("\r\n");
+  printf(" ===============+===========+================================================================================================================================================================================+\r\n");
+  printf("    DISPLAY     |           |                                                                                                                                                                                |\r\n");
+  printf("\t\t| Key Enter | Please choose 1 option below:                                                                                                                                                  |\r\n");
+  printf("\t\t+-----------+--------------------------------------------------------------------------------------------------------------------------------------------------------------------------------+\r\n");
+  printf("\t\t|     1.    | Display Port Mirroring Configuration.                                                                                                                                          |\r\n");
+  printf("\t\t+-----------+--------------------------------------------------------------------------------------------------------------------------------------------------------------------------------+\r\n");
+  printf("\t\t|     2.    | Add Port Mirroring Configuration.                                                                                                                                              |\r\n");
+  printf("\t\t+-----------+--------------------------------------------------------------------------------------------------------------------------------------------------------------------------------+\r\n");
+  printf("\t\t|     3.    | Update Port Mirroring.                                                                                                                                                         |\r\n");
+  printf("\t\t+-----------+--------------------------------------------------------------------------------------------------------------------------------------------------------------------------------+\r\n");
+  printf("\t\t|     4.    | Delete Port Mirroring Configuration.                                                                                                                                           |\r\n");
+  printf("\t\t+-----------+--------------------------------------------------------------------------------------------------------------------------------------------------------------------------------+\r\n");
+  printf("\t\t|     5.    | Back to Previous Menu.                                                                                                                                                         |\r\n");
+  printf("----------------+-----------+--------------------------------------------------------------------------------------------------------------------------------------------------------------------------------+\r\n");
+  printf("    SETTING     | Your choice: ");
+
+  while (1)
+  {
+    scanf("%c", &key);
+    if (key == '1' || key == '2' || key == '3' || key == '4' || key == '5')
+    {
+      break;
+    }
+    if (key != '1' && key != '2' && key != '3' && key != '4' && key != '5')
+    {
+      printf("\r     SETTING    | --> Your choice: ");
+    }
+  }
+
+  usleep(500000);
+  if (key == '1')
+  {
+    system("clear");
+    display_logo1();
+    // display_port_mirroring_config_api(serial_port);
+    //  printf("\nNhấn Enter để quay lại menu chính...");
+    display_port_mirroring_config_from_db(serial_port);
+    getchar();
+    getchar();
+    system("clear");
+    display_logo1();
+    // new_menu(serial_port);
+    goto start;
+  }
+  else if (key == '2')
+  {
+    system("clear");
+    display_logo1();
+    Add_port_mirroring(serial_port);
+    printf("\nAdding Port Mirroring Configuration...\n");
+    goto start;
+  }
+  else if (key == '3')
+  {
+    system("clear");
+    display_logo1();
+    Update_port_mirroring(serial_port);
+
+    // Add your delete port mirroring function here
+    printf("\nDeleting Port Mirroring Configuration...\n");
+    goto start;
+  }
+  else if (key == '4')
+  {
+    system("clear");
+    display_logo1();
+    Delete_port_mirroring(serial_port);
+    // new_menu(serial_port);
+  }
+  else if (key == '5')
+  {
+    system("clear");
+    display_logo1();
+    new_menu(serial_port);
+  }
+}
+
+void Delete_port_mirroring(int serial_port)
+{
+  system("clear");
+  display_logo1();
+  printf("\nCurrent Port Mirroring Configurations:\n");
+  display_port_mirroring_config_from_db(serial_port);
+
+  char port_name[32];
+  printf("\nEnter InterfaceName to delete mirroring config (e.g. eth1): ");
+  scanf("%31s", port_name);
+
+  sqlite3 *db;
+  int rc = sqlite3_open(DB_PATH, &db);
+  if (rc)
+  {
+    printf("Cannot open database: %s\n", sqlite3_errmsg(db));
+    return;
+  }
+
+  // Chỉ xóa cấu hình mirroring, KHÔNG xóa port (chỉ reset các trường mirroring về mặc định)
+  const char *update_sql =
+      "UPDATE DeviceInterfaces SET "
+      "InterfaceIsMirroring=0, InterfaceToMonitorInterfaceId=NULL, InterfaceMirrorSetting=NULL, MirrorType=NULL, Value=NULL "
+      "WHERE InterfaceName=?";
+
+  sqlite3_stmt *stmt;
+  rc = sqlite3_prepare_v2(db, update_sql, -1, &stmt, NULL);
+  if (rc != SQLITE_OK)
+  {
+    printf("SQL error: %s\n", sqlite3_errmsg(db));
+    sqlite3_close(db);
+    return;
+  }
+  sqlite3_bind_text(stmt, 1, port_name, -1, SQLITE_STATIC);
+
+  rc = sqlite3_step(stmt);
+  if (rc == SQLITE_DONE && sqlite3_changes(db) > 0)
+  {
+    printf("Deleted mirroring configuration for %s successfully!\n", port_name);
+  }
+  else
+  {
+    printf("No mirroring configuration found for %s or failed to delete.\n", port_name);
+  }
+  sqlite3_finalize(stmt);
+  sqlite3_close(db);
+
+  printf("Press Enter to return to menu...");
+  getchar();
+  getchar();
+  system("clear");
+  display_logo1();
+}
+void Add_port_mirroring(int serial_port)
+{
+  system("clear");
+  display_logo1();
+  PortMirroringConfig cfg = {0};
+  cfg.is_mirroring = 1;
+
+  int valid_ports[] = {1, 2, 3, 4, 6, 7, 8};
+  int num_ports = sizeof(valid_ports) / sizeof(valid_ports[0]);
+
+  printf("\r\n ============================================================================================================================================================================================================+");
+  printf("\r\n   CONFIGURE    |           |                                                                                                                                                                                |\r\n");
+  printf("=============================================================================================================================================================================================================+\r\n");
+  printf("\t\t| Key Enter | MONITORED PORT SELECTION                                                                                                                                                       |\r\n");
+  printf("\t\t+-----------+--------------------------------------------------------------------------------------------------------------------------------------------------------------------------------+\r\n");
+
+  for (int i = 0; i < num_ports; i++)
+  {
+    printf("\t\t|     %d.    | eth%d                                                                                                                                                                           |\r\n", i + 1, valid_ports[i]);
+    printf("\t\t+-----------+--------------------------------------------------------------------------------------------------------------------------------------------------------------------------------+\r\n");
+  }
+
+  printf("\t\t|     %d.    | Exit.                                                                                                                                                                          |\r\n", num_ports + 1);
+  printf(" ===============+=============================================================================================================================================================================================+\r\n");
+  printf("\nSETTING       |  Enter your choice [1-%d]: ", num_ports + 1);
+
+  int choice = 0;
+
+  if (scanf("%d", &choice) != 1)
+  {
+    printf("\nInvalid input! Please enter a number between 1 and %d.\n", num_ports + 1);
+    while (getchar() != '\n')
+      ;
+    Add_port_mirroring(serial_port);
+    return;
+  }
+
+  if (choice == num_ports + 1)
+  {
+    system("clear");
+    new_menu(serial_port);
+    return;
+  }
+
+  if (choice < 1 || choice > num_ports)
+  {
+    printf("\nChoice out of valid range! Please try again.\n");
+    Add_port_mirroring(serial_port);
+    return;
+  }
+
+  int selected_port = valid_ports[choice - 1];
+  sprintf(cfg.interface_name, "eth%d", selected_port);
+  cfg.monitor_target_id = -1;
+
+  printf("\nYou selected interface: %s\n", cfg.interface_name);
+
+  system("clear");
+  display_logo1();
+  Select_traffic_mirroring_mode(serial_port, &cfg);
+}
+
+void Select_traffic_mirroring_mode(int serial_port, PortMirroringConfig *cfg)
+{
+  printf("\r\n ============================================================================================================================================================================================================+\r\n");
+  printf("\r\n                   TRAFFIC MIRRORING MODE SETTINGS                                                                                                                                                           |");
+  printf("\r\n ============================================================================================================================================================================================================+");
+  printf("\r\n TRAFFIC MODE   |           |                                                                                                                                                                                |");
+  printf("\r\n ===============+===========+================================================================================================================================================================================+\r\n");
+  printf("\t\t|     1.    | INGRESS.                                                                                                                                                                       |\r\n");
+  printf("\t\t ---------------------+----------------------------------------------------------------------------------------------------------------------------------------------------------------------+\r\n");
+  printf("\t\t|     2.    | EGRESS.                                                                                                                                                                        |\r\n");
+  printf("\t\t ---------------------+----------------------------------------------------------------------------------------------------------------------------------------------------------------------+\r\n");
+  printf("\t\t|     3.    | INGRESS & EGRESS.                                                                                                                                                              |\r\n");
+  printf("\t\t+-----------+--------------------------------------------------------------------------------------------------------------------------------------------------------------------------------+\r\n");
+  printf("\t\t|     4.    | Exit.                                                                                                                                                                          |\r\n");
+  printf("\t\t =====================+======================================================================================================================================================================+\r\n");
+  printf("\t\t|  SETTING  | Enter your choice [1/2/3]: ");
+
+  char mode = 0;
+  scanf(" %c", &mode);
+
+  switch (mode)
+  {
+  case '1':
+    strcpy(cfg->mirror_setting, "Ingress");
+    break;
+  case '2':
+    strcpy(cfg->mirror_setting, "Egress");
+    break;
+  case '3':
+    strcpy(cfg->mirror_setting, "Ingress and Egress");
+    break;
+  case '4':
+    system("clear");
+    new_menu(serial_port);
+    return;
+  default:
+    printf("\nInvalid mode selected!\n");
+    return;
+  }
+  system("clear");
+  ConfigTypePacket(serial_port, cfg);
+}
+// Hàm tiện ích: Xóa trường khỏi mảng nếu đã tồn tại
+void remove_field(char type_fields[][32], char value_fields[][40], int *field_count, const char *field_name) {
+    for (int i = 0; i < *field_count; ++i) {
+        if (strcmp(type_fields[i], field_name) == 0) {
+            // Dịch các phần tử sau lên
+            for (int j = i; j < *field_count - 1; ++j) {
+                strcpy(type_fields[j], type_fields[j + 1]);
+                strcpy(value_fields[j], value_fields[j + 1]);
+            }
+            (*field_count)--;
+            break;
+        }
+    }
+}
+
+void ConfigTypePacket(int serial_port, PortMirroringConfig *cfg)
+{
+  cfg->monitor_target_id = 5;
+
+  char dest_mac[18] = "";
+  char src_mac[18] = "";
+  char dest_ip[40] = "";
+  char src_ip[40] = "";
+  char dest_port[6] = "";
+  char src_port[6] = "";
+  int protocol = -1;
+  int flag_dest_mac = 0, flag_src_mac = 0, flag_dest_ip = 0;
+  int flag_src_ip = 0, flag_dest_port = 0, flag_src_port = 0;
+  int flag_protocol = 0;
+  char choice;
+
+  char mirror_type[128] = "";
+  char value[256] = "";
+
+  system("clear");
+  display_logo1();
+  printf("\r\n ============================================================================================================================================================================================================+");
+  printf("\r\n ==> Packet Filtering Configuration Menu                                                                                                                                                                     |");
+  printf("\r\n ============================================================================================================================================================================================================+");
+  printf("\r\n    DISPLAY     |           |                                                                                                                                                                                |");
+  printf("\r\n ===============+===========+================================================================================================================================================================================+\r\n");
+  printf("\t\t|     1.    | Destination MAC.                                                                                                                                                               |\r\n");
+  printf("\t\t+-----------+--------------------------------------------------------------------------------------------------------------------------------------------------------------------------------+\r\n");
+  printf("\t\t|     2.    | Source MAC.                                                                                                                                                                    |\r\n");
+  printf("\t\t+-----------+--------------------------------------------------------------------------------------------------------------------------------------------------------------------------------+\r\n");
+  printf("\t\t|     3.    | Destination IP.                                                                                                                                                                |\r\n");
+  printf("\t\t+-----------+--------------------------------------------------------------------------------------------------------------------------------------------------------------------------------+\r\n");
+  printf("\t\t|     4.    | Source IP.                                                                                                                                                                     |\r\n");
+  printf("\t\t+-----------+--------------------------------------------------------------------------------------------------------------------------------------------------------------------------------+\r\n");
+  printf("\t\t|     5.    | Destination Port.                                                                                                                                                              |\r\n");
+  printf("\t\t+-----------+--------------------------------------------------------------------------------------------------------------------------------------------------------------------------------+\r\n");
+  printf("\t\t|     6.    |  Source Port.                                                                                                                                                                  |\r\n");
+  printf("\t\t+-----------+--------------------------------------------------------------------------------------------------------------------------------------------------------------------------------+\r\n");
+  printf("\t\t|     7.    | Protocol.                                                                                                                                                                      |\r\n");
+  printf("\t\t+-----------+--------------------------------------------------------------------------------------------------------------------------------------------------------------------------------+\r\n");
+  printf("\t\t|     8.    | Save.                                                                                                                                                                          |\r\n");
+  printf("\t\t+-----------+--------------------------------------------------------------------------------------------------------------------------------------------------------------------------------+\r\n");
+  printf("\t\t|     9.    | Exit.                                                                                                                                                                          |\r\n");
+  printf("\t\t+-----------+--------------------------------------------------------------------------------------------------------------------------------------------------------------------------------+\r\n");
+
+  char type_fields[7][32] = {0};
+  char value_fields[7][40] = {0};
+  int field_count = 0;
+  if (cfg->mirror_type[0] && cfg->value[0])
+  {
+    char type_buf[128];
+    strncpy(type_buf, cfg->mirror_type, sizeof(type_buf));
+    char *p = type_buf;
+    while (*p)
+    {
+      if (*p == '[' || *p == ']' || *p == '"')
+        *p = ' ';
+      p++;
+    }
+    char *type_token = strtok(type_buf, ",");
+    cJSON *json = cJSON_Parse(cfg->value);
+    while (type_token && field_count < 7)
+    {
+      while (*type_token == ' ')
+        type_token++;
+      char *end = type_token + strlen(type_token) - 1;
+      while (end > type_token && *end == ' ')
+      {
+        *end = 0;
+        end--;
+      }
+      strncpy(type_fields[field_count], type_token, sizeof(type_fields[field_count]));
+
+      char key[32] = "";
+      if (strcmp(type_token, "Dest Mac") == 0)
+        strcpy(key, "DestMac");
+      else if (strcmp(type_token, "Source Mac") == 0)
+        strcpy(key, "SourceMac");
+      else if (strcmp(type_token, "Dest IP") == 0)
+        strcpy(key, "DestIPv4");
+      else if (strcmp(type_token, "Source IP") == 0)
+        strcpy(key, "SourceIPv4");
+      else if (strcmp(type_token, "Dest Port") == 0)
+        strcpy(key, "DestPort");
+      else if (strcmp(type_token, "Source Port") == 0)
+        strcpy(key, "SourcePort");
+      else if (strcmp(type_token, "Protocol") == 0)
+        strcpy(key, "Protocol");
+      else
+        strncpy(key, type_token, sizeof(key) - 1);
+
+      cJSON *item = cJSON_GetObjectItemCaseSensitive(json, key);
+      if (item && cJSON_IsString(item))
+      {
+        strncpy(value_fields[field_count], item->valuestring, sizeof(value_fields[field_count]));
+      }
+      else
+      {
+        value_fields[field_count][0] = '\0';
+      }
+      field_count++;
+      type_token = strtok(NULL, ",");
+    }
+    cJSON_Delete(json);
+  }
+
+  while (1)
+  {
+    printf("+-----------+----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------+\n");
+    if (flag_dest_mac)
+      printf("| - Destination MAC     |  %s\n", dest_mac);
+    if (flag_src_mac)
+      printf("| - Source MAC          |  %s\n", src_mac);
+    if (flag_dest_ip)
+      printf("| - Destination IP      |  %s\n", dest_ip);
+    if (flag_src_ip)
+      printf("| - Source IP           |  %s\n", src_ip);
+    if (flag_dest_port)
+      printf("| - Destination Port    |  %s\n", dest_port);
+    if (flag_src_port)
+      printf("| - Source Port         |  %s\n", src_port);
+    if (flag_protocol)
+      printf("| - Protocol            |  %d\n", protocol);
+    printf("+-----------+----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------+\n");
+
+    printf("Your choice: ");
+    scanf(" %c", &choice);
+
+    if (choice == '1')
+    {
+      InputDestMAC(dest_mac);
+      if (strlen(dest_mac) > 0)
+      {
+        remove_field(type_fields, value_fields, &field_count, "Dest Mac");
+        strcpy(type_fields[field_count], "Dest Mac");
+        strcpy(value_fields[field_count], dest_mac);
+        field_count++;
+        flag_dest_mac = 1;
+      }
+      getchar();
+    }
+    else if (choice == '2')
+    {
+      InputSourceMAC(src_mac);
+      if (strlen(src_mac) > 0)
+      {
+        remove_field(type_fields, value_fields, &field_count, "Source Mac");
+        strcpy(type_fields[field_count], "Source Mac");
+        strcpy(value_fields[field_count], src_mac);
+        field_count++;
+        flag_src_mac = 1;
+      }
+      getchar();
+    }
+    else if (choice == '3')
+    {
+      InputDestIP(dest_ip);
+      if (strlen(dest_ip) > 0)
+      {
+        remove_field(type_fields, value_fields, &field_count, "Dest IP");
+        strcpy(type_fields[field_count], "Dest IP");
+        strcpy(value_fields[field_count], dest_ip);
+        field_count++;
+        flag_dest_ip = 1;
+      }
+      getchar();
+    }
+    else if (choice == '4')
+    {
+      InputSourceIP(src_ip);
+      if (strlen(src_ip) > 0)
+      {
+        remove_field(type_fields, value_fields, &field_count, "Source IP");
+        strcpy(type_fields[field_count], "Source IP");
+        strcpy(value_fields[field_count], src_ip);
+        field_count++;
+        flag_src_ip = 1;
+      }
+      getchar();
+    }
+    else if (choice == '5')
+    {
+      InputDestPort(dest_port);
+      if (strlen(dest_port) > 0)
+      {
+        remove_field(type_fields, value_fields, &field_count, "Dest Port");
+        strcpy(type_fields[field_count], "Dest Port");
+        strcpy(value_fields[field_count], dest_port);
+        field_count++;
+        flag_dest_port = 1;
+      }
+      getchar();
+    }
+    else if (choice == '6')
+    {
+      InputSourcePort(src_port);
+      if (strlen(src_port) > 0)
+      {
+        remove_field(type_fields, value_fields, &field_count, "Source Port");
+        strcpy(type_fields[field_count], "Source Port");
+        strcpy(value_fields[field_count], src_port);
+        field_count++;
+        flag_src_port = 1;
+      }
+      getchar();
+    }
+    else if (choice == '7')
+    {
+      char protocol_str[16] = "";
+      InputProtocol(&protocol, protocol_str);
+      remove_field(type_fields, value_fields, &field_count, "Protocol");
+      strcpy(type_fields[field_count], "Protocol");
+      strcpy(value_fields[field_count], protocol_str);
+      field_count++;
+      flag_protocol = 1;
+      getchar();
+    }
+    else if (choice == '8')
+    {
+      mirror_type[0] = '\0';
+      value[0] = '\0';
+
+      strcat(mirror_type, "[");
+      strcat(value, "{");
+
+      for (int i = 0; i < field_count; ++i)
+      {
+        strcat(mirror_type, "\"");
+        strcat(mirror_type, type_fields[i]);
+        strcat(mirror_type, "\"");
+        if (i < field_count - 1)
+          strcat(mirror_type, ",");
+
+        char key[32] = {0};
+        if (strcmp(type_fields[i], "Dest Mac") == 0)
+          strcpy(key, "DestMac");
+        else if (strcmp(type_fields[i], "Source Mac") == 0)
+          strcpy(key, "SourceMac");
+        else if (strcmp(type_fields[i], "Dest IP") == 0)
+          strcpy(key, strchr(value_fields[i], ':') ? "DestIPv6" : "DestIPv4");
+        else if (strcmp(type_fields[i], "Source IP") == 0)
+          strcpy(key, strchr(value_fields[i], ':') ? "SourceIPv6" : "SourceIPv4");
+        else if (strcmp(type_fields[i], "Dest Port") == 0)
+          strcpy(key, "DestPort");
+        else if (strcmp(type_fields[i], "Source Port") == 0)
+          strcpy(key, "SourcePort");
+        else if (strcmp(type_fields[i], "Protocol") == 0)
+          strcpy(key, "Protocol");
+        else
+          strcpy(key, type_fields[i]);
+
+        strcat(value, "\"");
+        strcat(value, key);
+        strcat(value, "\":\"");
+        strcat(value, value_fields[i]);
+        strcat(value, "\"");
+        if (i < field_count - 1)
+          strcat(value, ",");
+      }
+
+      strcat(mirror_type, "]");
+      strcat(value, "}");
+
+      strcpy(cfg->mirror_type, mirror_type);
+      strcpy(cfg->value, value);
+
+      system("clear");
+      display_logo1();
+      printf("\n+--------------------------------------------------------------+\n");
+      printf("|  Saving Packet Filtering Configuration...                   |\n");
+      printf("+--------------------------------------------------------------+\n");
+      save_port_mirroring_to_db(cfg);
+      break;
+    }
+    else if (choice == '9')
+    {
+      break;
+    }
+    else
+    {
+      printf("Invalid selection! Please try again.\n");
+    }
+  }
+
+  system("clear");
+  new_menu(serial_port);
+}
+
+void InputDestMAC(char *mac)
+{
+  printf("Enter Destination MAC (format XX:XX:XX:XX:XX:XX): ");
+  scanf("%17s", mac);
+  while (!is_valid_mac_address(mac))
+  {
+    printf("Invalid MAC address! Please re-enter: ");
+    scanf("%17s", mac);
+  }
+}
+
+void InputSourceIP(char *ip)
+{
+  struct in6_addr addr6;
+  int valid = 0;
+  while (!valid)
+  {
+    printf("Enter Source IP (IPv4 or IPv6): ");
+    scanf("%39s", ip);
+    // Check IPv4 or IPv6 validity
+    if (validate_ip_address(ip) || (inet_pton(AF_INET6, ip, &addr6) == 1))
+    {
+      valid = 1;
+    }
+    else
+    {
+      printf("Invalid IP address. Please re-enter:\n");
+    }
+  }
+}
+
+void InputSourceMAC(char *mac)
+{
+  printf("Enter Source MAC (format XX:XX:XX:XX:XX:XX): ");
+  scanf("%17s", mac);
+  while (!is_valid_mac_address(mac))
+  {
+    printf("Invalid MAC address! Please re-enter: ");
+    scanf("%17s", mac);
+  }
+}
+void InputDestPort(char *port)
+{
+  printf("Enter Destination Port: ");
+  scanf("%5s", port);
+}
+void InputSourcePort(char *port)
+{
+  printf("Enter Destination Port: ");
+  scanf("%5s", port);
+}
+void InputDestIP(char *ip)
+{
+  struct in6_addr addr6;
+  int valid = 0;
+  while (!valid)
+  {
+    printf("Enter Destination IP (IPv4 or IPv6): ");
+    scanf("%39s", ip);
+    // Check IPv4 or IPv6 validity
+    if (validate_ip_address(ip) || (inet_pton(AF_INET6, ip, &addr6) == 1))
+    {
+      valid = 1;
+    }
+    else
+    {
+      printf("Invalid IP address. Please re-enter:\n");
+    }
+  }
+}
+void InputProtocol(int *protocol, char *protocol_str)
+{
+  char choice;
+  printf("Select Protocol:\n");
+  printf("  [1] Any\n");
+  printf("  [2] TCP\n");
+  printf("  [3] UDP\n");
+  printf("  [4] ICMP\n");
+  printf("  [5] SCTP\n");
+  printf("  [6] GRE\n");
+  printf("  [7] ESP\n");
+  printf("  [8] AH\n");
+  printf("  [9] IPIP\n");
+  printf("  [A] ICMPv6\n");
+  printf("  [B] IGMP\n");
+  printf("  [C] IPSec (custom)\n");
+  printf("  [D] L2TP (custom)\n");
+  printf("  [E] PPTP (custom)\n");
+  scanf(" %c", &choice);
+
+  switch (choice)
+  {
+  case '1':
+    *protocol = 0;
+    strcpy(protocol_str, "Any");
+    break;
+  case '2':
+    *protocol = 6;
+    strcpy(protocol_str, "TCP");
+    break;
+  case '3':
+    *protocol = 17;
+    strcpy(protocol_str, "UDP");
+    break;
+  case '4':
+    *protocol = 1;
+    strcpy(protocol_str, "ICMP");
+    break;
+  case '5':
+    *protocol = 132;
+    strcpy(protocol_str, "SCTP");
+    break;
+  case '6':
+    *protocol = 47;
+    strcpy(protocol_str, "GRE");
+    break;
+  case '7':
+    *protocol = 50;
+    strcpy(protocol_str, "ESP");
+    break;
+  case '8':
+    *protocol = 51;
+    strcpy(protocol_str, "AH");
+    break;
+  case '9':
+    *protocol = 4;
+    strcpy(protocol_str, "IPIP");
+    break;
+  case 'A':
+  case 'a':
+    *protocol = 58;
+    strcpy(protocol_str, "ICMPv6");
+    break;
+  case 'B':
+  case 'b':
+    *protocol = 2;
+    strcpy(protocol_str, "IGMP");
+    break;
+  case 'C':
+  case 'c':
+    printf("Enter custom protocol number for IPSec: ");
+    scanf("%d", protocol);
+    strcpy(protocol_str, "IPSec");
+    break;
+  case 'D':
+  case 'd':
+    printf("Enter custom protocol number for L2TP: ");
+    scanf("%d", protocol);
+    strcpy(protocol_str, "L2TP");
+    break;
+  case 'E':
+  case 'e':
+    printf("Enter custom protocol number for PPTP: ");
+    scanf("%d", protocol);
+    strcpy(protocol_str, "PPTP");
+    break;
+  default:
+    printf("Invalid choice. Defaulting to TCP.\n");
+    *protocol = 6;
+    strcpy(protocol_str, "TCP");
+  }
+}
+
+void save_port_mirroring_to_db(const PortMirroringConfig *cfg)
+{
+  sqlite3 *db;
+  int rc = sqlite3_open(DB_PATH, &db);
+  if (rc)
+  {
+    printf("Cannot open database: %s\n", sqlite3_errmsg(db));
+    return;
+  }
+
+  // Thử UPDATE trước, nếu không có dòng nào bị ảnh hưởng thì INSERT mới
+  const char *update_sql =
+      "UPDATE DeviceInterfaces SET "
+      "InterfaceIsMirroring=?, InterfaceToMonitorInterfaceId=?, InterfaceMirrorSetting=?, MirrorType=?, Value=? "
+      "WHERE InterfaceName=?";
+
+  sqlite3_stmt *stmt;
+  rc = sqlite3_prepare_v2(db, update_sql, -1, &stmt, NULL);
+  if (rc != SQLITE_OK)
+  {
+    printf("SQL error: %s\n", sqlite3_errmsg(db));
+    sqlite3_close(db);
+    return;
+  }
+
+  sqlite3_bind_int(stmt, 1, cfg->is_mirroring);
+  sqlite3_bind_int(stmt, 2, cfg->monitor_target_id);
+  sqlite3_bind_text(stmt, 3, cfg->mirror_setting, -1, SQLITE_STATIC);
+  sqlite3_bind_text(stmt, 4, cfg->mirror_type, -1, SQLITE_STATIC);
+  sqlite3_bind_text(stmt, 5, cfg->value, -1, SQLITE_STATIC);
+  sqlite3_bind_text(stmt, 6, cfg->interface_name, -1, SQLITE_STATIC);
+
+  rc = sqlite3_step(stmt);
+  int rows_affected = sqlite3_changes(db);
+  sqlite3_finalize(stmt);
+
+  if (rows_affected == 0)
+  {
+    // Nếu chưa có, thì INSERT mới
+    const char *insert_sql =
+        "INSERT INTO DeviceInterfaces (InterfaceName, InterfaceIsMirroring, InterfaceToMonitorInterfaceId, InterfaceMirrorSetting, MirrorType, Value) "
+        "VALUES (?, ?, ?, ?, ?, ?)";
+    rc = sqlite3_prepare_v2(db, insert_sql, -1, &stmt, NULL);
+    if (rc != SQLITE_OK)
+    {
+      printf("SQL error: %s\n", sqlite3_errmsg(db));
+      sqlite3_close(db);
+      return;
+    }
+    sqlite3_bind_text(stmt, 1, cfg->interface_name, -1, SQLITE_STATIC);
+    sqlite3_bind_int(stmt, 2, cfg->is_mirroring);
+    sqlite3_bind_int(stmt, 3, cfg->monitor_target_id);
+    sqlite3_bind_text(stmt, 4, cfg->mirror_setting, -1, SQLITE_STATIC);
+    sqlite3_bind_text(stmt, 5, cfg->mirror_type, -1, SQLITE_STATIC);
+    sqlite3_bind_text(stmt, 6, cfg->value, -1, SQLITE_STATIC);
+
+    rc = sqlite3_step(stmt);
+    if (rc != SQLITE_DONE)
+    {
+      printf("Failed to insert data: %s\n", sqlite3_errmsg(db));
+    }
+    else
+    {
+      printf("Port mirroring configuration saved successfully!\n");
+    }
+    sqlite3_finalize(stmt);
+  }
+  else
+  {
+    printf("Port mirroring configuration updated successfully!\n");
+  }
+
+  sqlite3_close(db);
+}
+void save_port_config()
+{
+  FILE *file = fopen(CONFIG_FILE, "w");
+  if (file != NULL)
+  {
+    fprintf(file, "%d", current_port);
+    fclose(file);
+  }
+}
+
+void load_port_config()
+{
+  FILE *file = fopen(CONFIG_FILE, "r");
+  if (file != NULL)
+  {
+    fscanf(file, "%d", &current_port);
+    fclose(file);
+  }
+}
+
+// main C
 int main()
 {
   serial_port = configure_serial_port("/dev/ttyUSB0", B115200);
@@ -5655,6 +7369,7 @@ int main()
   read_config_mode_save_logfile();
   read_threshold_from_file();
   read_threshold_timecounter_from_file();
+  // load_port_config();  // Load saved port configuration
   create_http_filelog(LOGFILE_HTTP_IPv4);
   create_http_filelog(LOGFILE_HTTP_IPv6);
   ip_table = g_hash_table_new_full(g_str_hash, g_str_equal, g_free, NULL);
@@ -5681,8 +7396,10 @@ int main()
   printf("\n 10");
   sleep(2);
   // Sync Time
-  send_data_sync_time(serial_port);
-  ModeStart_cnt(serial_port);
+  // send_data_sync_time(serial_port);
+  // ModeStart_cnt(serial_port);
+  new_menu(serial_port);
+  // Mode_Condition_SDCard_Admin(serial_port);
 
   flush_batch_to_file(LOGFILE_HTTP_IPv4);
   flush_batch_to_file(LOGFILE_HTTP_IPv6);
