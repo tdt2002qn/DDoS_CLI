@@ -539,11 +539,11 @@ void Add_IPv4_Protect_Server();
 void Add_IPv6_Protect_Server();
 void Delete_IPv6_Protect_Server();
 void Delete_IPv4_Protect_Server();
+void Table_IP_Attacker();
+void Set_IPv4_Block_Attacker(int port, int add_or_remove);
+void Set_IPv4_Write_Block_Attacker(const char *ip_str, int port, int add_or_remove);
 
-void Add_IPv4_Block_Attacker();
-void Add_IPv6_Block_Attacker();
-void Delete_IPv4_Block_Attacker();
-void Delete_IPv6_Block_Attacker();
+void Set_IPv6_Block_Attacker(int port, int add_or_remove); // 1 ham
 
 // void SetIPTarget1(const char *ip_str);
 // void SetIPTarget2(const char *ip_str);
@@ -552,9 +552,7 @@ void Delete_IPv6_Block_Attacker();
 void Set_IPv4_Write_Protect_Server(const char *ip_str);
 void Set_IPv4_Remove_Protect_Server(const char *ip_str);
 
-void Set_IPv4_Write_Block_Attacker(const char *ip_str);
-void Set_IPv4_Remove_Block_Attacker(const char *ip_str);
-
+void Set_IPv4_Write_Block_Attacker(const char *ip_str, int port, int add_or_remove);
 void ReceiveIPv4String_protect(char *buffer_IPV4, char *header_buffer_IPV4, size_t buffer_size_IPV4);
 void ReceiveIPv4String(char *buffer_IPV4, size_t buffer_size_IPV4);
 void SetPortDefender();
@@ -2212,7 +2210,7 @@ void Delete_IPv6_Protect_Server()
 }
 
 // Block IPv6 Attacker
-void Add_IPv6_Block_Attacker()
+void Set_IPv6_Block_Attacker(int port, int add_or_remove)
 {
   int IPv6_Protect_ADD[4] = {0};
   u8 key;
@@ -2222,6 +2220,8 @@ void Add_IPv6_Block_Attacker()
   char input_buffer[40] = {0};
   u8 count = 0;
   int double_colon_position = -1;
+  uint32_t IPVer_Port;
+  uint32_t signal_add_or_remove;
 
   while (1)
   {
@@ -2310,6 +2310,39 @@ void Add_IPv6_Block_Attacker()
     //     }
     //   }
     //}
+
+    if (add_or_remove == 0)
+    {
+      signal_add_or_remove = 0x00000011;
+    }
+    else if (add_or_remove == 1)
+    {
+      signal_add_or_remove = 0x00000001;
+    }
+    switch (port)
+    {
+    case 1:
+      IPVer_Port = 0x00000016; // IPv6 port1
+      break;
+    case 2:
+      IPVer_Port = 0x00000026; // IPv6 port2
+      break;
+    case 3:
+      IPVer_Port = 0x00000086; // IPv6 port3
+      break;
+    case 4:
+      IPVer_Port = 0x00000106; // IPv6 port4
+      break;
+    case 5:
+      break;
+    case 6:
+      break;
+    case 7:
+      break;
+    case 8:
+      break;
+      default break;
+    }
     IPv6_Protect_ADD[0] = (IPv6Segment[0] << 16) | IPv6Segment[1];
     IPv6_Protect_ADD[1] = (IPv6Segment[2] << 16) | IPv6Segment[3];
     IPv6_Protect_ADD[2] = (IPv6Segment[4] << 16) | IPv6Segment[5];
@@ -2320,132 +2353,68 @@ void Add_IPv6_Block_Attacker()
     Xil_Out32(XPAR_DDOS_DEFENDER_0_BASEADDR + 552, IPv6_Protect_ADD[1]);
     Xil_Out32(XPAR_DDOS_DEFENDER_0_BASEADDR + 556, IPv6_Protect_ADD[2]);
     Xil_Out32(XPAR_DDOS_DEFENDER_0_BASEADDR + 560, IPv6_Protect_ADD[3]);
-    Xil_Out32(XPAR_DDOS_DEFENDER_0_BASEADDR + 564, IPV6_Version);
-    Xil_Out32(XPAR_DDOS_DEFENDER_0_BASEADDR + 568, 1);
+    Xil_Out32(XPAR_DDOS_DEFENDER_0_BASEADDR + 564, IPVer_Port);
+    Xil_Out32(XPAR_DDOS_DEFENDER_0_BASEADDR + 568, signal_add_or_remove);
     // delay_1s();
     delay_1ms();
     Xil_Out32(XPAR_DDOS_DEFENDER_0_BASEADDR + 568, 0);
-    XUartLite_SendByte(0x40600000, 'K');
+    //  XUartLite_SendByte(0x40600000, 'K');
   }
 }
 
-void Delete_IPv6_Block_Attacker()
+// Table IP attacker
+void Table_IP_Attacker()
 {
-  int IPv6_Protect_ADD[4] = {0};
-  u8 key;
-  u16 IPv6Segment[IPV6_SEGMENTS] = {0};
-  u8 next = 0;
-  u8 flag_error = 0;
-  char input_buffer[40] = {0};
-  u8 count = 0;
-  int double_colon_position = -1;
+  u8 key, key1;
 
   while (1)
   {
     key = XUartLite_RecvByte(0x40600000);
-    if (key == 13)
+    if (key == '1' || key == '2' || key == '3' || key == '4' || key == '5' || key == '6' || key == '7' || key == '8')
     {
       break;
     }
+
     else if (key == 03)
     {
       Reset_System();
+      break;
     }
-    else
-    {
-      // xil_printf("%c", key);
-      input_buffer[count++] = key;
-    }
-    // XUartLite_SendByte(0x40600000, 'H');
   }
-  input_buffer[count] = '\0';
-
-  char *token = strtok(input_buffer, ":");
-  while (token != NULL && next < IPV6_SEGMENTS)
+  while (1)
   {
-    if (strcmp(token, "") == 0)
+    key1 = XUartLite_RecvByte(0x40600000);
+    if (key1 == '1' || key1 == '2' || key1 == '3' || key1 == '4' || key1 == '5' || key1 == '6' || key1 == '7' || key1 == '8')
     {
-      if (double_colon_position == -1)
-      {
-        double_colon_position = next;
-        token = strtok(NULL, ":");
-        continue;
-      }
-      else
-      {
-        flag_error = 1;
-        break;
-      }
+      break;
     }
-    else
-    {
-      if (count_digits(token) > 4)
-      {
-        flag_error = 1;
-        break;
-      }
-      u16 segment_value = (u16)strtol(token, NULL, 16);
-      IPv6Segment[next++] = segment_value;
-      // xil_printf("\r\nSegment %d set to %04x", next - 1, segment_value);
-    }
-    token = strtok(NULL, ":");
-    // XUartLite_SendByte(0x40600000, 'H');
-  }
 
-  if (double_colon_position != -1)
-  {
-    int segments_to_add = IPV6_SEGMENTS - next;
-    for (int i = 0; i < segments_to_add; i++)
+    else if (key == 03)
     {
-      IPv6Segment[double_colon_position + i] = 0;
-    }
-    for (int i = 0; token != NULL; i++)
-    {
-      if (next < IPV6_SEGMENTS)
-      {
-        u16 segment_value = (u16)strtol(token, NULL, 16);
-        IPv6Segment[double_colon_position + segments_to_add + i] = segment_value;
-        next++;
-      }
-      token = strtok(NULL, ":");
+      Reset_System();
+      break;
     }
   }
 
-  if (flag_error == 1)
+  switch (key)
   {
-    XUartLite_SendByte(0x40600000, 'N');
+  case '1':
+    Set_IPv4_Block_Attacker(key1 - '0', 1);
+    break;
+  case '2':
+    Set_IPv4_Block_Attacker(key1 - '0', 0);
+    break;
+  case '3':
+    Set_IPv6_Block_Attacker(key1 - '0', 1);
+    break;
+  case '4':
+    Set_IPv6_Block_Attacker(key1 - '0', 0);
+    break;
+  default:
+    break;
   }
-  else
-  {
-    //  // xil_printf("\r\n ip  ");
-    //   for (int i = 0; i < IPV6_SEGMENTS; i++)
-    //   {
-    //     xil_printf("%04x", IPv6Segment[i]);
-    //     if (i < IPV6_SEGMENTS - 1)
-    //     {
-    //       xil_printf(":");
-    //     }
-    //   }
-    //}
-    IPv6_Protect_ADD[0] = (IPv6Segment[0] << 16) | IPv6Segment[1];
-    IPv6_Protect_ADD[1] = (IPv6Segment[2] << 16) | IPv6Segment[3];
-    IPv6_Protect_ADD[2] = (IPv6Segment[4] << 16) | IPv6Segment[5];
-    IPv6_Protect_ADD[3] = (IPv6Segment[6] << 16) | IPv6Segment[7];
-    delay_1ms();
-
-    Xil_Out32(XPAR_DDOS_DEFENDER_0_BASEADDR + 548, IPv6_Protect_ADD[0]);
-    Xil_Out32(XPAR_DDOS_DEFENDER_0_BASEADDR + 552, IPv6_Protect_ADD[1]);
-    Xil_Out32(XPAR_DDOS_DEFENDER_0_BASEADDR + 556, IPv6_Protect_ADD[2]);
-    Xil_Out32(XPAR_DDOS_DEFENDER_0_BASEADDR + 560, IPv6_Protect_ADD[3]);
-    Xil_Out32(XPAR_DDOS_DEFENDER_0_BASEADDR + 564, IPV6_Version);
-    Xil_Out32(XPAR_DDOS_DEFENDER_0_BASEADDR + 568, 0x00000011);
-    // delay_1s();
-    delay_1ms();
-    Xil_Out32(XPAR_DDOS_DEFENDER_0_BASEADDR + 544, 0);
-    XUartLite_SendByte(0x40600000, 'K');
-  }
+  XuartLite_SendByte(0x40600000, 'Y'); // cau hinh xong
 }
-
 int count_digits(char *str)
 {
   int count = 0;
@@ -4316,7 +4285,6 @@ void Port_mirroring_src_dst_ipv6(int dst_or_src, int add_or_remove)
   {
     Cacul_IPv6_into_port(&ipv6_1, &ipv6_2, &ipv6_3, &ipv6_4);
   }
-
   if (dst_or_src)
   {
     switch (key - '0')
@@ -5298,55 +5266,39 @@ void ModeStart()
       SetPortDefender();
       goto start;
     }
-    else if (key1 == '4')
-    {
-      Add_IPv4_Protect_Server();
-      goto start;
-    }
-    else if (key1 == 'R')
-    {
-      // SetIPv6Target();
-      Add_IPv6_Protect_Server();
-      // ReturnMode2();
-      goto start;
-    }
-    //
-    else if (key1 == 05)
-    {
-      Delete_IPv4_Protect_Server();
-      goto start;
-    }
-    else if (key1 == 06)
-    {
-      // SetIPv6Target();
-      Delete_IPv6_Protect_Server();
-      // ReturnMode2();
-      goto start;
-    }
-    // Block IP Client
-    //=========================
-    // else if (key1 == 0x08)
+    // else if (key1 == '4')
     // {
-    //   Add_IPv4_Block_Attacker();
+    //   Add_IPv4_Protect_Server();
     //   goto start;
     // }
+    // else if (key1 == 'R')
+    // {
+    //   // SetIPv6Target();
+    //   Add_IPv6_Protect_Server();
+    //   // ReturnMode2();
+    //   goto start;
+    // }
+    // //
+    // else if (key1 == 05)
+    // {
+    //   Delete_IPv4_Protect_Server();
+    //   goto start;
+    // }
+    // else if (key1 == 06)
+    // {
+    //   // SetIPv6Target();
+    //   Delete_IPv6_Protect_Server();
+    //   // ReturnMode2();
+    //   goto start;
+    // }
+    // Block IP Client
+
     else if (key1 == 0x09)
     {
+      Table_IP_Attacker();
+      goto start;
+    }
 
-      Add_IPv6_Block_Attacker();
-      goto start;
-    }
-    //
-    else if (key1 == 0x0A)
-    {
-      Delete_IPv4_Block_Attacker();
-      goto start;
-    }
-    else if (key1 == 0x0D)
-    {
-      Delete_IPv6_Block_Attacker();
-      goto start;
-    }
     //==============================
 
     //
@@ -8449,13 +8401,15 @@ void Set_IPv4_Remove_Protect_Server(const char *ip_str)
 }
 
 // Block attcker
-void Set_IPv4_Write_Block_Attacker(const char *ip_str)
+void Set_IPv4_Write_Block_Attacker(const char *ip_str, int port, int add_or_remove)
 {
   u16 IPlayerA = 0;
   u16 IPlayerB = 0;
   u16 IPlayerC = 0;
   u16 IPlayerD = 0;
   u8 flag_error = 0;
+  uint32_t IPVer_Port;
+  uint32_t signal_add_or_remove;
   int IPTarget_Write = 0;
   if (sscanf(ip_str, "%hu.%hu.%hu.%hu", &IPlayerA, &IPlayerB, &IPlayerC, &IPlayerD) != 4)
   {
@@ -8469,41 +8423,47 @@ void Set_IPv4_Write_Block_Attacker(const char *ip_str)
   }
 
   IPTarget_Write = IPlayerA * 16777216 + IPlayerB * 65536 + IPlayerC * 256 + IPlayerD;
+  if (add_or_remove == 0)
+  {
+    signal_add_or_remove = 0x00000011; // Remove
+  }
+  else
+  {
+    signal_add_or_remove = 0x00000001; // Add
+  }
+
+  switch (port)
+  {
+  case 1:
+    IPVer_Port = 0x00000014; // IPv4 + Port 1
+    break;
+  case 2:
+    IPVer_Port = 0x00000024; // IPv4 + Port 2
+    break;
+  case 3:
+    IPVer_Port = 0x00000084; // IPv4 + Port 3
+    break;
+  case 4:
+    IPVer_Port = 0x00000104; // IPv4 + Port 4
+    break;
+  case 5:
+    break;
+  case 6:
+    break;
+  case 7:
+    break;
+  case 8:
+    break;
+  default:
+    break;
+  }
+
   Xil_Out32(XPAR_DDOS_DEFENDER_0_BASEADDR + 548, 0x00000000);
   Xil_Out32(XPAR_DDOS_DEFENDER_0_BASEADDR + 552, 0x00000000);
   Xil_Out32(XPAR_DDOS_DEFENDER_0_BASEADDR + 556, 0x00000000);
   Xil_Out32(XPAR_DDOS_DEFENDER_0_BASEADDR + 560, IPTarget_Write);
-  Xil_Out32(XPAR_DDOS_DEFENDER_0_BASEADDR + 564, 0x00000004);
-  Xil_Out32(XPAR_DDOS_DEFENDER_0_BASEADDR + 568, 0x00000001);
-  // delay_1ms();
-  Xil_Out32(XPAR_DDOS_DEFENDER_0_BASEADDR + 568, 0x00000000);
-}
-void Set_IPv4_Remove_Block_Attacker(const char *ip_str)
-{
-  u16 IPlayerA = 0;
-  u16 IPlayerB = 0;
-  u16 IPlayerC = 0;
-  u16 IPlayerD = 0;
-  u8 flag_error = 0;
-  int IPTarget_Write = 0;
-  if (sscanf(ip_str, "%hu.%hu.%hu.%hu", &IPlayerA, &IPlayerB, &IPlayerC, &IPlayerD) != 4)
-  {
-    flag_error = 1;
-  }
-
-  if (flag_error == 1)
-  {
-    XUartLite_SendByte(0x40600000, 'N');
-    return;
-  }
-
-  IPTarget_Write = IPlayerA * 16777216 + IPlayerB * 65536 + IPlayerC * 256 + IPlayerD;
-  Xil_Out32(XPAR_DDOS_DEFENDER_0_BASEADDR + 548, 0x00000000);
-  Xil_Out32(XPAR_DDOS_DEFENDER_0_BASEADDR + 552, 0x00000000);
-  Xil_Out32(XPAR_DDOS_DEFENDER_0_BASEADDR + 556, 0x00000000);
-  Xil_Out32(XPAR_DDOS_DEFENDER_0_BASEADDR + 560, IPTarget_Write);
-  Xil_Out32(XPAR_DDOS_DEFENDER_0_BASEADDR + 564, 0x00000004);
-  Xil_Out32(XPAR_DDOS_DEFENDER_0_BASEADDR + 568, 0x00000011);
+  Xil_Out32(XPAR_DDOS_DEFENDER_0_BASEADDR + 564, IPVer_Port);
+  Xil_Out32(XPAR_DDOS_DEFENDER_0_BASEADDR + 568, signal_add_or_remove);
   // delay_1ms();
   Xil_Out32(XPAR_DDOS_DEFENDER_0_BASEADDR + 568, 0x00000000);
 }
@@ -8567,22 +8527,15 @@ void Delete_IPv4_Protect_Server()
   // }
 }
 
-void Add_IPv4_Block_Attacker()
+void Set_IPv4_Block_Attacker(int port, int add_or_remove)
 {
   char buffer_IPV4[BUFFER_SIZE_IPV4];
   char header_buffer_IPV4[1];
   ReceiveIPv4String_protect(buffer_IPV4, header_buffer_IPV4, BUFFER_SIZE_IPV4);
-  Set_IPv4_Write_Block_Attacker(buffer_IPV4);
-  XUartLite_SendByte(0x40600000, 'K');
+  Set_IPv4_Write_Block_Attacker(buffer_IPV4, port, add_or_remove);
+  // XUartLite_SendByte(0x40600000, 'K');
 }
-void Delete_IPv4_Block_Attacker()
-{
-  char buffer_IPV4[BUFFER_SIZE_IPV4];
-  char header_buffer_IPV4[1];
-  ReceiveIPv4String_protect(buffer_IPV4, header_buffer_IPV4, BUFFER_SIZE_IPV4);
-  Set_IPv4_Remove_Block_Attacker(buffer_IPV4);
-  XUartLite_SendByte(0x40600000, 'K');
-}
+
 // void SetIPTarget()
 // {
 //   u8 key;
@@ -13200,4 +13153,4 @@ void reset_HTTP_Table(struct IP_Connection *IP_Conn_Table, struct URL_Connection
   Atk_URL.url = 0;
   Atk_URL.max_URL_cnt = 0;
 }
-// main.c 31-3
+// main.c 30/6
