@@ -123,7 +123,7 @@ void SetHTTPDefender(int serial_port);
 void set_HTTP_IP_Table(int serial_port);
 void remove_ip_HTTP_from_hash(const char *ip);
 void remove_ip_from_file(const char *filename, const char *ip);
-void display_port_mirroring_config_from_db(int serial_port , int show_prompt);
+void display_port_mirroring_config_from_db(int serial_port, int show_prompt);
 //
 void SetTimeflood(int serial_port);
 void SetSynThresh(int serial_port);
@@ -1238,7 +1238,7 @@ void check_username_change_pass(int serial_port)
 void reconfig(int serial_port)
 {
 start:
-  //display_logo1();
+  // display_logo1();
   char key = 0;
   char enter = '\r';
   printf("\r\n *************************************************************************************************************************************************************************************************************");
@@ -6149,7 +6149,7 @@ start:
     system("clear");
     display_logo1();
     SetDateTime(serial_port);
-    goto start;
+    return;
   }
   else if (key == '2')
   {
@@ -6158,16 +6158,16 @@ start:
     display_logo1();
     printf("\r\n ==> Port 1 Configuration\n");
     reconfig(serial_port);
-    goto start;
+    return;
   }
   else if (key == '3')
   {
     current_port = 2;
     system("clear");
-    ;
+
     printf("\r\n ==> Port 2 Configuration\n");
     reconfig(serial_port);
-    goto start;
+    return;
   }
   else if (key == '4')
   {
@@ -6176,7 +6176,7 @@ start:
 
     printf("\r\n ==> Port 3 Configuration\n");
     reconfig(serial_port);
-    goto start;
+    return;
   }
   else if (key == '5')
   {
@@ -6184,14 +6184,14 @@ start:
     display_logo1();
     printf("\r\n ==> Port 4 Configuration\n");
     reconfig(serial_port);
-    goto start;
+    return;
   }
   else if (key == '6')
   {
     system("clear");
     display_logo1();
     port_mirroring_menu(serial_port);
-    goto start;
+    return;
   }
   else if (key == '7')
   {
@@ -6199,7 +6199,7 @@ start:
     display_logo1();
     display_table(serial_port);
     SetTimeflood(serial_port);
-    goto start;
+    return;
   }
   else if (key == '8')
   {
@@ -6207,7 +6207,7 @@ start:
     display_logo1();
     display_table(serial_port);
     AddIPv4VPN(serial_port);
-    goto start;
+    return;
   }
   else if (key == '9')
   {
@@ -6215,7 +6215,7 @@ start:
     display_logo1();
     display_table(serial_port);
     RemoveIPv4VPN(serial_port);
-    goto start;
+    return;
   }
   else if (key == 'A' || key == 'a')
   {
@@ -6223,7 +6223,7 @@ start:
     display_logo1();
     display_table(serial_port);
     AddIPv6VPN(serial_port);
-    goto start;
+    return;
   }
   else if (key == 'B' || key == 'b')
   {
@@ -6231,7 +6231,7 @@ start:
     display_logo1();
     display_table(serial_port);
     RemoveIPv6VPN(serial_port);
-    goto start;
+    return;
   }
   else if (key == 'Z' || key == 'z')
   {
@@ -6306,19 +6306,21 @@ void clean_json_array_string(const char *input, char *output, int out_size)
   output[out_idx] = '\0';
 }
 
-//void display_port_mirroring_config_from_db(int serial_port)
 void display_port_mirroring_config_from_db(int serial_port, int show_prompt)
-{ 
-  int idx = 1;
+{
   int max_width_type = 50;
   int max_width_value = 62;
-  int type_len = strlen(cleaned_type);
-  int value_len = strlen(extracted_values);
+  int idx = 1;
+  //   // In phần tiếp theo nếu MirrorType hoặc Value dài
+  // int type_len = strlen(cleaned_type);
+  // int value_len = strlen(extracted_values);
   int line = 1;
   sqlite3 *db;
+
   sqlite3_stmt *stmt;
   int rc = sqlite3_open(DB_PATH, &db);
-  sqlite3_busy_timeout(db, 2000); 
+  sqlite3_busy_timeout(db, 2000);
+
   if (rc)
   {
     printf("\n cannot open database: %s\n", sqlite3_errmsg(db));
@@ -6335,7 +6337,7 @@ void display_port_mirroring_config_from_db(int serial_port, int show_prompt)
   rc = sqlite3_prepare_v2(db, sql, -1, &stmt, NULL);
   if (rc != SQLITE_OK)
   {
-    printf("\nLỗi truy vấn: %s\n", sqlite3_errmsg(db));
+    printf("\nError query: %s\n", sqlite3_errmsg(db));
     sqlite3_close(db);
     return;
   }
@@ -6344,6 +6346,7 @@ void display_port_mirroring_config_from_db(int serial_port, int show_prompt)
   printf("| %-3s | %-15s | %-10s | %-22s | %-22s | %-50s | %-62s |\n",
          "No", "InterfaceName", "Mirroring", "Monitor Interface ID", "MirrorSetting", "MirrorType", "Value");
   printf("|=====|=================|============|========================|========================|====================================================|================================================================|\n");
+
   while (sqlite3_step(stmt) == SQLITE_ROW)
   {
     int mirroring = sqlite3_column_int(stmt, 1);
@@ -6364,17 +6367,20 @@ void display_port_mirroring_config_from_db(int serial_port, int show_prompt)
       strcpy(cleaned_type, "");
 
     const char *value_str = value ? (const char *)value : "";
+
     char extracted_values[512] = "";
     if (value_str && strlen(value_str) > 0)
-    extract_json_values(value_str, extracted_values, sizeof(extracted_values));
+      extract_json_values(value_str, extracted_values, sizeof(extracted_values));
     printf("| %-3d | %-15s | %-10s | %-22s | %-22s |", idx++, interface_name_str, mirroring_str, monitor_name_str, setting_str);
-
     // In phần đầu tiên của MirrorType
     printf(" %-*.*s |", max_width_type, max_width_type, cleaned_type);
 
     printf(" %-*.*s |\n", max_width_value, max_width_value, extracted_values);
 
     // In phần tiếp theo nếu MirrorType hoặc Value dài
+    int type_len = strlen(cleaned_type);
+    int value_len = strlen(extracted_values);
+    // int line = 1;
     while (line * max_width_type < type_len || line * max_width_value < value_len)
     {
       printf("| %-3s | %-15s | %-10s | %-22s | %-22s |", "", "", "", "", "");
@@ -6393,8 +6399,8 @@ void display_port_mirroring_config_from_db(int serial_port, int show_prompt)
     }
     printf("|-----+-----------------+------------+------------------------+------------------------+----------------------------------------------------+----------------------------------------------------------------|\n");
   }
-  //printf("Press Enter to return to menu...\n");
-  
+  // printf("Press Enter to return to menu...\n");
+
   if (show_prompt)
   {
     printf("Press Enter to return to menu...");
@@ -6412,33 +6418,33 @@ void Update_port_mirroring(int serial_port)
   printf("\nCurrent Port Mirroring Configurations:\n");
   display_port_mirroring_config_from_db(serial_port, 0);
 
-
   printf("\nEnter InterfaceName to update (e.g. eth1) or press 'exit' return previous menu :");
   scanf("%31s", port_name);
-  if (strcmp(port_name, "eth5") == 0) {
-  printf("Interface 'eth5' is not allowed to be selected for update.\n");
-  printf("Press Enter to return to the previous menu...");
-  getchar(); // Để đọc dấu Enter còn lại trong buffer
-  getchar();
-  system("clear");
-  display_logo1();
-  port_mirroring_menu(serial_port); // Quay lại menu chính hoặc menu port mirroring
-  return;
-}
+  if (strcmp(port_name, "eth5") == 0)
+  {
+    printf("Interface 'eth5' is not allowed to be selected for update.\n");
+    printf("Press Enter to return to the previous menu...");
+    getchar(); // Để đọc dấu Enter còn lại trong buffer
+    getchar();
+    system("clear");
+    display_logo1();
+    port_mirroring_menu(serial_port); // Quay lại menu chính hoặc menu port mirroring
+    return;
+  }
 
-  // Nếu người dùng nhập 'exit' thì quay về menu chính
-if (strcmp(port_name, "exit") == 0)
-{
-  printf("Returning to main menu...\n");
-  getchar(); // Clear buffer sau scanf
-  system("clear");
-  display_logo1();
-  port_mirroring_menu(serial_port);
-}
+  // Nếu người dùng nhập 'exit' thì quay về menu chíclearnh
+  if (strcmp(port_name, "exit") == 0)
+  {
+    printf("Returning to main menu...\n");
+    getchar(); // Clear buffer sau scanf
+    system("clear");
+    display_logo1();
+    port_mirroring_menu(serial_port);
+  }
   // Kiểm tra port có tồn tại không
   sqlite3 *db;
   int rc = sqlite3_open(DB_PATH, &db);
-  sqlite3_busy_timeout(db, 2000); 
+  sqlite3_busy_timeout(db, 2000);
   if (rc)
   {
     printf("Cannot open database: %s\n", sqlite3_errmsg(db));
@@ -6534,11 +6540,10 @@ if (strcmp(port_name, "exit") == 0)
   // Gán lại các trường đã có vào biến tạm để khi vào ConfigTypePacket sẽ hiển thị đúng
   strcpy(cfg_update.value, cfg.value);
   strcpy(cfg_update.mirror_type, cfg.mirror_type);
-  //ConfigTypePacket(serial_port, &cfg_update);
+  // ConfigTypePacket(serial_port, &cfg_update);
   system("clear");
   display_logo1();
   Select_traffic_mirroring_mode(serial_port, &cfg_update);
-
 
   // Sau khi cấu hình xong, parse lại value mới để lấy giá trị mới nhất
   cJSON *json_new = NULL;
@@ -6663,12 +6668,11 @@ void Delete_port_mirroring(int serial_port)
 {
   while (1)
   {
+    char port_name[32];
     system("clear");
     display_logo1();
     printf("\nCurrent Port Mirroring Configurations:\n");
     display_port_mirroring_config_from_db(serial_port, 0);
-
-    char port_name[32];
     printf("\nEnter InterfaceName to delete mirroring config (e.g. eth1), or type 'exit' to return: ");
     scanf("%31s", port_name);
     getchar(); // Clear newline kh?i stdin
@@ -6683,7 +6687,7 @@ void Delete_port_mirroring(int serial_port)
 
     sqlite3 *db;
     int rc = sqlite3_open(DB_PATH, &db);
-    sqlite3_busy_timeout(db, 2000); 
+    sqlite3_busy_timeout(db, 2000);
     if (rc)
     {
       printf("Cannot open database: %s\n", sqlite3_errmsg(db));
@@ -6712,7 +6716,7 @@ void Delete_port_mirroring(int serial_port)
       printf("Deleted mirroring configuration for %s successfully!\n", port_name);
       sqlite3_finalize(stmt);
       sqlite3_close(db);
-      break;  
+      break;
     }
     else
     {
@@ -6720,11 +6724,11 @@ void Delete_port_mirroring(int serial_port)
       sqlite3_finalize(stmt);
       sqlite3_close(db);
       printf("Please try again or type 'exit' to return.\n");
-      getchar();  
+      getchar();
     }
   }
   printf("Press Enter to return to menu...");
-  getchar(); 
+  getchar();
   system("clear");
   display_logo1();
   port_mirroring_menu(serial_port);
@@ -6761,7 +6765,7 @@ void Add_port_mirroring(int serial_port)
   if (scanf("%d", &choice) != 1)
   {
     printf("\nInvalid input! Please enter a number between 1 and %d.\n", num_ports + 1);
-    while (getchar() != '\n')
+    while (getchar() != '\n') // Clear the input buffer
       ;
     Add_port_mirroring(serial_port);
     return;
@@ -6870,6 +6874,9 @@ void ConfigTypePacket(int serial_port, PortMirroringConfig *cfg)
   int flag_src_ip = 0, flag_dest_port = 0, flag_src_port = 0;
   int flag_protocol = 0;
   char choice;
+  char type_fields[7][32] = {0};
+  char value_fields[7][40] = {0};
+  int field_count = 0;
 
   char mirror_type[128] = "";
   char value[256] = "";
@@ -6900,9 +6907,6 @@ void ConfigTypePacket(int serial_port, PortMirroringConfig *cfg)
   printf("\t\t|     9.    | Exit.                                                                                                                                                                          |\r\n");
   printf("\t\t+-----------+--------------------------------------------------------------------------------------------------------------------------------------------------------------------------------+\r\n");
 
-  char type_fields[7][32] = {0};
-  char value_fields[7][40] = {0};
-  int field_count = 0;
   if (cfg->mirror_type[0] && cfg->value[0])
   {
     char type_buf[128];
@@ -7135,7 +7139,7 @@ void ConfigTypePacket(int serial_port, PortMirroringConfig *cfg)
       display_logo1();
       Select_traffic_mirroring_mode(serial_port, cfg);
 
-      //printf("\nExiting Packet Filtering Configuration...\n");
+      // printf("\nExiting Packet Filtering Configuration...\n");
 
       return;
     }
@@ -7316,7 +7320,7 @@ void save_port_mirroring_to_db(const PortMirroringConfig *cfg)
 {
   sqlite3 *db;
   int rc = sqlite3_open(DB_PATH, &db);
-  sqlite3_busy_timeout(db, 2000); 
+  sqlite3_busy_timeout(db, 2000);
   if (rc)
   {
     printf("Cannot open database: %s\n", sqlite3_errmsg(db));
