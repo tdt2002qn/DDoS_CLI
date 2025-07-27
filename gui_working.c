@@ -8364,6 +8364,8 @@ void process_key(int serial_port, char *ID, char *Value, int client_sock, char *
       // printf("IP:%c\n", data);
       usleep(100000);
     }
+
+    // src-dst
     write(serial_port, &enter, sizeof(enter));
     while (1)
     {
@@ -8765,7 +8767,7 @@ void process_key(int serial_port, char *ID, char *Value, int client_sock, char *
       write(serial_port, &key8, sizeof(key8));
     }
     usleep(10000);
-    write(serial_port, &key0, sizeof(key0));
+    write(serial_port, &key0, sizeof(key0)); // xoa
     usleep(100000);
     while (1)
     {
@@ -10472,8 +10474,8 @@ void *run(void *arg)
   pthread_t lcd_thread;
   pthread_create(&lcd_thread, NULL, lcd_thread_function, NULL);
 
-  pthread_t memory_check_thread;
-  pthread_create(&memory_check_thread, NULL, memory_check_thread_function, NULL);
+  // pthread_t memory_check_thread;
+  // pthread_create(&memory_check_thread, NULL, memory_check_thread_function, NULL);
 
   pthread_t packet_queue_processing_thread_id;
   pthread_create(&packet_queue_processing_thread_id, NULL, packet_queue_processing_thread, NULL);

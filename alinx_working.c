@@ -1116,10 +1116,10 @@ int main()
   init_peripheral();
 
   init_http_resource();
-  LoadEEPROM();
-  //   EnableDefender1 = 12543;
-  load_default();
-  // ConfigurationIPcore();
+  // LoadEEPROM();
+  //     EnableDefender1 = 2047;
+  // load_default();
+  //  ConfigurationIPcore(1);
 
   Xil_Out32(XPAR_DDOS_DEFENDER_0_BASEADDR + 600, 0x00000007);
 
@@ -1158,6 +1158,20 @@ int main()
   // Xil_Out32(XPAR_DDOS_DEFENDER_0_BASEADDR + 540, 0x01000004);
   // Xil_Out32(XPAR_DDOS_DEFENDER_0_BASEADDR + 544, 0x00000011);
   // Xil_Out32(XPAR_DDOS_DEFENDER_0_BASEADDR + 544, 0x00000000);
+  //
+  //  Xil_Out32(XPAR_DDOS_DEFENDER_0_BASEADDR + 40, 0x000007ff);  // enable_defender
+  //                                                              //    Xil_Out32(XPAR_DDOS_DEFENDER_0_BASEADDR + 40, 0x000007fe);
+  //  Xil_Out32(XPAR_DDOS_DEFENDER_0_BASEADDR + 16, 0x000003e8);  // time_detect_atk
+  //  Xil_Out32(XPAR_DDOS_DEFENDER_0_BASEADDR + 20, 0x00000064);  // syn_thre
+  //  Xil_Out32(XPAR_DDOS_DEFENDER_0_BASEADDR + 24, 0x00000064);  // ack_thre
+  //  Xil_Out32(XPAR_DDOS_DEFENDER_0_BASEADDR + 28, 0x000005dc);  // udp_thre
+  //  Xil_Out32(XPAR_DDOS_DEFENDER_0_BASEADDR + 112, 0x000005dc); // udp_1s_thre    // profile port_0
+  //  Xil_Out32(XPAR_DDOS_DEFENDER_0_BASEADDR + 32, 0x000005dc);  // icmp_thre
+  //  Xil_Out32(XPAR_DDOS_DEFENDER_0_BASEADDR + 116, 0x000005dc); // icmp_1s_thre
+  //  Xil_Out32(XPAR_DDOS_DEFENDER_0_BASEADDR + 36, 0x000005dc);  // dns_thre
+  //  Xil_Out32(XPAR_DDOS_DEFENDER_0_BASEADDR + 37, 0x000005dc);  // ipsec_ike_thre
+  //
+  Xil_Out32(XPAR_DDOS_DEFENDER_0_BASEADDR + 676, 0x00000000);
   ModeStart();
   // show_inf_flow();
 
@@ -4145,7 +4159,6 @@ void Port_mirroring_src_dst_ipv6(int dst_or_src, int add_or_remove)
     case 4:
       // Write_IPv6_into_port_mirroring(716, 720, 724, 728, ipv6_1, ipv6_2, ipv6_3, ipv6_4);
       break;
-
     case 5:
       Write_IPv6_into_port_mirroring(716, 720, 724, 728, ipv6_1, ipv6_2, ipv6_3, ipv6_4);
       break;
@@ -4301,7 +4314,7 @@ void Port_mirroring_protocol(int add_or_remove)
   }
   if (add_or_remove == 0)
   {
-    Xil_Out32(XPAR_DDOS_DEFENDER_0_BASEADDR + 736, 0x00000000); // Clear previous protocol
+    Xil_Out32(XPAR_DDOS_DEFENDER_0_BASEADDR + 680, 0x00000000); // Clear previous protocol
   }
   else
   {
@@ -4310,114 +4323,114 @@ void Port_mirroring_protocol(int add_or_remove)
     case 1:
       if (protocol == '1')
       {
-        Xil_Out32(XPAR_DDOS_DEFENDER_0_BASEADDR + 736, 0x00000006); // TCP
+        Xil_Out32(XPAR_DDOS_DEFENDER_0_BASEADDR + 680, 0x00000006); // TCP
       }
       else if (protocol == '2')
       {
-        Xil_Out32(XPAR_DDOS_DEFENDER_0_BASEADDR + 736, 0x00000011); // UDP
+        Xil_Out32(XPAR_DDOS_DEFENDER_0_BASEADDR + 680, 0x00000011); // UDP
       }
       else if (protocol == '3')
       {
-        Xil_Out32(XPAR_DDOS_DEFENDER_0_BASEADDR + 736, 0x00000001); // ICMP
+        Xil_Out32(XPAR_DDOS_DEFENDER_0_BASEADDR + 680, 0x00000001); // ICMP
       }
 
       break;
     case 2:
       if (protocol == '1')
       {
-        Xil_Out32(XPAR_DDOS_DEFENDER_0_BASEADDR + 736, 0x00000006); // TCP
+        Xil_Out32(XPAR_DDOS_DEFENDER_0_BASEADDR + 680, 0x00000006); // TCP
       }
       else if (protocol == '2')
       {
-        Xil_Out32(XPAR_DDOS_DEFENDER_0_BASEADDR + 736, 0x00000011); // UDP
+        Xil_Out32(XPAR_DDOS_DEFENDER_0_BASEADDR + 680, 0x00000011); // UDP
       }
       else if (protocol == '3')
       {
-        Xil_Out32(XPAR_DDOS_DEFENDER_0_BASEADDR + 736, 0x00000001); // ICMP
+        Xil_Out32(XPAR_DDOS_DEFENDER_0_BASEADDR + 680, 0x00000001); // ICMP
       }
       break;
     case 3:
       if (protocol == '1')
       {
-        Xil_Out32(XPAR_DDOS_DEFENDER_0_BASEADDR + 736, 0x00000006); // TCP
+        Xil_Out32(XPAR_DDOS_DEFENDER_0_BASEADDR + 680, 0x00000006); // TCP
       }
       else if (protocol == '2')
       {
-        Xil_Out32(XPAR_DDOS_DEFENDER_0_BASEADDR + 736, 0x00000011); // UDP
+        Xil_Out32(XPAR_DDOS_DEFENDER_0_BASEADDR + 680, 0x00000011); // UDP
       }
       else if (protocol == '3')
       {
-        Xil_Out32(XPAR_DDOS_DEFENDER_0_BASEADDR + 736, 0x00000001); // ICMP
+        Xil_Out32(XPAR_DDOS_DEFENDER_0_BASEADDR + 680, 0x00000001); // ICMP
       }
       break;
     case 4:
       if (protocol == '1')
       {
-        Xil_Out32(XPAR_DDOS_DEFENDER_0_BASEADDR + 736, 0x00000006); // TCP
+        Xil_Out32(XPAR_DDOS_DEFENDER_0_BASEADDR + 680, 0x00000006); // TCP
       }
       else if (protocol == '2')
       {
-        Xil_Out32(XPAR_DDOS_DEFENDER_0_BASEADDR + 736, 0x00000011); // UDP
+        Xil_Out32(XPAR_DDOS_DEFENDER_0_BASEADDR + 680, 0x00000011); // UDP
       }
       else if (protocol == '3')
       {
-        Xil_Out32(XPAR_DDOS_DEFENDER_0_BASEADDR + 736, 0x00000001); // ICMP
+        Xil_Out32(XPAR_DDOS_DEFENDER_0_BASEADDR + 680, 0x00000001); // ICMP
       }
       break;
     case 5:
       if (protocol == '1')
       {
-        Xil_Out32(XPAR_DDOS_DEFENDER_0_BASEADDR + 736, 0x00000006); // TCP
+        Xil_Out32(XPAR_DDOS_DEFENDER_0_BASEADDR + 680, 0x00000006); // TCP
       }
       else if (protocol == '2')
       {
-        Xil_Out32(XPAR_DDOS_DEFENDER_0_BASEADDR + 736, 0x00000011); // UDP
+        Xil_Out32(XPAR_DDOS_DEFENDER_0_BASEADDR + 680, 0x00000011); // UDP
       }
       else if (protocol == '3')
       {
-        Xil_Out32(XPAR_DDOS_DEFENDER_0_BASEADDR + 736, 0x00000001); // ICMP
+        Xil_Out32(XPAR_DDOS_DEFENDER_0_BASEADDR + 680, 0x00000001); // ICMP
       }
       break;
     case 6:
       if (protocol == '1')
       {
-        Xil_Out32(XPAR_DDOS_DEFENDER_0_BASEADDR + 736, 0x00000006); // TCP
+        Xil_Out32(XPAR_DDOS_DEFENDER_0_BASEADDR + 680, 0x00000006); // TCP
       }
       else if (protocol == '2')
       {
-        Xil_Out32(XPAR_DDOS_DEFENDER_0_BASEADDR + 736, 0x00000011); // UDP
+        Xil_Out32(XPAR_DDOS_DEFENDER_0_BASEADDR + 680, 0x00000011); // UDP
       }
       else if (protocol == '3')
       {
-        Xil_Out32(XPAR_DDOS_DEFENDER_0_BASEADDR + 736, 0x00000001); // ICMP
+        Xil_Out32(XPAR_DDOS_DEFENDER_0_BASEADDR + 680, 0x00000001); // ICMP
       }
       break;
     case 7:
       if (protocol == '1')
       {
-        Xil_Out32(XPAR_DDOS_DEFENDER_0_BASEADDR + 736, 0x00000006); // TCP
+        Xil_Out32(XPAR_DDOS_DEFENDER_0_BASEADDR + 680, 0x00000006); // TCP
       }
       else if (protocol == '2')
       {
-        Xil_Out32(XPAR_DDOS_DEFENDER_0_BASEADDR + 736, 0x00000011); // UDP
+        Xil_Out32(XPAR_DDOS_DEFENDER_0_BASEADDR + 680, 0x00000011); // UDP
       }
       else if (protocol == '3')
       {
-        Xil_Out32(XPAR_DDOS_DEFENDER_0_BASEADDR + 736, 0x00000001); // ICMP
+        Xil_Out32(XPAR_DDOS_DEFENDER_0_BASEADDR + 680, 0x00000001); // ICMP
       }
       break;
     case 8:
       if (protocol == '1')
       {
-        Xil_Out32(XPAR_DDOS_DEFENDER_0_BASEADDR + 736, 0x00000006); // TCP
+        Xil_Out32(XPAR_DDOS_DEFENDER_0_BASEADDR + 680, 0x00000006); // TCP
       }
       else if (protocol == '2')
       {
-        Xil_Out32(XPAR_DDOS_DEFENDER_0_BASEADDR + 736, 0x00000011); // UDP
+        Xil_Out32(XPAR_DDOS_DEFENDER_0_BASEADDR + 680, 0x00000011); // UDP
       }
       else if (protocol == '3')
       {
-        Xil_Out32(XPAR_DDOS_DEFENDER_0_BASEADDR + 736, 0x00000001); // ICMP
+        Xil_Out32(XPAR_DDOS_DEFENDER_0_BASEADDR + 680, 0x00000001); // ICMP
       }
       break;
     default:
@@ -4458,22 +4471,73 @@ void Port_mirroring_mode(int add_or_remove)
     if (mode == '1')
     {
 
-      mode_monitored = '1';
+      mode_monitored = 1;
 
       u8 value = ((port_monitored & 0x0F) << 2) | (mode_monitored & 0x03);
+
+      char str2[10];
+
+      sprintf(str2, "%d", value);
+      for (int i = 0; i < 10; i++)
+      {
+        if (str2[i] == '\0')
+          break;
+        XUartLite_SendByte(0x40600000, str2[i]);
+      }
+      XUartLite_SendByte(0x40600000, '-');
       Xil_Out32(XPAR_DDOS_DEFENDER_0_BASEADDR + 676, value); // I
     }
     else if (mode == '2')
     {
-      mode_monitored = '2';
+      mode_monitored = 2;
       u8 value = ((port_monitored & 0x0F) << 2) | (mode_monitored & 0x03);
+      char str2[10];
+
+      sprintf(str2, "%d", value);
+      for (int i = 0; i < 10; i++)
+      {
+        if (str2[i] == '\0')
+          break;
+        XUartLite_SendByte(0x40600000, str2[i]);
+      }
+      XUartLite_SendByte(0x40600000, '-');
       Xil_Out32(XPAR_DDOS_DEFENDER_0_BASEADDR + 676, value); // E
     }
     else if (mode == '3')
     {
-      mode_monitored = '3';
+      mode_monitored = 3;
       u8 value = ((port_monitored & 0x0F) << 2) | (mode_monitored & 0x03);
+
+      char str2[10];
+
+      sprintf(str2, "%d", value);
+      for (int i = 0; i < 10; i++)
+      {
+        if (str2[i] == '\0')
+          break;
+        XUartLite_SendByte(0x40600000, str2[i]);
+      }
+      XUartLite_SendByte(0x40600000, '-');
+
       Xil_Out32(XPAR_DDOS_DEFENDER_0_BASEADDR + 676, value); // I+E
+    }
+    else if (mode == '0')
+    {
+      mode_monitored = 0;
+      u8 value = ((port_monitored & 0x0F) << 2) | (mode_monitored & 0x03);
+
+      char str2[10];
+
+      sprintf(str2, "%d", value);
+      for (int i = 0; i < 10; i++)
+      {
+        if (str2[i] == '\0')
+          break;
+        XUartLite_SendByte(0x40600000, str2[i]);
+      }
+      XUartLite_SendByte(0x40600000, '-');
+
+      Xil_Out32(XPAR_DDOS_DEFENDER_0_BASEADDR + 676, value); // xoa
     }
 
     break;
@@ -4498,6 +4562,13 @@ void Port_mirroring_mode(int add_or_remove)
       u8 value = ((port_monitored & 0x0F) << 2) | (mode_monitored & 0x03);
       Xil_Out32(XPAR_DDOS_DEFENDER_0_BASEADDR + 676, value); // I+E
     }
+    else if (mode == '0')
+    {
+      mode_monitored = 0;
+      u8 value = ((port_monitored & 0x0F) << 2) | (mode_monitored & 0x03);
+
+      Xil_Out32(XPAR_DDOS_DEFENDER_0_BASEADDR + 676, value); // xoa
+    }
     break;
   case 3:
     if (mode == '1')
@@ -4519,6 +4590,13 @@ void Port_mirroring_mode(int add_or_remove)
       mode_monitored = '3';
       u8 value = ((port_monitored & 0x0F) << 2) | (mode_monitored & 0x03);
       Xil_Out32(XPAR_DDOS_DEFENDER_0_BASEADDR + 676, value); // I+E
+    }
+    else if (mode == '0')
+    {
+      mode_monitored = 0;
+      u8 value = ((port_monitored & 0x0F) << 2) | (mode_monitored & 0x03);
+
+      Xil_Out32(XPAR_DDOS_DEFENDER_0_BASEADDR + 676, value); // xoa
     }
     break;
   case 4:
@@ -4542,6 +4620,13 @@ void Port_mirroring_mode(int add_or_remove)
       u8 value = ((port_monitored & 0x0F) << 2) | (mode_monitored & 0x03);
       Xil_Out32(XPAR_DDOS_DEFENDER_0_BASEADDR + 676, value); // I+E
     }
+    else if (mode == '0')
+    {
+      mode_monitored = 0;
+      u8 value = ((port_monitored & 0x0F) << 2) | (mode_monitored & 0x03);
+
+      Xil_Out32(XPAR_DDOS_DEFENDER_0_BASEADDR + 676, value); // xoa
+    }
     break;
   case 5:
     if (mode == '1')
@@ -4563,6 +4648,13 @@ void Port_mirroring_mode(int add_or_remove)
       mode_monitored = '3';
       u8 value = ((port_monitored & 0x0F) << 2) | (mode_monitored & 0x03);
       Xil_Out32(XPAR_DDOS_DEFENDER_0_BASEADDR + 676, value); // I+E
+    }
+    else if (mode == '0')
+    {
+      mode_monitored = 0;
+      u8 value = ((port_monitored & 0x0F) << 2) | (mode_monitored & 0x03);
+
+      Xil_Out32(XPAR_DDOS_DEFENDER_0_BASEADDR + 676, value); // xoa
     }
     break;
   case 6:
@@ -4586,6 +4678,13 @@ void Port_mirroring_mode(int add_or_remove)
       u8 value = ((port_monitored & 0x0F) << 2) | (mode_monitored & 0x03);
       Xil_Out32(XPAR_DDOS_DEFENDER_0_BASEADDR + 676, value); // I+E
     }
+    else if (mode == '0')
+    {
+      mode_monitored = 0;
+      u8 value = ((port_monitored & 0x0F) << 2) | (mode_monitored & 0x03);
+
+      Xil_Out32(XPAR_DDOS_DEFENDER_0_BASEADDR + 676, value); // xoa
+    }
     break;
   case 7:
     if (mode == '1')
@@ -4607,6 +4706,13 @@ void Port_mirroring_mode(int add_or_remove)
       mode_monitored = '3';
       u8 value = ((port_monitored & 0x0F) << 2) | (mode_monitored & 0x03);
       Xil_Out32(XPAR_DDOS_DEFENDER_0_BASEADDR + 676, value); // I+E
+    }
+    else if (mode == '0')
+    {
+      mode_monitored = 0;
+      u8 value = ((port_monitored & 0x0F) << 2) | (mode_monitored & 0x03);
+
+      Xil_Out32(XPAR_DDOS_DEFENDER_0_BASEADDR + 676, value); // xoa
     }
     break;
   case 8:
@@ -4630,6 +4736,13 @@ void Port_mirroring_mode(int add_or_remove)
       u8 value = ((port_monitored & 0x0F) << 2) | (mode_monitored & 0x03);
       Xil_Out32(XPAR_DDOS_DEFENDER_0_BASEADDR + 676, value); // I+E
     }
+    else if (mode == '0')
+    {
+      mode_monitored = 0;
+      u8 value = ((port_monitored & 0x0F) << 2) | (mode_monitored & 0x03);
+
+      Xil_Out32(XPAR_DDOS_DEFENDER_0_BASEADDR + 676, value); // xoa
+    }
     break;
   default:
     break;
@@ -4639,16 +4752,16 @@ void Port_mirroring_mode(int add_or_remove)
 // Chose Port monitored
 void Choose_port_monitored()
 {
+
   u8 key = 0;
   u8 key1;
   char buffer[16] = {0};
   int idx = 0;
   u8 value;
-  uint8_t port_monitored;
+  // uint8_t port_monitored;
   while (1)
   {
     key = XUartLite_RecvByte(0x40600000);
-
     if (key == '1' || key == '2' || key == '3' || key == '4' || key == '5' || key == '6' || key == '7' || key == '8')
     {
       break;
@@ -4663,114 +4776,96 @@ void Choose_port_monitored()
       break;
     }
   }
-  if (key1 == "1")
+  if (key1 == '1')
   {
     switch (key - '0')
     {
     case 1:
       port_monitored_1 = 1;
-      port_monitored = (uint8_t)((port_monitored_1 << 3) | (port_monitored_2 << 2) | (port_monitored_3 << 1) | (port_monitored_4 << 0));
-      value = ((port_monitored & 0x0F) << 2) | (mode_monitored & 0x03);
-      Xil_Out32(XPAR_DDOS_DEFENDER_0_BASEADDR + 676, value);
+      port_monitored = (port_monitored_1 << 0) | (port_monitored_2 << 1) | (port_monitored_3 << 2) | (port_monitored_4 << 3);
+
       break;
     case 2:
       port_monitored_2 = 1;
-      port_monitored = (uint8_t)((port_monitored_1 << 3) | (port_monitored_2 << 2) | (port_monitored_3 << 1) | (port_monitored_4 << 0));
-      value = ((port_monitored & 0x0F) << 2) | (mode_monitored & 0x03);
-      Xil_Out32(XPAR_DDOS_DEFENDER_0_BASEADDR + 676, value);
+      port_monitored = (port_monitored_1 << 0) | (port_monitored_2 << 1) | (port_monitored_3 << 2) | (port_monitored_4 << 3);
+
       break;
     case 3:
       port_monitored_3 = 1;
-      port_monitored = (uint8_t)((port_monitored_1 << 3) | (port_monitored_2 << 2) | (port_monitored_3 << 1) | (port_monitored_4 << 0));
-      value = ((port_monitored & 0x0F) << 2) | (mode_monitored & 0x03);
-      Xil_Out32(XPAR_DDOS_DEFENDER_0_BASEADDR + 676, value);
+      port_monitored = (port_monitored_1 << 0) | (port_monitored_2 << 1) | (port_monitored_3 << 2) | (port_monitored_4 << 3);
 
       break;
     case 4:
       port_monitored_4 = 1;
-      port_monitored = (uint8_t)((port_monitored_1 << 3) | (port_monitored_2 << 2) | (port_monitored_3 << 1) | (port_monitored_4 << 0));
-      value = ((port_monitored & 0x0F) << 2) | (mode_monitored & 0x03);
-      Xil_Out32(XPAR_DDOS_DEFENDER_0_BASEADDR + 676, value);
+      port_monitored = (port_monitored_1 << 0) | (port_monitored_2 << 1) | (port_monitored_3 << 2) | (port_monitored_4 << 3);
+
       break;
     case 5:
       port_monitored_1 = 1;
-      port_monitored = (uint8_t)((port_monitored_1 << 3) | (port_monitored_2 << 2) | (port_monitored_3 << 1) | (port_monitored_4 << 0));
-      value = ((port_monitored & 0x0F) << 2) | (mode_monitored & 0x03);
-      Xil_Out32(XPAR_DDOS_DEFENDER_0_BASEADDR + 676, value);
+      port_monitored = (port_monitored_1 << 0) | (port_monitored_2 << 1) | (port_monitored_3 << 2) | (port_monitored_4 << 3);
+
       break;
     case 6:
       port_monitored_1 = 1;
-      port_monitored = (uint8_t)((port_monitored_1 << 3) | (port_monitored_2 << 2) | (port_monitored_3 << 1) | (port_monitored_4 << 0));
-      value = ((port_monitored & 0x0F) << 2) | (mode_monitored & 0x03);
-      Xil_Out32(XPAR_DDOS_DEFENDER_0_BASEADDR + 676, value);
+      port_monitored = (port_monitored_1 << 0) | (port_monitored_2 << 1) | (port_monitored_3 << 2) | (port_monitored_4 << 3);
+
       break;
     case 7:
       port_monitored_1 = 1;
-      port_monitored = (uint8_t)((port_monitored_1 << 3) | (port_monitored_2 << 2) | (port_monitored_3 << 1) | (port_monitored_4 << 0));
-      value = ((port_monitored & 0x0F) << 2) | (mode_monitored & 0x03);
-      Xil_Out32(XPAR_DDOS_DEFENDER_0_BASEADDR + 676, value);
+      port_monitored = (port_monitored_1 << 0) | (port_monitored_2 << 1) | (port_monitored_3 << 2) | (port_monitored_4 << 3);
+
       break;
     case 8:
       port_monitored_1 = 1;
-      port_monitored = (uint8_t)((port_monitored_1 << 3) | (port_monitored_2 << 2) | (port_monitored_3 << 1) | (port_monitored_4 << 0));
-      value = ((port_monitored & 0x0F) << 2) | (mode_monitored & 0x03);
-      Xil_Out32(XPAR_DDOS_DEFENDER_0_BASEADDR + 676, value);
+      port_monitored = (port_monitored_1 << 0) | (port_monitored_2 << 1) | (port_monitored_3 << 2) | (port_monitored_4 << 3);
+
       break;
     default:
+      XUartLite_SendByte(0x40600000, 'K');
       break;
     }
   }
-  else if (key1 == "0")
+  else if (key1 == '0')
   {
     switch (key - '0')
     {
     case 1:
       port_monitored_1 = 0;
-      port_monitored = (uint8_t)((port_monitored_1 << 3) | (port_monitored_2 << 2) | (port_monitored_3 << 1) | (port_monitored_4 << 0));
-      value = ((port_monitored & 0x0F) << 2) | (mode_monitored & 0x03);
-      Xil_Out32(XPAR_DDOS_DEFENDER_0_BASEADDR + 676, value);
+      port_monitored = (port_monitored_1 << 0) | (port_monitored_2 << 1) | (port_monitored_3 << 2) | (port_monitored_4 << 3);
+
       break;
     case 2:
       port_monitored_2 = 0;
-      port_monitored = (uint8_t)((port_monitored_1 << 3) | (port_monitored_2 << 2) | (port_monitored_3 << 1) | (port_monitored_4 << 0));
-      value = ((port_monitored & 0x0F) << 2) | (mode_monitored & 0x03);
-      Xil_Out32(XPAR_DDOS_DEFENDER_0_BASEADDR + 676, value);
+      port_monitored = (port_monitored_1 << 0) | (port_monitored_2 << 1) | (port_monitored_3 << 2) | (port_monitored_4 << 3);
+
       break;
     case 3:
       port_monitored_3 = 0;
-      port_monitored = (uint8_t)((port_monitored_1 << 3) | (port_monitored_2 << 2) | (port_monitored_3 << 1) | (port_monitored_4 << 0));
-      value = ((port_monitored & 0x0F) << 2) | (mode_monitored & 0x03);
-      Xil_Out32(XPAR_DDOS_DEFENDER_0_BASEADDR + 676, value);
+      port_monitored = (port_monitored_1 << 0) | (port_monitored_2 << 1) | (port_monitored_3 << 2) | (port_monitored_4 << 3);
+
       break;
     case 4:
       port_monitored_4 = 0;
-      port_monitored = (uint8_t)((port_monitored_1 << 3) | (port_monitored_2 << 2) | (port_monitored_3 << 1) | (port_monitored_4 << 0));
-      value = ((port_monitored & 0x0F) << 2) | (mode_monitored & 0x03);
-      Xil_Out32(XPAR_DDOS_DEFENDER_0_BASEADDR + 676, value);
+      port_monitored = (port_monitored_1 << 0) | (port_monitored_2 << 1) | (port_monitored_3 << 2) | (port_monitored_4 << 3);
+
       break;
     case 5:
-      port_monitored_1 = 1;
-      port_monitored = (uint8_t)((port_monitored_1 << 3) | (port_monitored_2 << 2) | (port_monitored_3 << 1) | (port_monitored_4 << 0));
-      value = ((port_monitored & 0x0F) << 2) | (mode_monitored & 0x03);
-      Xil_Out32(XPAR_DDOS_DEFENDER_0_BASEADDR + 676, value);
+      port_monitored_1 = 0;
+      port_monitored = (port_monitored_1 << 0) | (port_monitored_2 << 1) | (port_monitored_3 << 2) | (port_monitored_4 << 3);
+
       break;
     case 6:
-      port_monitored_1 = 1;
-      port_monitored = (uint8_t)((port_monitored_1 << 3) | (port_monitored_2 << 2) | (port_monitored_3 << 1) | (port_monitored_4 << 0));
-      value = ((port_monitored & 0x0F) << 2) | (mode_monitored & 0x03);
-      Xil_Out32(XPAR_DDOS_DEFENDER_0_BASEADDR + 676, value);
+      port_monitored_1 = 0;
+      port_monitored = (port_monitored_1 << 0) | (port_monitored_2 << 1) | (port_monitored_3 << 2) | (port_monitored_4 << 3);
       break;
     case 7:
-      port_monitored_1 = 1;
-      port_monitored = (uint8_t)((port_monitored_1 << 3) | (port_monitored_2 << 2) | (port_monitored_3 << 1) | (port_monitored_4 << 0));
-      value = ((port_monitored & 0x0F) << 2) | (mode_monitored & 0x03);
-      Xil_Out32(XPAR_DDOS_DEFENDER_0_BASEADDR + 676, value);
+      port_monitored_1 = 0;
+      port_monitored = (port_monitored_1 << 0) | (port_monitored_2 << 1) | (port_monitored_3 << 2) | (port_monitored_4 << 3);
       break;
     case 8:
-      port_monitored_1 = 1;
-      port_monitored = (uint8_t)((port_monitored_1 << 3) | (port_monitored_2 << 2) | (port_monitored_3 << 1) | (port_monitored_4 << 0));
-      value = ((port_monitored & 0x0F) << 2) | (mode_monitored & 0x03);
-      Xil_Out32(XPAR_DDOS_DEFENDER_0_BASEADDR + 676, value);
+      port_monitored_1 = 0;
+      port_monitored = (port_monitored_1 << 0) | (port_monitored_2 << 1) | (port_monitored_3 << 2) | (port_monitored_4 << 3);
+
       break;
     default:
       break;
@@ -9645,7 +9740,7 @@ void SetSynonymousDefender()
         LANDATTACK_en2 = 0;
         break;
       case 3:
-        LANDATTACK_en3 = 01;
+        LANDATTACK_en3 = 0;
         break;
       case 4:
         LANDATTACK_en4 = 0;
@@ -9723,7 +9818,6 @@ void SetUDPDefender()
     if (key1 == '1' || key1 == '2' || key1 == '3' || key1 == '4' || key1 == '5' || key1 == '6' || key1 == '7' || key1 == '8')
       break;
   }
-
   while (1)
   {
     key = XUartLite_RecvByte(0x40600000);
@@ -9758,7 +9852,6 @@ void SetUDPDefender()
       default:
         break;
       }
-
       done = 1;
     }
     else if (key == 'n' || key == 'N')
@@ -12857,4 +12950,4 @@ void reset_HTTP_Table(struct IP_Connection *IP_Conn_Table, struct URL_Connection
   Atk_URL.url = 0;
   Atk_URL.max_URL_cnt = 0;
 }
-// main.c 19/7 bythi
+// main.c 5/7 bythi
