@@ -233,17 +233,12 @@ dqfJHHFSlDBD4PF4dP1hG0wJzOZoKnGtHN9DvFbbpaS+NXCkXs9P/ABVmTo9I89n\n\
 WvUi+LUp0EQR6zUuRr79jhiyX6i/GTKh9dwD5nyaHwx8qbAOITc78bA=\n\
 -----END RSA PRIVATE KEY-----\n";
 
-
-
 const char alphabet[] = "abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789";
-
-
-void test_attack_packets();
 
 /*============FUNCTION FOR HTTPS==================*/
 static void display_whitelist(void);
 static void display_processing(void);
-unsigned long IPV4_to_decimal(const char *ip);
+unsigned long ipv4_to_decimal(const char *ip);
 unsigned long hash_string_to_int(unsigned char *str);
 int hash_time_to_int(void);
 void init_http_resource(void);
@@ -255,9 +250,9 @@ void reset_HTTP_Table(struct IP_Connection *IP_Conn_Table_1, struct URL_Connecti
 void add_blacklist(char *key_addr);
 static void display_blacklist(void);
 void get_data_BL_from_Thread_HTTPS(char *get_ip);
-void Send_IPV4_HTTPS_to_BLackList(int serial_port, char *get_ip);
+void Send_ipV4_HTTPS_to_BLackList(int serial_port, char *get_ip);
 void get_data_WL_from_Thread_HTTPS(char *get_ip);
-void Send_IPV4_HTTPS_to_WhiteList(int serial_port, char *get_ip);
+void Send_IPv4_HTTPS_to_WhiteList(int serial_port, char *get_ip);
 THREAD_RETURN WOLFSSL_THREAD process_https(void *args);
 /*==================================================*/
 /*==============================================*/
@@ -298,7 +293,6 @@ void get_current_date(char *date_str);
 void get_custom_datetime(char *date_str);
 void send_time(int serial_port);
 void remove_old_logs(void);
-int open_and_check_dir(const char *dir_path);
 // void memory_check_thread_function(void);
 void *memory_check_thread_function(void *arg);
 void *run(void *arg);
@@ -319,8 +313,8 @@ void append_ips_to_file(const char *source_file, const char *dest_file);
 void remove_matching_ips(const char *source_file, const char *dest_file);
 void send_ips_via_uart(const char *filename);
 void uart_send(const char *data, int serial_port);
-void send_http_IPV4_start(int serial_port, const char *filename);
-void send_http_IPV6_start(int serial_port, const char *filename);
+void send_http_ipv4_start(int serial_port, const char *filename);
+void send_http_ipv6_start(int serial_port, const char *filename);
 void send_data_sync_gui(int serial_port);
 void send_data_sync_time(int serial_port);
 void remove_ip_from_file(const char *filename, const char *ip);
@@ -338,8 +332,8 @@ const char *serverBasedUrl = "http://localhost:3000/";
 #define LOG_FLOOD_DIR "Log/Log_Flood"
 #define LOG_NORMAL_DIR "Log/Log_Normal"
 #define ATTACKER_LOG_DIR "HTTP_ip_table"
-#define LOGFILE_HTTP_IPV4 "HTTP_ip_table/http_IPV4.log"
-#define LOGFILE_HTTP_IPV6 "HTTP_ip_table/http_IPV6.log"
+#define LOGFILE_HTTP_IPv4 "HTTP_ip_table/http_ipv4.log"
+#define LOGFILE_HTTP_IPv6 "HTTP_ip_table/http_ipv6.log"
 #define MAX_LOG_DAYS 100
 
 #define MAX_IP_LEN 42
@@ -428,12 +422,6 @@ bool full_sd2 = false;
 bool is_run_running = false;
 bool is_connected = true;
 bool show_disconnected_message = false;
-
-bool detect_attack = false;
-bool empty_log_normal = false;
-bool close_normal_log = false;
-bool close_flood_log = false;
-
 bool is_idle = false;
 bool is_idle2 = false;
 
@@ -502,7 +490,7 @@ int hash_time_to_int(void)
 }
 
 // Convert IP to DEC
-unsigned long IPV4_to_decimal(const char *ip)
+unsigned long ipv4_to_decimal(const char *ip)
 {
   unsigned int a, b, c, d;
   sscanf(ip, "%u.%u.%u.%u", &a, &b, &c, &d);
@@ -565,7 +553,7 @@ int get_HTTP_Data(unsigned char *s_ip, unsigned char *uri, int packet_timer)
     last_time = current_time;
   }
   // packet_timer = hash_time_to_int();
-  src_ip = IPV4_to_decimal((const char *)s_ip);
+  src_ip = ipv4_to_decimal((const char *)s_ip);
   hash_url = hash_string_to_int(uri);
   Atk_HTTP.connected_IP = IP_Management(IP_Conn_Table, src_ip, packet_timer, &Num_of_IP);
   ////  printf("\r\n              hash time: %u", packet_timer);
@@ -807,16 +795,16 @@ int Attacker_Detection(struct URL_Connection *URL_Conn_Table_1, unsigned int ip,
       if (((URL_Conn_Table_1 + Atk_URL.index)->PAL + i)->pkt_counter_1 > (unsigned int)PAL_Thres)
 
       {
-        char IPV4_str[16];
+        char ipv4_str[16];
         int src_ip = ((URL_Conn_Table + Atk_URL.index)->PAL + i)->src_ip_1;
-        sprintf(IPV4_str, "%d.%d.%d.%d",
+        sprintf(ipv4_str, "%d.%d.%d.%d",
                 (src_ip >> 24) & 0xFF,
                 (src_ip >> 16) & 0xFF,
                 (src_ip >> 8) & 0xFF,
                 src_ip & 0xFF);
-        // add_blacklist(IPV4_str);
-        get_data_BL_from_Thread_HTTPS(IPV4_str);
-        //   printf("\n\r ADD: %s\n", IPV4_str);
+        // add_blacklist(ipv4_str);
+        get_data_BL_from_Thread_HTTPS(ipv4_str);
+        //   printf("\n\r ADD: %s\n", ipv4_str);
         Atk_HTTP.just_detected_IP = ((URL_Conn_Table + Atk_URL.index)->PAL + i)->src_ip_1;
       }
     }
@@ -1285,11 +1273,11 @@ static void SignalReady(void *args, word16 port)
 // Ham lay du lieu IP tu thread HTTPS BL
 void get_data_BL_from_Thread_HTTPS(char *get_ip)
 {
-  Send_IPV4_HTTPS_to_BLackList(serial_port, get_ip);
+  Send_ipV4_HTTPS_to_BLackList(serial_port, get_ip);
 }
 
 // Ham gui blacklist xuong core
-void Send_IPV4_HTTPS_to_BLackList(int serial_port, char *get_ip)
+void Send_ipV4_HTTPS_to_BLackList(int serial_port, char *get_ip)
 {
 
   char keyT = 'T';
@@ -1324,11 +1312,11 @@ void Send_IPV4_HTTPS_to_BLackList(int serial_port, char *get_ip)
 // Ham lay du lieu IP tu thread HTTPS Wl
 void get_data_WL_from_Thread_HTTPS(char *get_ip)
 {
-  Send_IPV4_HTTPS_to_WhiteList(serial_port, get_ip);
+  Send_IPv4_HTTPS_to_WhiteList(serial_port, get_ip);
 }
 
 // Ham gui blacklist xuong core
-void Send_IPV4_HTTPS_to_WhiteList(int serial_port, char *get_ip)
+void Send_IPv4_HTTPS_to_WhiteList(int serial_port, char *get_ip)
 {
 
   char key04 = 04;
@@ -1653,7 +1641,8 @@ void *process_https(void *args)
   port = 443;
   useAnyAddr = 1;
   tcp_listen(&sockfd, &port, useAnyAddr, doDTLS, 0);
-  method = wolfTLSv1_2_server_method();
+  //method = wolfTLSv1_2_server_method();
+  method = wolfSSLv3_server_method();
   ctx = wolfSSL_CTX_new(method);
   if (ctx == NULL)
     printf("ERROR: failed to create WOLFSSL_CTX\n");
@@ -1778,6 +1767,7 @@ void *process_https(void *args)
     {
 #ifndef NO_PSK
       const char *defaultCipherList;
+
       // printf("Run wolfSSL_CTX_set_psk_server_callback\n");
       wolfSSL_CTX_set_psk_server_callback(ctx, my_psk_server_cb);
       wolfSSL_CTX_use_psk_identity_hint(ctx, "cyassl server");
@@ -1821,9 +1811,9 @@ void *process_https(void *args)
 
   SignalReady(args, port);
 
-  // int soluong = 0;
-  // int tsoluong = 0;
- // time_t start_time = time(NULL);
+  int soluong = 0;
+  int tsoluong = 0;
+  time_t start_time = time(NULL);
   while (1)
   {
     clock_gettime(CLOCK_MONOTONIC, &start);
@@ -1831,17 +1821,18 @@ void *process_https(void *args)
     {
       break;
     }
-    // time_t current_time = time(NULL);
-    // if (difftime(current_time, start_time) >= 1)
-    // {
-    //   // printf("Connection/s: %d\n", soluong);
-    //   //  printf("\n\r\n");
-    //   //  printf("time pr: %ld\n", current_time);
-    //   //  printf("time pr: %ld\n", start_time);
-    //   //  In ra "hello"
-    //   start_time = current_time; // C?p nh?t l?i th?i gian b?t d?u
-    //   soluong = 0;
-    // }
+
+    time_t current_time = time(NULL);
+    if (difftime(current_time, start_time) >= 1)
+    {
+      // printf("Connection/s: %d\n", soluong);
+      //  printf("\n\r\n");
+      //  printf("time pr: %ld\n", current_time);
+      //  printf("time pr: %ld\n", start_time);
+      //  In ra "hello"
+      start_time = current_time; // C?p nh?t l?i th?i gian b?t d?u
+      soluong = 0;
+    }
 
     /*WOLF SSL begin*/
     WOLFSSL *ssl = NULL;
@@ -1876,7 +1867,7 @@ void *process_https(void *args)
       }
       else
       {
-        /* Tắt TCP Keep-Alive trên socket */
+        /* T?t TCP Keep-Alive trên socket */
         int optval = 0;
         setsockopt(clientfd, SOL_SOCKET, SO_KEEPALIVE, &optval, sizeof(optval));
 
@@ -1952,13 +1943,14 @@ void *process_https(void *args)
       // fprintf(stderr, "SSL_accept failed\n");
       wolfSSL_free(ssl);
       CloseSocket(clientfd);
+
       continue;
     }
     process_pkg_https(ret, shutDown, ssl, addr_client, timer_pkg);
     // shutDown = 1;
     // test_start:
-    // soluong = soluong + 1;
-    // tsoluong = tsoluong + 1;
+    soluong = soluong + 1;
+    tsoluong = tsoluong + 1;
 
     //  printf("\r\n\t\t\t            { Client connected successfully }              ");
     // printf("Tong Connection/s: %d\n", tsoluong);
@@ -2010,6 +2002,7 @@ void *process_https(void *args)
         }
         break;
       }
+
       echoSz = ret;
 
       if (firstRead == 1)
@@ -2167,7 +2160,8 @@ void *process_https(void *args)
   wolfAsync_DevClose(&devId);
 #endif
 
-  WOLFSSL_RETURN_FROM_THREAD(0);
+  //WOLFSSL_RETURN_FROM_THREAD(0);
+return NULL;
 }
 
 // by thi :v
@@ -2239,7 +2233,7 @@ void process_buffer(char *client_message, int client_sock)
   char buffer[2000] = "";
   char *token;
   char ID[50];
-  char Value[500];
+  char Value[50];
 
   token = strtok(client_message, "$");
   // //printf("\ntoken$ %s\n",token);
@@ -2370,10 +2364,6 @@ void process_key(int serial_port, char *ID, char *Value, int client_sock, char *
   char keyngoacnhonphai = '}';
   char keycham = '.';
   char keynhaynguoc = '`';
-  char keyhaicham = ':';
-  char keybehon = '<';
-  char keylonhon = '>';
-  char keyacong = '@';
   char key_01 = 01;
   char key_02 = 02;
   char key_03 = 03;
@@ -2391,10 +2381,7 @@ void process_key(int serial_port, char *ID, char *Value, int client_sock, char *
   int t = 0;
   //=============================================================================================================
   // Set SYN_Threshould
-  if (strcmp(ID, "PORT1_SYN_THR") == 0 || strcmp(ID, "PORT2_SYN_THR") == 0 ||
-      strcmp(ID, "PORT3_SYN_THR") == 0 || strcmp(ID, "PORT4_SYN_THR") == 0 ||
-      strcmp(ID, "PORT5_SYN_THR") == 0 || strcmp(ID, "PORT6_SYN_THR") == 0 ||
-      strcmp(ID, "PORT7_SYN_THR") == 0 || strcmp(ID, "PORT8_SYN_THR") == 0)
+  if (strcmp(ID, "SYN_THR") == 0)
   {
     t = 0;
     write(serial_port, &key7, sizeof(key7));
@@ -2402,40 +2389,6 @@ void process_key(int serial_port, char *ID, char *Value, int client_sock, char *
     write(serial_port, &enter, sizeof(enter));
     usleep(100000);
 
-    if (ID[4] == '1')
-    {
-      write(serial_port, &key1, sizeof(key1));
-    }
-    else if (ID[4] == '2')
-    {
-      write(serial_port, &key2, sizeof(key2));
-    }
-    else if (ID[4] == '3')
-    {
-      write(serial_port, &key3, sizeof(key3));
-    }
-    else if (ID[4] == '4')
-    {
-      write(serial_port, &key4, sizeof(key4));
-    }
-    else if (ID[4] == '5')
-    {
-      write(serial_port, &key5, sizeof(key5));
-    }
-    else if (ID[4] == '6')
-    {
-      write(serial_port, &key6, sizeof(key6));
-    }
-    else if (ID[4] == '7')
-    {
-      write(serial_port, &key7, sizeof(key7));
-    }
-    else if (ID[4] == '8')
-    {
-      write(serial_port, &key8, sizeof(key8));
-    }
-
-    usleep(10000);
     int n = strlen(Value);
     for (int i = 0; i < n; i++)
     {
@@ -2471,50 +2424,13 @@ void process_key(int serial_port, char *ID, char *Value, int client_sock, char *
   }
 
   // Set ACK_Threashold
-  else if (strcmp(ID, "PORT1_ACK_THR") == 0 || strcmp(ID, "PORT2_ACK_THR") == 0 ||
-           strcmp(ID, "PORT3_ACK_THR") == 0 || strcmp(ID, "PORT4_ACK_THR") == 0 ||
-           strcmp(ID, "PORT5_ACK_THR") == 0 || strcmp(ID, "PORT6_ACK_THR") == 0 ||
-           strcmp(ID, "PORT7_ACK_THR") == 0 || strcmp(ID, "PORT8_ACK_THR") == 0)
+  else if (strcmp(ID, "ACK_THR") == 0)
   {
     t = 0;
     write(serial_port, &key8, sizeof(key8));
     usleep(1000);
     write(serial_port, &enter, sizeof(enter));
     usleep(100000);
-
-    if (ID[4] == '1')
-    {
-      write(serial_port, &key1, sizeof(key1));
-    }
-    else if (ID[4] == '2')
-    {
-      write(serial_port, &key2, sizeof(key2));
-    }
-    else if (ID[4] == '3')
-    {
-      write(serial_port, &key3, sizeof(key3));
-    }
-    else if (ID[4] == '4')
-    {
-      write(serial_port, &key4, sizeof(key4));
-    }
-    else if (ID[4] == '5')
-    {
-      write(serial_port, &key5, sizeof(key5));
-    }
-    else if (ID[4] == '6')
-    {
-      write(serial_port, &key6, sizeof(key6));
-    }
-    else if (ID[4] == '7')
-    {
-      write(serial_port, &key7, sizeof(key7));
-    }
-    else if (ID[4] == '8')
-    {
-      write(serial_port, &key8, sizeof(key8));
-    }
-    usleep(10000);
 
     int n = strlen(Value);
     for (int i = 0; i < n; i++)
@@ -2553,49 +2469,13 @@ void process_key(int serial_port, char *ID, char *Value, int client_sock, char *
   }
 
   // Set en/dis SYN
-  else if (strcmp(ID, "PORT1_SYN_EN_DIS") == 0 || strcmp(ID, "PORT2_SYN_EN_DIS") == 0 ||
-           strcmp(ID, "PORT3_SYN_EN_DIS") == 0 || strcmp(ID, "PORT4_SYN_EN_DIS") == 0 ||
-           strcmp(ID, "PORT5_SYN_EN_DIS") == 0 || strcmp(ID, "PORT6_SYN_EN_DIS") == 0 ||
-           strcmp(ID, "PORT7_SYN_EN_DIS") == 0 || strcmp(ID, "PORT8_SYN_EN_DIS") == 0)
+  else if (strcmp(ID, "SYN_EN_DIS") == 0)
   {
     t = 0;
     write(serial_port, &key6, sizeof(key6));
     usleep(1000);
     write(serial_port, &enter, sizeof(enter));
     usleep(100000);
-    if (ID[4] == '1')
-    {
-      write(serial_port, &key1, sizeof(key1));
-    }
-    else if (ID[4] == '2')
-    {
-      write(serial_port, &key2, sizeof(key2));
-    }
-    else if (ID[4] == '3')
-    {
-      write(serial_port, &key3, sizeof(key3));
-    }
-    else if (ID[4] == '4')
-    {
-      write(serial_port, &key4, sizeof(key4));
-    }
-    else if (ID[4] == '5')
-    {
-      write(serial_port, &key5, sizeof(key5));
-    }
-    else if (ID[4] == '6')
-    {
-      write(serial_port, &key6, sizeof(key6));
-    }
-    else if (ID[4] == '7')
-    {
-      write(serial_port, &key7, sizeof(key7));
-    }
-    else if (ID[4] == '8')
-    {
-      write(serial_port, &key8, sizeof(key8));
-    }
-    usleep(10000);
     if (strcmp(Value, "1") == 0)
     {
       write(serial_port, &keyY, sizeof(keyY));
@@ -2636,49 +2516,14 @@ void process_key(int serial_port, char *ID, char *Value, int client_sock, char *
   }
   //================================================================================================================
   // Set UDP_Threshould
-  else if (strcmp(ID, "PORT1_UDP_THR") == 0 || strcmp(ID, "PORT2_UDP_THR") == 0 ||
-           strcmp(ID, "PORT3_UDP_THR") == 0 || strcmp(ID, "PORT4_UDP_THR") == 0 ||
-           strcmp(ID, "PORT5_UDP_THR") == 0 || strcmp(ID, "PORT6_UDP_THR") == 0 ||
-           strcmp(ID, "PORT7_UDP_THR") == 0 || strcmp(ID, "PORT8_UDP_THR") == 0)
+  else if (strcmp(ID, "UDP_THR") == 0)
   {
     t = 0;
     write(serial_port, &keyC, sizeof(keyC));
     usleep(1000);
     write(serial_port, &enter, sizeof(enter));
     usleep(100000);
-    if (ID[4] == '1')
-    {
-      write(serial_port, &key1, sizeof(key1));
-    }
-    else if (ID[4] == '2')
-    {
-      write(serial_port, &key2, sizeof(key2));
-    }
-    else if (ID[4] == '3')
-    {
-      write(serial_port, &key3, sizeof(key3));
-    }
-    else if (ID[4] == '4')
-    {
-      write(serial_port, &key4, sizeof(key4));
-    }
-    else if (ID[4] == '5')
-    {
-      write(serial_port, &key5, sizeof(key5));
-    }
-    else if (ID[4] == '6')
-    {
-      write(serial_port, &key6, sizeof(key6));
-    }
-    else if (ID[4] == '7')
-    {
-      write(serial_port, &key7, sizeof(key7));
-    }
-    else if (ID[4] == '8')
-    {
-      write(serial_port, &key8, sizeof(key8));
-    }
-    usleep(10000);
+
     int n = strlen(Value);
     for (int i = 0; i < n; i++)
     {
@@ -2714,51 +2559,15 @@ void process_key(int serial_port, char *ID, char *Value, int client_sock, char *
       t++;
     }
   }
-
   // Set UDP_Threashold_perSecond
-  else if (strcmp(ID, "PORT1_UDP_THR_PS") == 0 || strcmp(ID, "PORT2_UDP_THR_PS") == 0 ||
-           strcmp(ID, "PORT3_UDP_THR_PS") == 0 || strcmp(ID, "PORT4_UDP_THR_PS") == 0 ||
-           strcmp(ID, "PORT5_UDP_THR_PS") == 0 || strcmp(ID, "PORT6_UDP_THR_PS") == 0 ||
-           strcmp(ID, "PORT7_UDP_THR_PS") == 0 || strcmp(ID, "PORT8_UDP_THR_PS") == 0)
+  else if (strcmp(ID, "UDP_THR_PS") == 0)
   {
     t = 0;
     write(serial_port, &keyD, sizeof(keyD));
     usleep(1000);
     write(serial_port, &enter, sizeof(enter));
     usleep(100000);
-    if (ID[4] == '1')
-    {
-      write(serial_port, &key1, sizeof(key1));
-    }
-    else if (ID[4] == '2')
-    {
-      write(serial_port, &key2, sizeof(key2));
-    }
-    else if (ID[4] == '3')
-    {
-      write(serial_port, &key3, sizeof(key3));
-    }
-    else if (ID[4] == '4')
-    {
-      write(serial_port, &key4, sizeof(key4));
-    }
-    else if (ID[4] == '5')
-    {
-      write(serial_port, &key5, sizeof(key5));
-    }
-    else if (ID[4] == '6')
-    {
-      write(serial_port, &key6, sizeof(key6));
-    }
-    else if (ID[4] == '7')
-    {
-      write(serial_port, &key7, sizeof(key7));
-    }
-    else if (ID[4] == '8')
-    {
-      write(serial_port, &key8, sizeof(key8));
-    }
-    usleep(10000);
+
     int n = strlen(Value);
     for (int i = 0; i < n; i++)
     {
@@ -2796,49 +2605,13 @@ void process_key(int serial_port, char *ID, char *Value, int client_sock, char *
     }
   }
   // Set en/dis UDP
-  else if (strcmp(ID, "PORT1_UDP_EN_DIS") == 0 || strcmp(ID, "PORT2_UDP_EN_DIS") == 0 ||
-           strcmp(ID, "PORT3_UDP_EN_DIS") == 0 || strcmp(ID, "PORT4_UDP_EN_DIS") == 0 ||
-           strcmp(ID, "PORT5_UDP_EN_DIS") == 0 || strcmp(ID, "PORT6_UDP_EN_DIS") == 0 ||
-           strcmp(ID, "PORT7_UDP_EN_DIS") == 0 || strcmp(ID, "PORT8_UDP_EN_DIS") == 0)
+  else if (strcmp(ID, "UDP_EN_DIS") == 0)
   {
     t = 0;
     write(serial_port, &keyB, sizeof(keyB));
     usleep(1000);
     write(serial_port, &enter, sizeof(enter));
     usleep(100000);
-    if (ID[4] == '1')
-    {
-      write(serial_port, &key1, sizeof(key1));
-    }
-    else if (ID[4] == '2')
-    {
-      write(serial_port, &key2, sizeof(key2));
-    }
-    else if (ID[4] == '3')
-    {
-      write(serial_port, &key3, sizeof(key3));
-    }
-    else if (ID[4] == '4')
-    {
-      write(serial_port, &key4, sizeof(key4));
-    }
-    else if (ID[4] == '5')
-    {
-      write(serial_port, &key5, sizeof(key5));
-    }
-    else if (ID[4] == '6')
-    {
-      write(serial_port, &key6, sizeof(key6));
-    }
-    else if (ID[4] == '7')
-    {
-      write(serial_port, &key7, sizeof(key7));
-    }
-    else if (ID[4] == '8')
-    {
-      write(serial_port, &key8, sizeof(key8));
-    }
-    usleep(10000);
     if (strcmp(Value, "1") == 0)
     {
       write(serial_port, &keyY, sizeof(keyY));
@@ -2878,49 +2651,13 @@ void process_key(int serial_port, char *ID, char *Value, int client_sock, char *
   }
   //=================================================================================================================
   // Set ICMP_Threshould
-  else if (strcmp(ID, "PORT1_ICMP_THR") == 0 || strcmp(ID, "PORT2_ICMP_THR") == 0 ||
-           strcmp(ID, "PORT3_ICMP_THR") == 0 || strcmp(ID, "PORT4_ICMP_THR") == 0 ||
-           strcmp(ID, "PORT5_ICMP_THR") == 0 || strcmp(ID, "PORT6_ICMP_THR") == 0 ||
-           strcmp(ID, "PORT7_ICMP_THR") == 0 || strcmp(ID, "PORT8_ICMP_THR") == 0)
+  else if (strcmp(ID, "ICMP_THR") == 0)
   {
     t = 0;
     write(serial_port, &keyH, sizeof(keyH));
     usleep(1000);
     write(serial_port, &enter, sizeof(enter));
     usleep(100000);
-    if (ID[4] == '1')
-    {
-      write(serial_port, &key1, sizeof(key1));
-    }
-    else if (ID[4] == '2')
-    {
-      write(serial_port, &key2, sizeof(key2));
-    }
-    else if (ID[4] == '3')
-    {
-      write(serial_port, &key3, sizeof(key3));
-    }
-    else if (ID[4] == '4')
-    {
-      write(serial_port, &key4, sizeof(key4));
-    }
-    else if (ID[4] == '5')
-    {
-      write(serial_port, &key5, sizeof(key5));
-    }
-    else if (ID[4] == '6')
-    {
-      write(serial_port, &key6, sizeof(key6));
-    }
-    else if (ID[4] == '7')
-    {
-      write(serial_port, &key7, sizeof(key7));
-    }
-    else if (ID[4] == '8')
-    {
-      write(serial_port, &key8, sizeof(key8));
-    }
-    usleep(10000);
     int n = strlen(Value);
     for (int i = 0; i < n; i++)
     {
@@ -2956,49 +2693,14 @@ void process_key(int serial_port, char *ID, char *Value, int client_sock, char *
   }
 
   // Set ICMP_Threashold_perSecond
-  else if (strcmp(ID, "PORT1_ICMP_THR_PS") == 0 || strcmp(ID, "PORT2_ICMP_THR_PS") == 0 ||
-           strcmp(ID, "PORT3_ICMP_THR_PS") == 0 || strcmp(ID, "PORT4_ICMP_THR_PS") == 0 ||
-           strcmp(ID, "PORT5_ICMP_THR_PS") == 0 || strcmp(ID, "PORT6_ICMP_THR_PS") == 0 ||
-           strcmp(ID, "PORT7_ICMP_THR_PS") == 0 || strcmp(ID, "PORT8_ICMP_THR_PS") == 0)
+  else if (strcmp(ID, "ICMP_THR_PS") == 0)
   {
     t = 0;
     write(serial_port, &keyI, sizeof(keyI));
     usleep(1000);
     write(serial_port, &enter, sizeof(enter));
     usleep(100000);
-    if (ID[4] == '1')
-    {
-      write(serial_port, &key1, sizeof(key1));
-    }
-    else if (ID[4] == '2')
-    {
-      write(serial_port, &key2, sizeof(key2));
-    }
-    else if (ID[4] == '3')
-    {
-      write(serial_port, &key3, sizeof(key3));
-    }
-    else if (ID[4] == '4')
-    {
-      write(serial_port, &key4, sizeof(key4));
-    }
-    else if (ID[4] == '5')
-    {
-      write(serial_port, &key5, sizeof(key5));
-    }
-    else if (ID[4] == '6')
-    {
-      write(serial_port, &key6, sizeof(key6));
-    }
-    else if (ID[4] == '7')
-    {
-      write(serial_port, &key7, sizeof(key7));
-    }
-    else if (ID[4] == '8')
-    {
-      write(serial_port, &key8, sizeof(key8));
-    }
-    usleep(10000);
+
     int n = strlen(Value);
     for (int i = 0; i < n; i++)
     {
@@ -3035,49 +2737,13 @@ void process_key(int serial_port, char *ID, char *Value, int client_sock, char *
   }
 
   // Set en/dis ICMP
-  else if (strcmp(ID, "PORT1_ICMP_EN_DIS") == 0 || strcmp(ID, "PORT2_ICMP_EN_DIS") == 0 ||
-           strcmp(ID, "PORT3_ICMP_EN_DIS") == 0 || strcmp(ID, "PORT4_ICMP_EN_DIS") == 0 ||
-           strcmp(ID, "PORT5_ICMP_EN_DIS") == 0 || strcmp(ID, "PORT6_ICMP_EN_DIS") == 0 ||
-           strcmp(ID, "PORT7_ICMP_EN_DIS") == 0 || strcmp(ID, "PORT8_ICMP_EN_DIS") == 0)
+  else if (strcmp(ID, "ICMP_EN_DIS") == 0)
   {
     t = 0;
     write(serial_port, &keyG, sizeof(keyG));
     usleep(1000);
     write(serial_port, &enter, sizeof(enter));
     usleep(100000);
-    if (ID[4] == '1')
-    {
-      write(serial_port, &key1, sizeof(key1));
-    }
-    else if (ID[4] == '2')
-    {
-      write(serial_port, &key2, sizeof(key2));
-    }
-    else if (ID[4] == '3')
-    {
-      write(serial_port, &key3, sizeof(key3));
-    }
-    else if (ID[4] == '4')
-    {
-      write(serial_port, &key4, sizeof(key4));
-    }
-    else if (ID[4] == '5')
-    {
-      write(serial_port, &key5, sizeof(key5));
-    }
-    else if (ID[4] == '6')
-    {
-      write(serial_port, &key6, sizeof(key6));
-    }
-    else if (ID[4] == '7')
-    {
-      write(serial_port, &key7, sizeof(key7));
-    }
-    else if (ID[4] == '8')
-    {
-      write(serial_port, &key8, sizeof(key8));
-    }
-    usleep(10000);
     if (strcmp(Value, "1") == 0)
     {
       write(serial_port, &keyY, sizeof(keyY));
@@ -3118,49 +2784,13 @@ void process_key(int serial_port, char *ID, char *Value, int client_sock, char *
   }
   //=================================================================================================================
   // Set en/dis LAND
-  else if (strcmp(ID, "PORT1_LAND_EN_DIS") == 0 || strcmp(ID, "PORT2_LAND_EN_DIS") == 0 ||
-           strcmp(ID, "PORT3_LAND_EN_DIS") == 0 || strcmp(ID, "PORT4_LAND_EN_DIS") == 0 ||
-           strcmp(ID, "PORT5_LAND_EN_DIS") == 0 || strcmp(ID, "PORT6_LAND_EN_DIS") == 0 ||
-           strcmp(ID, "PORT7_LAND_EN_DIS") == 0 || strcmp(ID, "PORT8_LAND_EN_DIS") == 0)
+  else if (strcmp(ID, "LAND_EN_DIS") == 0)
   {
     t = 0;
     write(serial_port, &keyA, sizeof(keyA));
     usleep(1000);
     write(serial_port, &enter, sizeof(enter));
     usleep(100000);
-    if (ID[4] == '1')
-    {
-      write(serial_port, &key1, sizeof(key1));
-    }
-    else if (ID[4] == '2')
-    {
-      write(serial_port, &key2, sizeof(key2));
-    }
-    else if (ID[4] == '3')
-    {
-      write(serial_port, &key3, sizeof(key3));
-    }
-    else if (ID[4] == '4')
-    {
-      write(serial_port, &key4, sizeof(key4));
-    }
-    else if (ID[4] == '5')
-    {
-      write(serial_port, &key5, sizeof(key5));
-    }
-    else if (ID[4] == '6')
-    {
-      write(serial_port, &key6, sizeof(key6));
-    }
-    else if (ID[4] == '7')
-    {
-      write(serial_port, &key7, sizeof(key7));
-    }
-    else if (ID[4] == '8')
-    {
-      write(serial_port, &key8, sizeof(key8));
-    }
-    usleep(10000);
     if (strcmp(Value, "1") == 0)
     {
       write(serial_port, &keyY, sizeof(keyY));
@@ -3200,49 +2830,13 @@ void process_key(int serial_port, char *ID, char *Value, int client_sock, char *
   }
   //=================================================================================================================
   // Set en/dis DNS
-  else if (strcmp(ID, "PORT1_DNS_EN_DIS") == 0 || strcmp(ID, "PORT2_DNS_EN_DIS") == 0 ||
-           strcmp(ID, "PORT3_DNS_EN_DIS") == 0 || strcmp(ID, "PORT4_DNS_EN_DIS") == 0 ||
-           strcmp(ID, "PORT5_DNS_EN_DIS") == 0 || strcmp(ID, "PORT6_DNS_EN_DIS") == 0 ||
-           strcmp(ID, "PORT7_DNS_EN_DIS") == 0 || strcmp(ID, "PORT8_DNS_EN_DIS") == 0)
+  else if (strcmp(ID, "DNS_EN_DIS") == 0)
   {
     t = 0;
     write(serial_port, &keyE, sizeof(keyE));
     usleep(1000);
     write(serial_port, &enter, sizeof(enter));
     usleep(100000);
-    if (ID[4] == '1')
-    {
-      write(serial_port, &key1, sizeof(key1));
-    }
-    else if (ID[4] == '2')
-    {
-      write(serial_port, &key2, sizeof(key2));
-    }
-    else if (ID[4] == '3')
-    {
-      write(serial_port, &key3, sizeof(key3));
-    }
-    else if (ID[4] == '4')
-    {
-      write(serial_port, &key4, sizeof(key4));
-    }
-    else if (ID[4] == '5')
-    {
-      write(serial_port, &key5, sizeof(key5));
-    }
-    else if (ID[4] == '6')
-    {
-      write(serial_port, &key6, sizeof(key6));
-    }
-    else if (ID[4] == '7')
-    {
-      write(serial_port, &key7, sizeof(key7));
-    }
-    else if (ID[4] == '8')
-    {
-      write(serial_port, &key8, sizeof(key8));
-    }
-    usleep(10000);
     if (strcmp(Value, "1") == 0)
     {
       write(serial_port, &keyY, sizeof(keyY));
@@ -3280,51 +2874,16 @@ void process_key(int serial_port, char *ID, char *Value, int client_sock, char *
       t++;
     }
   }
-  //===================================================================================================================
+
   // Set DNS_Threshould
-  else if (strcmp(ID, "PORT1_DNS_THR") == 0 || strcmp(ID, "PORT2_DNS_THR") == 0 ||
-           strcmp(ID, "PORT3_DNS_THR") == 0 || strcmp(ID, "PORT4_DNS_THR") == 0 ||
-           strcmp(ID, "PORT5_DNS_THR") == 0 || strcmp(ID, "PORT6_DNS_THR") == 0 ||
-           strcmp(ID, "PORT7_DNS_THR") == 0 || strcmp(ID, "PORT8_DNS_THR") == 0)
+  else if (strcmp(ID, "DNS_THR") == 0)
   {
     t = 0;
     write(serial_port, &keyF, sizeof(keyF));
     usleep(1000);
     write(serial_port, &enter, sizeof(enter));
     usleep(100000);
-    if (ID[4] == '1')
-    {
-      write(serial_port, &key1, sizeof(key1));
-    }
-    else if (ID[4] == '2')
-    {
-      write(serial_port, &key2, sizeof(key2));
-    }
-    else if (ID[4] == '3')
-    {
-      write(serial_port, &key3, sizeof(key3));
-    }
-    else if (ID[4] == '4')
-    {
-      write(serial_port, &key4, sizeof(key4));
-    }
-    else if (ID[4] == '5')
-    {
-      write(serial_port, &key5, sizeof(key5));
-    }
-    else if (ID[4] == '6')
-    {
-      write(serial_port, &key6, sizeof(key6));
-    }
-    else if (ID[4] == '7')
-    {
-      write(serial_port, &key7, sizeof(key7));
-    }
-    else if (ID[4] == '8')
-    {
-      write(serial_port, &key8, sizeof(key8));
-    }
-    usleep(10000);
+
     int n = strlen(Value);
     for (int i = 0; i < n; i++)
     {
@@ -3362,50 +2921,15 @@ void process_key(int serial_port, char *ID, char *Value, int client_sock, char *
   }
 
   //=================================================================================================================
+
   // Set en/dis IPSEC
-  else if (strcmp(ID, "PORT1_IPSEC_IKE_EN_DIS") == 0 || strcmp(ID, "PORT2_IPSEC_IKE_EN_DIS") == 0 ||
-           strcmp(ID, "PORT3_IPSEC_IKE_EN_DIS") == 0 || strcmp(ID, "PORT4_IPSEC_IKE_EN_DIS") == 0 ||
-           strcmp(ID, "PORT5_IPSEC_IKE_EN_DIS") == 0 || strcmp(ID, "PORT6_IPSEC_IKE_EN_DIS") == 0 ||
-           strcmp(ID, "PORT7_IPSEC_IKE_EN_DIS") == 0 || strcmp(ID, "PORT8_IPSEC_IKE_EN_DIS") == 0)
+  else if (strcmp(ID, "IPSEC_IKE_EN_DIS") == 0)
   {
     t = 0;
     write(serial_port, &keyJ, sizeof(keyJ));
     usleep(1000);
     write(serial_port, &enter, sizeof(enter));
     usleep(100000);
-    if (ID[4] == '1')
-    {
-      write(serial_port, &key1, sizeof(key1));
-    }
-    else if (ID[4] == '2')
-    {
-      write(serial_port, &key2, sizeof(key2));
-    }
-    else if (ID[4] == '3')
-    {
-      write(serial_port, &key3, sizeof(key3));
-    }
-    else if (ID[4] == '4')
-    {
-      write(serial_port, &key4, sizeof(key4));
-    }
-    else if (ID[4] == '5')
-    {
-      write(serial_port, &key5, sizeof(key5));
-    }
-    else if (ID[4] == '6')
-    {
-      write(serial_port, &key6, sizeof(key6));
-    }
-    else if (ID[4] == '7')
-    {
-      write(serial_port, &key7, sizeof(key7));
-    }
-    else if (ID[4] == '8')
-    {
-      write(serial_port, &key8, sizeof(key8));
-    }
-    usleep(10000);
     if (strcmp(Value, "1") == 0)
     {
       write(serial_port, &keyY, sizeof(keyY));
@@ -3443,51 +2967,16 @@ void process_key(int serial_port, char *ID, char *Value, int client_sock, char *
       t++;
     }
   }
-  //=================================================================================================================
-  // Set IPSEC_IKE_THR
-  else if (strcmp(ID, "PORT1_IPSEC_IKE_THR") == 0 || strcmp(ID, "PORT2_IPSEC_IKE_THR") == 0 ||
-           strcmp(ID, "PORT3_IPSEC_IKE_THR") == 0 || strcmp(ID, "PORT4_IPSEC_IKE_THR") == 0 ||
-           strcmp(ID, "PORT5_IPSEC_IKE_THR") == 0 || strcmp(ID, "PORT6_IPSEC_IKE_THR") == 0 ||
-           strcmp(ID, "PORT7_IPSEC_IKE_THR") == 0 || strcmp(ID, "PORT8_IPSEC_IKE_THR") == 0)
+
+  // Set DNS_Threshould
+  else if (strcmp(ID, "IPSEC_IKE_THR") == 0)
   {
     t = 0;
     write(serial_port, &keyK, sizeof(keyK));
     usleep(1000);
     write(serial_port, &enter, sizeof(enter));
     usleep(100000);
-    if (ID[4] == '1')
-    {
-      write(serial_port, &key1, sizeof(key1));
-    }
-    else if (ID[4] == '2')
-    {
-      write(serial_port, &key2, sizeof(key2));
-    }
-    else if (ID[4] == '3')
-    {
-      write(serial_port, &key3, sizeof(key3));
-    }
-    else if (ID[4] == '4')
-    {
-      write(serial_port, &key4, sizeof(key4));
-    }
-    else if (ID[4] == '5')
-    {
-      write(serial_port, &key5, sizeof(key5));
-    }
-    else if (ID[4] == '6')
-    {
-      write(serial_port, &key6, sizeof(key6));
-    }
-    else if (ID[4] == '7')
-    {
-      write(serial_port, &key7, sizeof(key7));
-    }
-    else if (ID[4] == '8')
-    {
-      write(serial_port, &key8, sizeof(key8));
-    }
-    usleep(10000);
+
     int n = strlen(Value);
     for (int i = 0; i < n; i++)
     {
@@ -3525,10 +3014,7 @@ void process_key(int serial_port, char *ID, char *Value, int client_sock, char *
 
   //=================================================================================================================
   // Set en/dis UDP Fragmentation
-  else if (strcmp(ID, "PORT1_UDP_FRA_EN_DIS") == 0 || strcmp(ID, "PORT2_UDP_FRA_EN_DIS") == 0 ||
-           strcmp(ID, "PORT3_UDP_FRA_EN_DIS") == 0 || strcmp(ID, "PORT4_UDP_FRA_EN_DIS") == 0 ||
-           strcmp(ID, "PORT5_UDP_FRA_EN_DIS") == 0 || strcmp(ID, "PORT6_UDP_FRA_EN_DIS") == 0 ||
-           strcmp(ID, "PORT7_UDP_FRA_EN_DIS") == 0 || strcmp(ID, "PORT8_UDP_FRA_EN_DIS") == 0)
+  else if (strcmp(ID, "UDP_FRA_EN_DIS") == 0)
   {
     t = 0;
     write(serial_port, &keyO, sizeof(keyO));
@@ -3536,39 +3022,7 @@ void process_key(int serial_port, char *ID, char *Value, int client_sock, char *
 
     write(serial_port, &enter, sizeof(enter));
     usleep(100000);
-    if (ID[4] == '1')
-    {
-      write(serial_port, &key1, sizeof(key1));
-    }
-    else if (ID[4] == '2')
-    {
-      write(serial_port, &key2, sizeof(key2));
-    }
-    else if (ID[4] == '3')
-    {
-      write(serial_port, &key3, sizeof(key3));
-    }
-    else if (ID[4] == '4')
-    {
-      write(serial_port, &key4, sizeof(key4));
-    }
-    else if (ID[4] == '5')
-    {
-      write(serial_port, &key5, sizeof(key5));
-    }
-    else if (ID[4] == '6')
-    {
-      write(serial_port, &key6, sizeof(key6));
-    }
-    else if (ID[4] == '7')
-    {
-      write(serial_port, &key7, sizeof(key7));
-    }
-    else if (ID[4] == '8')
-    {
-      write(serial_port, &key8, sizeof(key8));
-    }
-    usleep(10000);
+
     if (strcmp(Value, "1") == 0)
     {
       write(serial_port, &keyY, sizeof(keyY));
@@ -3609,51 +3063,16 @@ void process_key(int serial_port, char *ID, char *Value, int client_sock, char *
     }
   }
 
+  //=============================================================================================================
   //=====================================================================================
   // Set en/dis TCP Fragmentation
-  else if (strcmp(ID, "PORT1_TCP_FRA_EN_DIS") == 0 || strcmp(ID, "PORT2_TCP_FRA_EN_DIS") == 0 ||
-           strcmp(ID, "PORT3_TCP_FRA_EN_DIS") == 0 || strcmp(ID, "PORT4_TCP_FRA_EN_DIS") == 0 ||
-           strcmp(ID, "PORT5_TCP_FRA_EN_DIS") == 0 || strcmp(ID, "PORT6_TCP_FRA_EN_DIS") == 0 ||
-           strcmp(ID, "PORT7_TCP_FRA_EN_DIS") == 0 || strcmp(ID, "PORT8_TCP_FRA_EN_DIS") == 0)
+  else if (strcmp(ID, "TCP_FRA_EN_DIS") == 0)
   {
     t = 0;
     write(serial_port, &keyN, sizeof(keyN));
     usleep(1000);
     write(serial_port, &enter, sizeof(enter));
     usleep(100000);
-    if (ID[4] == '1')
-    {
-      write(serial_port, &key1, sizeof(key1));
-    }
-    else if (ID[4] == '2')
-    {
-      write(serial_port, &key2, sizeof(key2));
-    }
-    else if (ID[4] == '3')
-    {
-      write(serial_port, &key3, sizeof(key3));
-    }
-    else if (ID[4] == '4')
-    {
-      write(serial_port, &key4, sizeof(key4));
-    }
-    else if (ID[4] == '5')
-    {
-      write(serial_port, &key5, sizeof(key5));
-    }
-    else if (ID[4] == '6')
-    {
-      write(serial_port, &key6, sizeof(key6));
-    }
-    else if (ID[4] == '7')
-    {
-      write(serial_port, &key7, sizeof(key7));
-    }
-    else if (ID[4] == '8')
-    {
-      write(serial_port, &key8, sizeof(key8));
-    }
-    usleep(10000);
     if (strcmp(Value, "1") == 0)
     {
       write(serial_port, &keyY, sizeof(keyY));
@@ -3692,12 +3111,11 @@ void process_key(int serial_port, char *ID, char *Value, int client_sock, char *
     }
   }
 
+  //=============================================================================================================
+
   //=================================================================================================================
   // Set Time_Delete_White list
-  else if (strcmp(ID, "PORT1_TIME_WHITE_LIST") == 0 || strcmp(ID, "PORT2_TIME_WHITE_LIST") == 0 ||
-           strcmp(ID, "PORT3_TIME_WHITE_LIST") == 0 || strcmp(ID, "PORT4_TIME_WHITE_LIST") == 0 ||
-           strcmp(ID, "PORT5_TIME_WHITE_LIST") == 0 || strcmp(ID, "PORT6_TIME_WHITE_LIST") == 0 ||
-           strcmp(ID, "PORT7_TIME_WHITE_LIST") == 0 || strcmp(ID, "PORT8_TIME_WHITE_LIST") == 0)
+  else if (strcmp(ID, "TIME_WHITE_LIST") == 0)
   {
     t = 0;
     write(serial_port, &key9, sizeof(key9));
@@ -3740,51 +3158,17 @@ void process_key(int serial_port, char *ID, char *Value, int client_sock, char *
       t++;
     }
   }
+
   //=================================================================================================================
   // Set Time_Detect_Actack
-  else if (strcmp(ID, "PORT1_TIME_DETECT_ATTACK") == 0 || strcmp(ID, "PORT2_TIME_DETECT_ATTACK") == 0 ||
-           strcmp(ID, "PORT3_TIME_DETECT_ATTACK") == 0 || strcmp(ID, "PORT4_TIME_DETECT_ATTACK") == 0 ||
-           strcmp(ID, "PORT5_TIME_DETECT_ATTACK") == 0 || strcmp(ID, "PORT6_TIME_DETECT_ATTACK") == 0 ||
-           strcmp(ID, "PORT7_TIME_DETECT_ATTACK") == 0 || strcmp(ID, "PORT8_TIME_DETECT_ATTACK") == 0)
+  else if (strcmp(ID, "TIME_DETECT_ATTACK") == 0)
   {
     t = 0;
     write(serial_port, &key5, sizeof(key5));
     usleep(1000);
     write(serial_port, &enter, sizeof(enter));
     usleep(100000);
-    if (ID[4] == '1')
-    {
-      write(serial_port, &key1, sizeof(key1));
-    }
-    else if (ID[4] == '2')
-    {
-      write(serial_port, &key2, sizeof(key2));
-    }
-    else if (ID[4] == '3')
-    {
-      write(serial_port, &key3, sizeof(key3));
-    }
-    else if (ID[4] == '4')
-    {
-      write(serial_port, &key4, sizeof(key4));
-    }
-    else if (ID[4] == '5')
-    {
-      write(serial_port, &key5, sizeof(key5));
-    }
-    else if (ID[4] == '6')
-    {
-      write(serial_port, &key6, sizeof(key6));
-    }
-    else if (ID[4] == '7')
-    {
-      write(serial_port, &key7, sizeof(key7));
-    }
-    else if (ID[4] == '8')
-    {
-      write(serial_port, &key8, sizeof(key8));
-    }
-    usleep(10000);
+
     int n = strlen(Value);
     for (int i = 0; i < n; i++)
     {
@@ -3822,425 +3206,71 @@ void process_key(int serial_port, char *ID, char *Value, int client_sock, char *
   }
   //=================================================================================================================
   // Seting anti by PORT or IP
-  // else if (strcmp(ID, "PROTECT") == 0)
-  // {
-  //   t = 0;
-  //   write(serial_port, &key2, sizeof(key2));
-  //   usleep(1000);
-  //   write(serial_port, &enter, sizeof(enter));
-  //   usleep(100000);
-  //   if (strcmp(Value, "PORT") == 0)
-  //   {
-  //     write(serial_port, &keyY, sizeof(keyY));
-  //     usleep(1000);
-  //     write(serial_port, &enter, sizeof(enter));
-  //   }
-  //   else if (strcmp(Value, "IP") == 0)
-  //   {
-  //     write(serial_port, &keyN, sizeof(keyN));
-  //     usleep(1000);
-  //     write(serial_port, &enter, sizeof(enter));
-  //   }
-  //   while (1)
-  //   {
-  //     char *data1 = receive_data(serial_port);
-  //     printf("\nReceived message: %s\n", data1);
-  //     if ((strchr(data1, 'Y') != NULL))
-  //     {
-  //       strcat(buffer, ID);
-  //       strcat(buffer, "$");
-  //       strcat(buffer, Value);
-  //       strcat(buffer, "$OK$");
-  //       printf("\nPROTECT done\n");
-  //       break;
-  //     }
-  //     else if ((strchr(data1, 'N') != NULL) || (t == 10))
-  //     {
-  //       strcat(buffer, ID);
-  //       strcat(buffer, "$");
-  //       strcat(buffer, Value);
-  //       strcat(buffer, "$ERROR$");
-  //       printf("\nPROTECT ERROR\n");
-  //       break;
-  //     }
-  //     t++;
-  //   }
-  // }
+  else if (strcmp(ID, "PROTECT") == 0)
+  {
+    t = 0;
+    write(serial_port, &key2, sizeof(key2));
+    usleep(1000);
+    write(serial_port, &enter, sizeof(enter));
+    usleep(100000);
+    if (strcmp(Value, "PORT") == 0)
+    {
+      write(serial_port, &keyY, sizeof(keyY));
+      usleep(1000);
+      write(serial_port, &enter, sizeof(enter));
+    }
+    else if (strcmp(Value, "IP") == 0)
+    {
+      write(serial_port, &keyN, sizeof(keyN));
+      usleep(1000);
+      write(serial_port, &enter, sizeof(enter));
+    }
+    while (1)
+    {
+      char *data1 = receive_data(serial_port);
+      printf("\nReceived message: %s\n", data1);
+      if ((strchr(data1, 'Y') != NULL))
+      {
+        strcat(buffer, ID);
+        strcat(buffer, "$");
+        strcat(buffer, Value);
+        strcat(buffer, "$OK$");
+        printf("\nPROTECT done\n");
+        break;
+      }
+      else if ((strchr(data1, 'N') != NULL) || (t == 10))
+      {
+        strcat(buffer, ID);
+        strcat(buffer, "$");
+        strcat(buffer, Value);
+        strcat(buffer, "$ERROR$");
+        printf("\nPROTECT ERROR\n");
+        break;
+      }
+      t++;
+    }
+  }
   //=================================================================================================================
   // Seting interface PORT
-  // else if (strcmp(ID, "PROTECT_PORT") == 0)
-  // {
-  //   t = 0;
-  //   write(serial_port, &key3, sizeof(key3));
-  //   usleep(1000);
-  //   write(serial_port, &enter, sizeof(enter));
-  //   usleep(100000);
-  //   if (strcmp(Value, "1") == 0)
-  //   {
-  //     write(serial_port, &key1, sizeof(key1));
-  //     usleep(1000);
-  //     write(serial_port, &enter, sizeof(enter));
-  //   }
-  //   else if (strcmp(Value, "0") == 0)
-  //   {
-  //     write(serial_port, &key0, sizeof(key0));
-  //     usleep(1000);
-  //     write(serial_port, &enter, sizeof(enter));
-  //   }
-  //   while (1)
-  //   {
-  //     char *data1 = receive_data(serial_port);
-  //     printf("\nReceived message: %s\n", data1);
-  //     if ((strchr(data1, 'Y') != NULL))
-  //     {
-  //       strcat(buffer, ID);
-  //       strcat(buffer, "$");
-  //       strcat(buffer, Value);
-  //       strcat(buffer, "$OK$");
-  //       printf("\nPROTECT_PORT done\n");
-  //       break;
-  //     }
-  //     else if ((strchr(data1, 'N') != NULL) || (t == 10))
-  //     {
-  //       strcat(buffer, ID);
-  //       strcat(buffer, "$");
-  //       strcat(buffer, Value);
-  //       strcat(buffer, "$ERROR$");
-  //       printf("\nPROTECT_PORT error\n");
-  //       break;
-  //     }
-  //     t++;
-  //   }
-  // }
-  //=================================================================================================================
-  // Setting IP server to Protect
-  // else if (strcmp(ID, "PROTECT_SERVER_IPV4") == 0)
-  // {
-  //   t = 0;
-  //   write(serial_port, &key4, sizeof(key4));
-  //   usleep(1000);
-  //   write(serial_port, &enter, sizeof(enter));
-  //   usleep(1000000);
-
-  //   int n = strlen(Value);
-  //   for (int i = 0; i < n; i++)
-  //   {
-  //     char data = Value[i];
-  //     send_data(serial_port, &data, sizeof(data));
-  //     usleep(10000);
-  //   }
-  //   write(serial_port, &enter, sizeof(enter));
-
-  //   while (1)
-  //   {
-  //     char *data1 = receive_data(serial_port);
-  //     printf("\nReceived message: %s\n", data1);
-  //     if ((strchr(data1, 'Y') != NULL))
-  //     {
-  //       strcat(buffer, ID);
-  //       strcat(buffer, "$");
-  //       strcat(buffer, Value);
-  //       strcat(buffer, "$OK$");
-  //       printf("\nPROTECT_IP done\n");
-
-  //       break;
-  //     }
-  //     else if ((strchr(data1, 'N') != NULL) || (t == 10))
-  //     {
-  //       strcat(buffer, ID);
-  //       strcat(buffer, "$");
-  //       strcat(buffer, Value);
-  //       strcat(buffer, "$ERROR$");
-  //       printf("\nPROTECT_IP ERROR\n");
-  //       break;
-  //     }
-  //     t++;
-  //   }
-  // }
-
-  // //=================================================================================================================
-  // // Setting IP V6 server to Protect
-  // else if (strcmp(ID, "PROTECT_SERVER_IPV6") == 0)
-  // {
-  //   t = 0;
-  //   write(serial_port, &keyR, sizeof(keyR));
-  //   usleep(1000);
-  //   write(serial_port, &enter, sizeof(enter));
-  //   usleep(1000000);
-
-  //   int n = strlen(Value);
-  //   //  //printf("\n strlen :%d", strlen);
-  //   // //printf("\n Value :%s", Value);
-  //   for (int i = 0; i < n; i++)
-  //   {
-  //     char data = Value[i];
-  //     send_data(serial_port, &data, sizeof(data));
-  //     // //printf("\n Char :%c", data);
-  //     usleep(1000);
-  //   }
-
-  //   write(serial_port, &enter, sizeof(enter));
-  //   while (1)
-  //   {
-  //     char *data1 = receive_data(serial_port);
-  //     printf("\nReceived message: %s\n", data1);
-  //     if ((strchr(data1, 'Y') != NULL))
-  //     {
-  //       strcat(buffer, ID);
-  //       strcat(buffer, "$");
-  //       strcat(buffer, Value);
-  //       strcat(buffer, "$OK$");
-  //       printf("\nPROTECT_IPV6 done\n");
-  //       break;
-  //     }
-  //     else if ((strchr(data1, 'N') != NULL) || (t == 10))
-  //     {
-  //       strcat(buffer, ID);
-  //       strcat(buffer, "$");
-  //       strcat(buffer, Value);
-  //       strcat(buffer, "$ERROR$");
-  //       printf("\nPROTECT_IPV6 ERROR\n");
-  //       break;
-  //     }
-  //     t++;
-  //   }
-  //   // //printf("\nT NE: %d\n", t);
-  // }
-  // Delete IPV4/IPV6 protect server
-  //=================================================================================================================
-  // Setting IPV4 REMOVE server to Protect
-  // else if (strcmp(ID, "REMOVE_SERVER_IPV4") == 0)
-  // {
-  //   t = 0;
-  //   write(serial_port, &key_05, sizeof(key_05));
-  //   usleep(1000);
-  //   write(serial_port, &enter, sizeof(enter));
-  //   usleep(1000000);
-
-  //   int n = strlen(Value);
-  //   for (int i = 0; i < n; i++)
-  //   {
-  //     char data = Value[i];
-  //     send_data(serial_port, &data, sizeof(data));
-  //     usleep(10000);
-  //   }
-  //   write(serial_port, &enter, sizeof(enter));
-
-  //   while (1)
-  //   {
-  //     char *data1 = receive_data(serial_port);
-  //     printf("\nReceived message: %s\n", data1);
-  //     if ((strchr(data1, 'Y') != NULL))
-  //     {
-  //       strcat(buffer, ID);
-  //       strcat(buffer, "$");
-  //       strcat(buffer, Value);
-  //       strcat(buffer, "$OK$");
-  //       printf("\nPROTECT_IP done\n");
-
-  //       break;
-  //     }
-  //     else if ((strchr(data1, 'N') != NULL) || (t == 10))
-  //     {
-  //       strcat(buffer, ID);
-  //       strcat(buffer, "$");
-  //       strcat(buffer, Value);
-  //       strcat(buffer, "$ERROR$");
-  //       printf("\nPROTECT_IP ERROR\n");
-  //       break;
-  //     }
-  //     t++;
-  //   }
-  // }
-
-  // //=================================================================================================================
-  // // Setting REMOVE IP V6 server to Protect
-  // else if (strcmp(ID, "REMOVE_SERVER_IPV6") == 0)
-  // {
-  //   t = 0;
-  //   write(serial_port, &key_06, sizeof(key_06));
-  //   usleep(1000);
-  //   write(serial_port, &enter, sizeof(enter));
-  //   usleep(1000000);
-
-  //   int n = strlen(Value);
-  //   //  //printf("\n strlen :%d", strlen);
-  //   // //printf("\n Value :%s", Value);
-  //   for (int i = 0; i < n; i++)
-  //   {
-  //     char data = Value[i];
-  //     send_data(serial_port, &data, sizeof(data));
-  //     // //printf("\n Char :%c", data);
-  //     usleep(1000);
-  //   }
-
-  //   write(serial_port, &enter, sizeof(enter));
-  //   while (1)
-  //   {
-  //     char *data1 = receive_data(serial_port);
-  //     printf("\nReceived message: %s\n", data1);
-  //     if ((strchr(data1, 'Y') != NULL))
-  //     {
-  //       strcat(buffer, ID);
-  //       strcat(buffer, "$");
-  //       strcat(buffer, Value);
-  //       strcat(buffer, "$OK$");
-  //       printf("\nPROTECT_IPV6 done\n");
-  //       break;
-  //     }
-  //     else if ((strchr(data1, 'N') != NULL) || (t == 10))
-  //     {
-  //       strcat(buffer, ID);
-  //       strcat(buffer, "$");
-  //       strcat(buffer, Value);
-  //       strcat(buffer, "$ERROR$");
-  //       printf("\nPROTECT_IPV6 ERROR\n");
-  //       break;
-  //     }
-  //     t++;
-  //   }
-  //   // //printf("\nT NE: %d\n", t);
-  // }
-  //=================================================================================================================
-  // BLOCK IP CLIENT ATTACK
-  // Setting IP server to Protect
-  else if (strcmp(ID, "PORT1_BLOCK_IPV4") == 0 || strcmp(ID, "PORT2_BLOCK_IPV4") == 0 ||
-           strcmp(ID, "PORT3_BLOCK_IPV4") == 0 || strcmp(ID, "PORT4_BLOCK_IPV4") == 0 ||
-           strcmp(ID, "PORT5_BLOCK_IPV4") == 0 || strcmp(ID, "PORT6_BLOCK_IPV4") == 0 ||
-           strcmp(ID, "PORT7_BLOCK_IPV4") == 0 || strcmp(ID, "PORT8_BLOCK_IPV4") == 0)
+  else if (strcmp(ID, "PROTECT_PORT") == 0)
   {
     t = 0;
-    write(serial_port, &key_09, sizeof(key_09));
-    usleep(1000);
-    write(serial_port, &enter, sizeof(enter));
-    usleep(1000000);
-    write(serial_port, &key1, sizeof(key1));
-    usleep(100000);
-    if (ID[4] == '1')
-    {
-      write(serial_port, &key1, sizeof(key1));
-    }
-    else if (ID[4] == '2')
-    {
-      write(serial_port, &key2, sizeof(key2));
-    }
-    else if (ID[4] == '3')
-    {
-      write(serial_port, &key3, sizeof(key3));
-    }
-    else if (ID[4] == '4')
-    {
-      write(serial_port, &key4, sizeof(key4));
-    }
-    else if (ID[4] == '5')
-    {
-      write(serial_port, &key5, sizeof(key5));
-    }
-    else if (ID[4] == '6')
-    {
-      write(serial_port, &key6, sizeof(key6));
-    }
-    else if (ID[4] == '7')
-    {
-      write(serial_port, &key7, sizeof(key7));
-    }
-    else if (ID[4] == '8')
-    {
-      write(serial_port, &key8, sizeof(key8));
-    }
-    usleep(10000);
-    int n = strlen(Value);
-    for (int i = 0; i < n; i++)
-    {
-      char data = Value[i];
-      send_data(serial_port, &data, sizeof(data));
-      usleep(10000);
-    }
-    write(serial_port, &enter, sizeof(enter));
-
-    while (1)
-    {
-      char *data1 = receive_data(serial_port);
-      printf("\nReceived message: %s\n", data1);
-      if ((strchr(data1, 'Y') != NULL))
-      {
-        strcat(buffer, ID);
-        strcat(buffer, "$");
-        strcat(buffer, Value);
-        strcat(buffer, "$OK$");
-        printf("\nBLOCK_IPV4 done\n");
-
-        break;
-      }
-      else if ((strchr(data1, 'N') != NULL) || (t == 10))
-      {
-        strcat(buffer, ID);
-        strcat(buffer, "$");
-        strcat(buffer, Value);
-        strcat(buffer, "$ERROR$");
-        printf("\nBLOCK_IPV4 ERROR\n");
-        break;
-      }
-      t++;
-    }
-  }
-
-  //=================================================================================================================
-  // Setting IP V6 server to BLOCK
-  else if (strcmp(ID, "PORT1_BLOCK_IPV6") == 0 || strcmp(ID, "PORT2_BLOCK_IPV6") == 0 ||
-           strcmp(ID, "PORT3_BLOCK_IPV6") == 0 || strcmp(ID, "PORT4_BLOCK_IPV6") == 0 ||
-           strcmp(ID, "PORT5_BLOCK_IPV6") == 0 || strcmp(ID, "PORT6_BLOCK_IPV6") == 0 ||
-           strcmp(ID, "PORT7_BLOCK_IPV6") == 0 || strcmp(ID, "PORT8_BLOCK_IPV6") == 0)
-  {
-
-    t = 0;
-    write(serial_port, &key_09, sizeof(key_09));
-    usleep(1000);
-    write(serial_port, &enter, sizeof(enter));
-    usleep(1000000);
     write(serial_port, &key3, sizeof(key3));
+    usleep(1000);
+    write(serial_port, &enter, sizeof(enter));
     usleep(100000);
-    if (ID[4] == '1')
+    if (strcmp(Value, "1") == 0)
     {
       write(serial_port, &key1, sizeof(key1));
-    }
-    else if (ID[4] == '2')
-    {
-      write(serial_port, &key2, sizeof(key2));
-    }
-    else if (ID[4] == '3')
-    {
-      write(serial_port, &key3, sizeof(key3));
-    }
-    else if (ID[4] == '4')
-    {
-      write(serial_port, &key4, sizeof(key4));
-    }
-    else if (ID[4] == '5')
-    {
-      write(serial_port, &key5, sizeof(key5));
-    }
-    else if (ID[4] == '6')
-    {
-      write(serial_port, &key6, sizeof(key6));
-    }
-    else if (ID[4] == '7')
-    {
-      write(serial_port, &key7, sizeof(key7));
-    }
-    else if (ID[4] == '8')
-    {
-      write(serial_port, &key8, sizeof(key8));
-    }
-    usleep(10000);
-    int n = strlen(Value);
-    for (int i = 0; i < n; i++)
-    {
-      char data = Value[i];
-      send_data(serial_port, &data, sizeof(data));
       usleep(1000);
+      write(serial_port, &enter, sizeof(enter));
     }
-    write(serial_port, &enter, sizeof(enter));
+    else if (strcmp(Value, "0") == 0)
+    {
+      write(serial_port, &key0, sizeof(key0));
+      usleep(1000);
+      write(serial_port, &enter, sizeof(enter));
+    }
     while (1)
     {
       char *data1 = receive_data(serial_port);
@@ -4251,7 +3281,7 @@ void process_key(int serial_port, char *ID, char *Value, int client_sock, char *
         strcat(buffer, "$");
         strcat(buffer, Value);
         strcat(buffer, "$OK$");
-        printf("\nBLOCK_IPV6 done\n");
+        printf("\nPROTECT_PORT done\n");
         break;
       }
       else if ((strchr(data1, 'N') != NULL) || (t == 10))
@@ -4260,61 +3290,22 @@ void process_key(int serial_port, char *ID, char *Value, int client_sock, char *
         strcat(buffer, "$");
         strcat(buffer, Value);
         strcat(buffer, "$ERROR$");
-        printf("\nBLOCK_IPV6 ERROR\n");
+        printf("\nPROTECT_PORT error\n");
         break;
       }
       t++;
     }
-    // //printf("\nT NE: %d\n", t);
   }
-  // Delete IPV4/IPV6 BLOCK CLIENT
   //=================================================================================================================
-  // Setting IPV4 REMOVE BLOCK IPV4
-  else if (strcmp(ID, "PORT1_REMOVE_BLOCK_IPV4") == 0 || strcmp(ID, "PORT2_REMOVE_BLOCK_IPV4") == 0 ||
-           strcmp(ID, "PORT3_REMOVE_BLOCK_IPV4") == 0 || strcmp(ID, "PORT4_REMOVE_BLOCK_IPV4") == 0 ||
-           strcmp(ID, "PORT5_REMOVE_BLOCK_IPV4") == 0 || strcmp(ID, "PORT6_REMOVE_BLOCK_IPV4") == 0 ||
-           strcmp(ID, "PORT7_REMOVE_BLOCK_IPV4") == 0 || strcmp(ID, "PORT8_REMOVE_BLOCK_IPV4") == 0)
+  // Setting IP server to Protect
+  else if (strcmp(ID, "PROTECT_SERVER_IPv4") == 0)
   {
     t = 0;
-    write(serial_port, &key_09, sizeof(key_09));
+    write(serial_port, &key4, sizeof(key4));
     usleep(1000);
     write(serial_port, &enter, sizeof(enter));
     usleep(1000000);
-    write(serial_port, &key2, sizeof(key2));
-    usleep(100000);
-    if (ID[4] == '1')
-    {
-      write(serial_port, &key1, sizeof(key1));
-    }
-    else if (ID[4] == '2')
-    {
-      write(serial_port, &key2, sizeof(key2));
-    }
-    else if (ID[4] == '3')
-    {
-      write(serial_port, &key3, sizeof(key3));
-    }
-    else if (ID[4] == '4')
-    {
-      write(serial_port, &key4, sizeof(key4));
-    }
-    else if (ID[4] == '5')
-    {
-      write(serial_port, &key5, sizeof(key5));
-    }
-    else if (ID[4] == '6')
-    {
-      write(serial_port, &key6, sizeof(key6));
-    }
-    else if (ID[4] == '7')
-    {
-      write(serial_port, &key7, sizeof(key7));
-    }
-    else if (ID[4] == '8')
-    {
-      write(serial_port, &key8, sizeof(key8));
-    }
-    usleep(10000);
+
     int n = strlen(Value);
     for (int i = 0; i < n; i++)
     {
@@ -4334,7 +3325,7 @@ void process_key(int serial_port, char *ID, char *Value, int client_sock, char *
         strcat(buffer, "$");
         strcat(buffer, Value);
         strcat(buffer, "$OK$");
-        printf("\nREMOVE_BLOCK_IPV4 done\n");
+        printf("\nPROTECT_IP done\n");
 
         break;
       }
@@ -4344,7 +3335,7 @@ void process_key(int serial_port, char *ID, char *Value, int client_sock, char *
         strcat(buffer, "$");
         strcat(buffer, Value);
         strcat(buffer, "$ERROR$");
-        printf("\nREMOVE_BLOCK_IPV4 ERROR\n");
+        printf("\nPROTECT_IP ERROR\n");
         break;
       }
       t++;
@@ -4352,52 +3343,15 @@ void process_key(int serial_port, char *ID, char *Value, int client_sock, char *
   }
 
   //=================================================================================================================
-  // Setting REMOVE IP V6 BLOCK
-  else if (strcmp(ID, "PORT1_REMOVE_BLOCK_IPV6") == 0 || strcmp(ID, "PORT2_REMOVE_BLOCK_IPV6") == 0 ||
-           strcmp(ID, "PORT3_REMOVE_BLOCK_IPV6") == 0 || strcmp(ID, "PORT4_REMOVE_BLOCK_IPV6") == 0 ||
-           strcmp(ID, "PORT5_REMOVE_BLOCK_IPV6") == 0 || strcmp(ID, "PORT6_REMOVE_BLOCK_IPV6") == 0 ||
-           strcmp(ID, "PORT7_REMOVE_BLOCK_IPV6") == 0 || strcmp(ID, "PORT8_REMOVE_BLOCK_IPV6") == 0)
+  // Setting IP V6 server to Protect
+  else if (strcmp(ID, "PROTECT_SERVER_IPv6") == 0)
   {
     t = 0;
-    write(serial_port, &key_09, sizeof(key_09));
+    write(serial_port, &keyR, sizeof(keyR));
     usleep(1000);
     write(serial_port, &enter, sizeof(enter));
     usleep(1000000);
-    write(serial_port, &key4, sizeof(key4));
-    usleep(100000);
-    if (ID[4] == '1')
-    {
-      write(serial_port, &key1, sizeof(key1));
-    }
-    else if (ID[4] == '2')
-    {
-      write(serial_port, &key2, sizeof(key2));
-    }
-    else if (ID[4] == '3')
-    {
-      write(serial_port, &key3, sizeof(key3));
-    }
-    else if (ID[4] == '4')
-    {
-      write(serial_port, &key4, sizeof(key4));
-    }
-    else if (ID[4] == '5')
-    {
-      write(serial_port, &key5, sizeof(key5));
-    }
-    else if (ID[4] == '6')
-    {
-      write(serial_port, &key6, sizeof(key6));
-    }
-    else if (ID[4] == '7')
-    {
-      write(serial_port, &key7, sizeof(key7));
-    }
-    else if (ID[4] == '8')
-    {
-      write(serial_port, &key8, sizeof(key8));
-    }
-    usleep(10000);
+
     int n = strlen(Value);
     //  //printf("\n strlen :%d", strlen);
     // //printf("\n Value :%s", Value);
@@ -4420,7 +3374,7 @@ void process_key(int serial_port, char *ID, char *Value, int client_sock, char *
         strcat(buffer, "$");
         strcat(buffer, Value);
         strcat(buffer, "$OK$");
-        printf("\nREMOVE_BLOCK_IPV6 DONE\n");
+        printf("\nPROTECT_IPv6 done\n");
         break;
       }
       else if ((strchr(data1, 'N') != NULL) || (t == 10))
@@ -4429,15 +3383,301 @@ void process_key(int serial_port, char *ID, char *Value, int client_sock, char *
         strcat(buffer, "$");
         strcat(buffer, Value);
         strcat(buffer, "$ERROR$");
-        printf("\nREMOVE_BLOCK_IPV6 ERROR\n");
+        printf("\nPROTECT_IPv6 ERROR\n");
+        break;
+      }
+      t++;
+    }
+    // //printf("\nT NE: %d\n", t);
+  }
+  // Delete IPv4/ipv6 protect server
+  //=================================================================================================================
+  // Setting IPv4 REMOVE server to Protect
+  else if (strcmp(ID, "REMOVE_SERVER_IPv4") == 0)
+  {
+    t = 0;
+    write(serial_port, &key_05, sizeof(key_05));
+    usleep(1000);
+    write(serial_port, &enter, sizeof(enter));
+    usleep(1000000);
+
+    int n = strlen(Value);
+    for (int i = 0; i < n; i++)
+    {
+      char data = Value[i];
+      send_data(serial_port, &data, sizeof(data));
+      usleep(10000);
+    }
+    write(serial_port, &enter, sizeof(enter));
+
+    while (1)
+    {
+      char *data1 = receive_data(serial_port);
+      printf("\nReceived message: %s\n", data1);
+      if ((strchr(data1, 'Y') != NULL))
+      {
+        strcat(buffer, ID);
+        strcat(buffer, "$");
+        strcat(buffer, Value);
+        strcat(buffer, "$OK$");
+        printf("\nPROTECT_IP done\n");
+
+        break;
+      }
+      else if ((strchr(data1, 'N') != NULL) || (t == 10))
+      {
+        strcat(buffer, ID);
+        strcat(buffer, "$");
+        strcat(buffer, Value);
+        strcat(buffer, "$ERROR$");
+        printf("\nPROTECT_IP ERROR\n");
         break;
       }
       t++;
     }
   }
+
+  //=================================================================================================================
+  // Setting REMOVE IP V6 server to Protect
+  else if (strcmp(ID, "REMOVE_SERVER_IPv6") == 0)
+  {
+    t = 0;
+    write(serial_port, &key_06, sizeof(key_06));
+    usleep(1000);
+    write(serial_port, &enter, sizeof(enter));
+    usleep(1000000);
+
+    int n = strlen(Value);
+    //  //printf("\n strlen :%d", strlen);
+    // //printf("\n Value :%s", Value);
+    for (int i = 0; i < n; i++)
+    {
+      char data = Value[i];
+      send_data(serial_port, &data, sizeof(data));
+      // //printf("\n Char :%c", data);
+      usleep(1000);
+    }
+
+    write(serial_port, &enter, sizeof(enter));
+    while (1)
+    {
+      char *data1 = receive_data(serial_port);
+      printf("\nReceived message: %s\n", data1);
+      if ((strchr(data1, 'Y') != NULL))
+      {
+        strcat(buffer, ID);
+        strcat(buffer, "$");
+        strcat(buffer, Value);
+        strcat(buffer, "$OK$");
+        printf("\nPROTECT_IPv6 done\n");
+        break;
+      }
+      else if ((strchr(data1, 'N') != NULL) || (t == 10))
+      {
+        strcat(buffer, ID);
+        strcat(buffer, "$");
+        strcat(buffer, Value);
+        strcat(buffer, "$ERROR$");
+        printf("\nPROTECT_IPv6 ERROR\n");
+        break;
+      }
+      t++;
+    }
+    // //printf("\nT NE: %d\n", t);
+  }
+  //=================================================================================================================
+  // BLOCK IP CLIENT ATTACK
+  // Setting IP server to Protect
+  else if (strcmp(ID, "BLOCK_IPv4") == 0)
+  {
+    t = 0;
+    write(serial_port, &key_08, sizeof(key_08));
+    usleep(1000);
+    write(serial_port, &enter, sizeof(enter));
+    usleep(1000000);
+
+    int n = strlen(Value);
+    for (int i = 0; i < n; i++)
+    {
+      char data = Value[i];
+      send_data(serial_port, &data, sizeof(data));
+      usleep(10000);
+    }
+    write(serial_port, &enter, sizeof(enter));
+
+    while (1)
+    {
+      char *data1 = receive_data(serial_port);
+      printf("\nReceived message: %s\n", data1);
+      if ((strchr(data1, 'K') != NULL))
+      {
+        strcat(buffer, ID);
+        strcat(buffer, "$");
+        strcat(buffer, Value);
+        strcat(buffer, "$OK$");
+        printf("\nBLOCK_IPv4 done\n");
+
+        break;
+      }
+      else if ((strchr(data1, 'N') != NULL) || (t == 10))
+      {
+        strcat(buffer, ID);
+        strcat(buffer, "$");
+        strcat(buffer, Value);
+        strcat(buffer, "$ERROR$");
+        printf("\nBLOCK_IPv4 ERROR\n");
+        break;
+      }
+      t++;
+    }
+  }
+
+  //=================================================================================================================
+  // Setting IP V6 server to BLOCK
+  else if (strcmp(ID, "BLOCK_IPv6") == 0)
+  {
+    t = 0;
+    write(serial_port, &key_09, sizeof(key_09));
+    usleep(1000);
+    write(serial_port, &enter, sizeof(enter));
+    usleep(1000000);
+
+    int n = strlen(Value);
+    //  //printf("\n strlen :%d", strlen);
+    // //printf("\n Value :%s", Value);
+    for (int i = 0; i < n; i++)
+    {
+      char data = Value[i];
+      send_data(serial_port, &data, sizeof(data));
+      // //printf("\n Char :%c", data);
+      usleep(1000);
+    }
+
+    write(serial_port, &enter, sizeof(enter));
+    while (1)
+    {
+      char *data1 = receive_data(serial_port);
+      printf("\nReceived message: %s\n", data1);
+      if ((strchr(data1, 'K') != NULL))
+      {
+        strcat(buffer, ID);
+        strcat(buffer, "$");
+        strcat(buffer, Value);
+        strcat(buffer, "$OK$");
+        printf("\nBLOCK_IPv6 done\n");
+        break;
+      }
+      else if ((strchr(data1, 'N') != NULL) || (t == 10))
+      {
+        strcat(buffer, ID);
+        strcat(buffer, "$");
+        strcat(buffer, Value);
+        strcat(buffer, "$ERROR$");
+        printf("\nBLOCK_IPv6 ERROR\n");
+        break;
+      }
+      t++;
+    }
+    // //printf("\nT NE: %d\n", t);
+  }
+  // Delete IPv4/ipv6 BLOCK CLIENT
+  //=================================================================================================================
+  // Setting IPv4 REMOVE BLOCK IPv4
+  else if (strcmp(ID, "REMOVE_BLOCK_IPv4") == 0)
+  {
+    t = 0;
+    write(serial_port, &key_0A, sizeof(key_0A));
+    usleep(1000);
+    write(serial_port, &enter, sizeof(enter));
+    usleep(1000000);
+
+    int n = strlen(Value);
+    for (int i = 0; i < n; i++)
+    {
+      char data = Value[i];
+      send_data(serial_port, &data, sizeof(data));
+      usleep(10000);
+    }
+    write(serial_port, &enter, sizeof(enter));
+
+    while (1)
+    {
+      char *data1 = receive_data(serial_port);
+      printf("\nReceived message: %s\n", data1);
+      if ((strchr(data1, 'K') != NULL))
+      {
+        strcat(buffer, ID);
+        strcat(buffer, "$");
+        strcat(buffer, Value);
+        strcat(buffer, "$OK$");
+        printf("\nREMOVE_BLOCK_IPv4 done\n");
+
+        break;
+      }
+      else if ((strchr(data1, 'N') != NULL) || (t == 10))
+      {
+        strcat(buffer, ID);
+        strcat(buffer, "$");
+        strcat(buffer, Value);
+        strcat(buffer, "$ERROR$");
+        printf("\nREMOVE_BLOCK_IPv4 ERROR\n");
+        break;
+      }
+      t++;
+    }
+  }
+
+  //=================================================================================================================
+  // Setting REMOVE IP V6 BLOCK
+  else if (strcmp(ID, "REMOVE_BLOCK_IPv6") == 0)
+  {
+    t = 0;
+    write(serial_port, &key_09, sizeof(key_09));
+    usleep(1000);
+    write(serial_port, &enter, sizeof(enter));
+    usleep(1000000);
+
+    int n = strlen(Value);
+    //  //printf("\n strlen :%d", strlen);
+    // //printf("\n Value :%s", Value);
+    for (int i = 0; i < n; i++)
+    {
+      char data = Value[i];
+      send_data(serial_port, &data, sizeof(data));
+      // //printf("\n Char :%c", data);
+      usleep(1000);
+    }
+
+    write(serial_port, &enter, sizeof(enter));
+    while (1)
+    {
+      char *data1 = receive_data(serial_port);
+      printf("\nReceived message: %s\n", data1);
+      if ((strchr(data1, 'K') != NULL))
+      {
+        strcat(buffer, ID);
+        strcat(buffer, "$");
+        strcat(buffer, Value);
+        strcat(buffer, "$OK$");
+        printf("\nREMOVE_BLOCK_IPv6 DONE\n");
+        break;
+      }
+      else if ((strchr(data1, 'N') != NULL) || (t == 10))
+      {
+        strcat(buffer, ID);
+        strcat(buffer, "$");
+        strcat(buffer, Value);
+        strcat(buffer, "$ERROR$");
+        printf("\nREMOVE_BLOCK_IPv6 ERROR\n");
+        break;
+      }
+      t++;
+    }
+    // //printf("\nT NE: %d\n", t);
+  }
   //=================================================================================================================
   // Add VPN in VPN List IP4
-  else if (strcmp(ID, "ADD_IPV4_VPN") == 0)
+  else if (strcmp(ID, "ADD_IPv4_VPN") == 0)
   {
     t = 0;
     write(serial_port, &keyL, sizeof(keyL));
@@ -4483,7 +3723,7 @@ void process_key(int serial_port, char *ID, char *Value, int client_sock, char *
 
   //=================================================================================================================
   // Remove VPN in VPN List
-  else if (strcmp(ID, "REMOVE_IPV4_VPN") == 0)
+  else if (strcmp(ID, "REMOVE_IPv4_VPN") == 0)
   {
     t = 0;
     write(serial_port, &keyM, sizeof(keyM));
@@ -4529,7 +3769,7 @@ void process_key(int serial_port, char *ID, char *Value, int client_sock, char *
 
   //=================================================================================================================
   // Add VPN in VPN List IP6
-  else if (strcmp(ID, "ADD_IPV6_VPN") == 0)
+  else if (strcmp(ID, "ADD_IPv6_VPN") == 0)
   {
     t = 0;
     write(serial_port, &keythang, sizeof(keythang));
@@ -4557,7 +3797,7 @@ void process_key(int serial_port, char *ID, char *Value, int client_sock, char *
         strcat(buffer, "$");
         strcat(buffer, Value);
         strcat(buffer, "$OK$");
-        printf("\nADD_IPV6_VPN done\n");
+        printf("\nADD_IPv6_VPN done\n");
         break;
       }
       else if ((strchr(data1, 'N') != NULL) || (t == 10))
@@ -4566,7 +3806,7 @@ void process_key(int serial_port, char *ID, char *Value, int client_sock, char *
         strcat(buffer, "$");
         strcat(buffer, Value);
         strcat(buffer, "$ERROR$");
-        printf("\nADD_IPV6 VPN ERROR\n");
+        printf("\nADD_IPv6 VPN ERROR\n");
         break;
       }
       t++;
@@ -4575,7 +3815,7 @@ void process_key(int serial_port, char *ID, char *Value, int client_sock, char *
 
   //=================================================================================================================
   // Remove VPN in VPN List
-  else if (strcmp(ID, "REMOVE_IPV6_VPN") == 0)
+  else if (strcmp(ID, "REMOVE_IPv6_VPN") == 0)
   {
     t = 0;
     write(serial_port, &keymu, sizeof(keymu));
@@ -4603,7 +3843,7 @@ void process_key(int serial_port, char *ID, char *Value, int client_sock, char *
         strcat(buffer, "$");
         strcat(buffer, Value);
         strcat(buffer, "$OK$");
-        printf("\nREMOVE_IPV6 done\n");
+        printf("\nREMOVE_IPv6 done\n");
         break;
       }
       else if ((strchr(data1, 'N') != NULL) || (t == 10))
@@ -4612,57 +3852,21 @@ void process_key(int serial_port, char *ID, char *Value, int client_sock, char *
         strcat(buffer, "$");
         strcat(buffer, Value);
         strcat(buffer, "$ERROR$");
-        printf("\nREMOVE_IPV6 ERROR\n");
+        printf("\nREMOVE_IPv6 ERROR\n");
         break;
       }
       t++;
     }
   }
-  //=================================================================================================================
   // Set en/dis HTTPS
-  else if (strcmp(ID, "PORT1_HTTPS_EN_DIS") == 0 || strcmp(ID, "PORT2_HTTPS_EN_DIS") == 0 ||
-           strcmp(ID, "PORT3_HTTPS_EN_DIS") == 0 || strcmp(ID, "PORT4_HTTPS_EN_DIS") == 0 ||
-           strcmp(ID, "PORT5_HTTPS_EN_DIS") == 0 || strcmp(ID, "PORT6_HTTPS_EN_DIS") == 0 ||
-           strcmp(ID, "PORT7_HTTPS_EN_DIS") == 0 || strcmp(ID, "PORT8_HTTPS_EN_DIS") == 0)
+
+  else if (strcmp(ID, "HTTPS_EN_DIS") == 0)
   {
     t = 0;
     write(serial_port, &key_FF, sizeof(key_FF));
     usleep(1000);
     write(serial_port, &enter, sizeof(enter));
     usleep(100000);
-    if (ID[4] == '1')
-    {
-      write(serial_port, &key1, sizeof(key1));
-    }
-    else if (ID[4] == '2')
-    {
-      write(serial_port, &key2, sizeof(key2));
-    }
-    else if (ID[4] == '3')
-    {
-      write(serial_port, &key3, sizeof(key3));
-    }
-    else if (ID[4] == '4')
-    {
-      write(serial_port, &key4, sizeof(key4));
-    }
-    else if (ID[4] == '5')
-    {
-      write(serial_port, &key5, sizeof(key5));
-    }
-    else if (ID[4] == '6')
-    {
-      write(serial_port, &key6, sizeof(key6));
-    }
-    else if (ID[4] == '7')
-    {
-      write(serial_port, &key7, sizeof(key7));
-    }
-    else if (ID[4] == '8')
-    {
-      write(serial_port, &key8, sizeof(key8));
-    }
-    usleep(10000);
     if (strcmp(Value, "1") == 0)
     {
       write(serial_port, &keyY, sizeof(keyY));
@@ -4701,52 +3905,16 @@ void process_key(int serial_port, char *ID, char *Value, int client_sock, char *
     }
   }
   //=================================================================================================================
+
   // Set en/dis HTTP
-  else if (strcmp(ID, "PORT1_HTTP_EN_DIS") == 0 || strcmp(ID, "PORT2_HTTP_EN_DIS") == 0 ||
-           strcmp(ID, "PORT3_HTTP_EN_DIS") == 0 || strcmp(ID, "PORT4_HTTP_EN_DIS") == 0 ||
-           strcmp(ID, "PORT5_HTTP_EN_DIS") == 0 || strcmp(ID, "PORT6_HTTP_EN_DIS") == 0 ||
-           strcmp(ID, "PORT7_HTTP_EN_DIS") == 0 || strcmp(ID, "PORT8_HTTP_EN_DIS") == 0)
+
+  else if (strcmp(ID, "HTTP_EN_DIS") == 0)
   {
     t = 0;
     write(serial_port, &keyP, sizeof(keyP));
     usleep(1000);
     write(serial_port, &enter, sizeof(enter));
     usleep(100000);
-
-    if (ID[4] == '1')
-    {
-      write(serial_port, &key1, sizeof(key1));
-    }
-    else if (ID[4] == '2')
-    {
-      write(serial_port, &key2, sizeof(key2));
-    }
-    else if (ID[4] == '3')
-    {
-      write(serial_port, &key3, sizeof(key3));
-    }
-    else if (ID[4] == '4')
-    {
-      write(serial_port, &key4, sizeof(key4));
-    }
-    else if (ID[4] == '5')
-    {
-      write(serial_port, &key5, sizeof(key5));
-    }
-    else if (ID[4] == '6')
-    {
-      write(serial_port, &key6, sizeof(key6));
-    }
-    else if (ID[4] == '7')
-    {
-      write(serial_port, &key7, sizeof(key7));
-    }
-    else if (ID[4] == '8')
-    {
-      write(serial_port, &key8, sizeof(key8));
-    }
-    usleep(10000);
-
     if (strcmp(Value, "1") == 0)
     {
       write(serial_port, &keyY, sizeof(keyY));
@@ -4784,10 +3952,9 @@ void process_key(int serial_port, char *ID, char *Value, int client_sock, char *
       t++;
     }
   }
-
   //================================================================================================================
   // Add HTTP IP4
-  else if (strcmp(ID, "ADD_IPV4_HTTP") == 0)
+  else if (strcmp(ID, "ADD_IPv4_HTTP") == 0)
   {
     t = 0;
     write(serial_port, &keyT, sizeof(keyT));
@@ -4812,12 +3979,12 @@ void process_key(int serial_port, char *ID, char *Value, int client_sock, char *
       ////printf("\nReceived message: %s\n", data1);
       if ((strchr(data1, 'Y') != NULL))
       {
-        process_ip(LOGFILE_HTTP_IPV4, Value);
+        process_ip(LOGFILE_HTTP_IPv4, Value);
         strcat(buffer, ID);
         strcat(buffer, "$");
         strcat(buffer, Value);
         strcat(buffer, "$OK$");
-        printf("\nADD_IPV4_HTTP done\n");
+        printf("\nADD_IPv4_HTTP done\n");
 
         break;
       }
@@ -4827,16 +3994,15 @@ void process_key(int serial_port, char *ID, char *Value, int client_sock, char *
         strcat(buffer, "$");
         strcat(buffer, Value);
         strcat(buffer, "$ERROR$");
-        printf("\nADD_IPV4_HTTP error\n");
+        printf("\nADD_IPv4_HTTP error\n");
         break;
       }
       t++;
     }
   }
-
   //=================================================================================================================
   // REmove http ip4
-  else if (strcmp(ID, "REMOVE_IPV4_HTTP") == 0)
+  else if (strcmp(ID, "REMOVE_IPv4_HTTP") == 0)
   {
     t = 0;
     write(serial_port, &keyX, sizeof(keyX));
@@ -4859,13 +4025,13 @@ void process_key(int serial_port, char *ID, char *Value, int client_sock, char *
       printf("\nReceived message: %s\n", data1);
       if ((strchr(data1, 'Y') != NULL))
       {
-        remove_ip_from_file(LOGFILE_HTTP_IPV4, Value);
+        remove_ip_from_file(LOGFILE_HTTP_IPv4, Value);
         remove_ip_HTTP_from_hash(Value);
         strcat(buffer, ID);
         strcat(buffer, "$");
         strcat(buffer, Value);
         strcat(buffer, "$OK$");
-        printf("\nREMOVE_IPV4_HTTP done\n");
+        printf("\nREMOVE_IPv4_HTTP done\n");
         break;
       }
       else if ((strchr(data1, 'N') != NULL) || (t == 10))
@@ -4874,7 +4040,7 @@ void process_key(int serial_port, char *ID, char *Value, int client_sock, char *
         strcat(buffer, "$");
         strcat(buffer, Value);
         strcat(buffer, "$ERROR$");
-        printf("\nREMOVE_IPV4_HTTP ERROR\n");
+        printf("\nREMOVE_IPv4_HTTP ERROR\n");
         break;
       }
       t++;
@@ -4882,7 +4048,7 @@ void process_key(int serial_port, char *ID, char *Value, int client_sock, char *
   }
   //================================================================================================================
   // Add HTTP IP6
-  else if (strcmp(ID, "ADD_IPV6_HTTP") == 0)
+  else if (strcmp(ID, "ADD_IPv6_HTTP") == 0)
   {
     t = 0;
     write(serial_port, &keyngoacnhontrai, sizeof(keyngoacnhontrai));
@@ -4907,12 +4073,12 @@ void process_key(int serial_port, char *ID, char *Value, int client_sock, char *
       //  //printf("\nReceived message: %s\n", data1);
       if ((strchr(data1, 'Y') != NULL))
       {
-        process_ip(LOGFILE_HTTP_IPV6, Value);
+        process_ip(LOGFILE_HTTP_IPv6, Value);
         strcat(buffer, ID);
         strcat(buffer, "$");
         strcat(buffer, Value);
         strcat(buffer, "$OK$");
-        printf("\nADD_IPV6_HTTP done\n");
+        printf("\nADD_IPv6_HTTP done\n");
         break;
       }
       else if ((strchr(data1, 'N') != NULL) || (t == 10))
@@ -4921,7 +4087,7 @@ void process_key(int serial_port, char *ID, char *Value, int client_sock, char *
         strcat(buffer, "$");
         strcat(buffer, Value);
         strcat(buffer, "$ERROR$");
-        printf("\nADD_IPV6_HTTP error\n");
+        printf("\nADD_IPv6_HTTP error\n");
         break;
       }
       t++;
@@ -4929,7 +4095,7 @@ void process_key(int serial_port, char *ID, char *Value, int client_sock, char *
   }
   //=================================================================================================================
   // REmove http ip6
-  else if (strcmp(ID, "REMOVE_IPV6_HTTP") == 0)
+  else if (strcmp(ID, "REMOVE_IPv6_HTTP") == 0)
   {
     t = 0;
     write(serial_port, &keyngoacnhonphai, sizeof(keyngoacnhonphai));
@@ -4952,13 +4118,13 @@ void process_key(int serial_port, char *ID, char *Value, int client_sock, char *
       printf("\nReceived message: %s\n", data1);
       if ((strchr(data1, 'Y') != NULL))
       {
-        remove_ip_from_file(LOGFILE_HTTP_IPV6, Value);
+        remove_ip_from_file(LOGFILE_HTTP_IPv6, Value);
         remove_ip_HTTP_from_hash(Value);
         strcat(buffer, ID);
         strcat(buffer, "$");
         strcat(buffer, Value);
         strcat(buffer, "$OK$");
-        printf("\nREMOVE_IPV6_HTTP done\n");
+        printf("\nREMOVE_IPv6_HTTP done\n");
         break;
       }
       else if ((strchr(data1, 'N') != NULL) || (t == 10))
@@ -4967,7 +4133,7 @@ void process_key(int serial_port, char *ID, char *Value, int client_sock, char *
         strcat(buffer, "$");
         strcat(buffer, Value);
         strcat(buffer, "$ERROR$");
-        printf("\nREMOVE_IPV6_HTTP ERROR\n");
+        printf("\nREMOVE_IPv6_HTTP ERROR\n");
         break;
       }
       t++;
@@ -5375,7 +4541,7 @@ void process_key(int serial_port, char *ID, char *Value, int client_sock, char *
       t++;
     }
   }
-  //====================================================================================================================
+  //
   // Create new log file
   else if (strcmp(ID, "CREATE_NEW_LOG") == 0)
   {
@@ -5394,158 +4560,21 @@ void process_key(int serial_port, char *ID, char *Value, int client_sock, char *
     }
   }
   //=================================================================================================================
-  //  HTTP  IPV4 - ADD  from file
-  else if (strcmp(ID, "HTTP_TABLE_IPV4_ADD") == 0)
+  // Check save HTTP table IPv4 - ADD
+  else if (strcmp(ID, "HTTP_TABLE_IPv4_ADD") == 0)
   {
     write(serial_port, &keycham, sizeof(keycham));
+
     usleep(1000);
     write(serial_port, &enter, sizeof(enter));
-    usleep(10000);
-    write(serial_port, &key1, sizeof(key1));
-    usleep(10000);
-    // b0: xu ly file and send qua core
-    send_ips_via_uart(Value);
-    // b1: dua vào hash
-    // load_ips_from_file(Value);
-    // b2: luu vào file http table
-    // append_ips_to_file(Value, LOGFILE_HTTP_IPV4);
-    // b4: phan hoi len GUI
-    while (1)
-    {
-      //  char *data1 = "Y";
-      char *data1 = receive_data(serial_port);
-      printf("\nReceived message: %s\n", data1);
-      if ((strchr(data1, 'Y') != NULL))
-      {
-        strcat(buffer, ID);
-        strcat(buffer, "$");
-        strcat(buffer, Value);
-        strcat(buffer, "$OK$");
-        printf("\nHTTP_TABLE_IPV4 done\n");
-        break;
-      }
-    }
-  }
-  //=================================================================================================================
-  // Check save HTTP table IPV6 - ADD
-  else if (strcmp(ID, "HTTP_TABLE_IPV6_ADD") == 0)
-  {
-    write(serial_port, &keycham, sizeof(keycham));
-    usleep(1000);
-    write(serial_port, &enter, sizeof(enter));
-    usleep(10000);
-
-    write(serial_port, &key3, sizeof(key3));
-    usleep(10000);
-    // b0: xu ly file and send qua core
-    send_ips_via_uart(Value);
-    // // b1: dua vào hash
-    // load_ips_from_file(Value);
-    // // b2: luu vào file http table
-    // append_ips_to_file(Value, LOGFILE_HTTP_IPV6);
-    // // b4: phan hoi len GUI
-    while (1)
-    {
-      // char *data1 = "Y";
-      char *data1 = receive_data(serial_port);
-      printf("\nReceived message: %s\n", data1);
-      if ((strchr(data1, 'Y') != NULL))
-      {
-        strcat(buffer, ID);
-        strcat(buffer, "$");
-        strcat(buffer, Value);
-        strcat(buffer, "$OK$");
-        printf("\nHTTP_TABLE_IPV6 done\n");
-        break;
-      }
-    }
-  }
-  //=================================================================================================================
-  // Clear
-  else if (strcmp(ID, "HTTP_TABLE_IPV4_REMOVE") == 0)
-  {
-    write(serial_port, &keycham, sizeof(keycham));
-    usleep(1000);
-    write(serial_port, &enter, sizeof(enter));
-    usleep(10000);
-    write(serial_port, &key2, sizeof(key2));
-    usleep(10000);
-    // b0: xu ly file and send qua core
-    send_ips_via_uart(Value);
-
-    // // b1: xoa khoi vào hash
-    // load_remove_hash_ip_http_from_file(Value);
-    // // b2: xoa khoi file http table
-    // remove_matching_ips(Value, LOGFILE_HTTP_IPV4);
-    // // b4: phan hoi len GUI
-    while (1)
-    {
-      // char *data1 = "Y";
-      char *data1 = receive_data(serial_port);
-      printf("\nReceived message: %s\n", data1);
-      if ((strchr(data1, 'Y') != NULL))
-      {
-        strcat(buffer, ID);
-        strcat(buffer, "$");
-        strcat(buffer, Value);
-        strcat(buffer, "$OK$");
-        printf("\nCLear HTTP_TABLE_IPV4 done\n");
-        break;
-      }
-    }
-  }
-
-  // Check save HTTP table IPV6 - ADD
-  else if (strcmp(ID, "HTTP_TABLE_IPV6_REMOVE") == 0)
-  {
-    write(serial_port, &keycham, sizeof(keycham));
-    usleep(1000);
-    write(serial_port, &enter, sizeof(enter));
-    usleep(10000);
-    write(serial_port, &key4, sizeof(key4));
-    usleep(10000);
-    // b0: xu ly file and send qua core
-    send_ips_via_uart(Value);
-
-    // // b1: xoa khoi  vào hash
-    // load_remove_hash_ip_http_from_file(Value);
-    // // b2: xoa khoi file http table
-    // remove_matching_ips(Value, LOGFILE_HTTP_IPV6);
-    // // b4: phan hoi len GUI
-    while (1)
-    {
-      // char *data1 = "Y";
-      char *data1 = receive_data(serial_port);
-      printf("\nReceived message: %s\n", data1);
-      if ((strchr(data1, 'Y') != NULL))
-      {
-        strcat(buffer, ID);
-        strcat(buffer, "$");
-        strcat(buffer, Value);
-        strcat(buffer, "$OK$");
-        printf("\nClear HTTP_TABLE_IPV6 done\n");
-        break;
-      }
-    }
-  }
-
-  //=================================================================================================================
-  // Check save VPN table IPV4 - ADD
-  else if (strcmp(ID, "VPN_IPV4_ADD") == 0)
-  {
-    write(serial_port, &keycham, sizeof(keycham));
-    usleep(1000);
-    write(serial_port, &enter, sizeof(enter));
-    usleep(10000);
-    write(serial_port, &key5, sizeof(key5));
     usleep(10000);
     // b0: xu ly file and send qua core
     send_ips_via_uart(Value);
 
     // b1: dua vào hash
-    // load_ips_from_file(Value);
+    load_ips_from_file(Value);
     // b2: luu vào file http table
-    // append_ips_to_file(Value, LOGFILE_HTTP_IPV4);
+    append_ips_to_file(Value, LOGFILE_HTTP_IPv4);
     // b4: phan hoi len GUI
     while (1)
     {
@@ -5557,30 +4586,28 @@ void process_key(int serial_port, char *ID, char *Value, int client_sock, char *
         strcat(buffer, "$");
         strcat(buffer, Value);
         strcat(buffer, "$OK$");
-        printf("\nVPN_TABLE_IPV4 done\n");
+        printf("\nHTTP_TABLE_IPv4 done\n");
         break;
       }
     }
   }
 
-  // Check save VPN table IPV6 - ADD
-  else if (strcmp(ID, "VPN_IPV6_ADD") == 0)
+  // Check save HTTP table IPv6 - ADD
+  else if (strcmp(ID, "HTTP_TABLE_IPv6_ADD") == 0)
   {
-    write(serial_port, &keycham, sizeof(keycham));
+    write(serial_port, &keynhaynguoc, sizeof(keynhaynguoc));
+
     usleep(1000);
     write(serial_port, &enter, sizeof(enter));
-    usleep(10000);
-
-    write(serial_port, &key7, sizeof(key7));
     usleep(10000);
     // b0: xu ly file and send qua core
     send_ips_via_uart(Value);
 
-    // // b1: dua vào hash
-    // load_ips_from_file(Value);
-    // // b2: luu vào file http table
-    // append_ips_to_file(Value, LOGFILE_HTTP_IPV6);
-    // // b4: phan hoi len GUI
+    // b1: dua vào hash
+    load_ips_from_file(Value);
+    // b2: luu vào file http table
+    append_ips_to_file(Value, LOGFILE_HTTP_IPv6);
+    // b4: phan hoi len GUI
     while (1)
     {
       char *data1 = receive_data(serial_port);
@@ -5591,28 +4618,26 @@ void process_key(int serial_port, char *ID, char *Value, int client_sock, char *
         strcat(buffer, "$");
         strcat(buffer, Value);
         strcat(buffer, "$OK$");
-        printf("\nVPN_TABLE_IPV6 done\n");
+        printf("\nHTTP_TABLE_IPv6 done\n");
         break;
       }
     }
   }
 
   // Clear
-  else if (strcmp(ID, "VPN_IPV4_REMOVE") == 0)
+  else if (strcmp(ID, "HTTP_TABLE_IPv4_CLEAR") == 0)
   {
-    write(serial_port, &keycham, sizeof(keycham));
+    write(serial_port, &key_01, sizeof(key_01));
     usleep(1000);
     write(serial_port, &enter, sizeof(enter));
-    usleep(10000);
-    write(serial_port, &key6, sizeof(key6));
     usleep(10000);
     // b0: xu ly file and send qua core
     send_ips_via_uart(Value);
 
-    // // b1: xoa khoi vào hash
-    // load_remove_hash_ip_http_from_file(Value);
-    // // b2: xoa khoi file http table
-    // remove_matching_ips(Value, LOGFILE_HTTP_IPV4);
+    // b1: xoa khoi vào hash
+    load_remove_hash_ip_http_from_file(Value);
+    // b2: xoa khoi file http table
+    remove_matching_ips(Value, LOGFILE_HTTP_IPv4);
     // b4: phan hoi len GUI
     while (1)
     {
@@ -5624,104 +4649,27 @@ void process_key(int serial_port, char *ID, char *Value, int client_sock, char *
         strcat(buffer, "$");
         strcat(buffer, Value);
         strcat(buffer, "$OK$");
-        printf("\nCLear VPN_TABLE_IPV4 done\n");
+        printf("\nCLear HTTP_TABLE_IPv4 done\n");
         break;
       }
     }
   }
 
-  // Check save HTTP table IPV6 - ADD
-  else if (strcmp(ID, "VPN_IPV6_ADD") == 0)
+  // Check save HTTP table IPv6 - ADD
+  else if (strcmp(ID, "HTTP_TABLE_IPv6_CLEAR") == 0)
   {
-    write(serial_port, &keycham, sizeof(keycham));
+    write(serial_port, &key_02, sizeof(key_02));
     usleep(1000);
     write(serial_port, &enter, sizeof(enter));
-    usleep(10000);
-    write(serial_port, &key8, sizeof(key8));
     usleep(10000);
     // b0: xu ly file and send qua core
     send_ips_via_uart(Value);
 
-    // // b1: xoa khoi  vào hash
-    // load_remove_hash_ip_http_from_file(Value);
-    // // b2: xoa khoi file http table
-    // remove_matching_ips(Value, LOGFILE_HTTP_IPV6);
-    // // b4: phan hoi len GUI
-    while (1)
-    {
-      char *data1 = receive_data(serial_port);
-      printf("\nReceived message: %s\n", data1);
-      if ((strchr(data1, 'Y') != NULL))
-      {
-        strcat(buffer, ID);
-        strcat(buffer, "$");
-        strcat(buffer, Value);
-        strcat(buffer, "$OK$");
-        printf("\nClear VPN_TABLE_IPV6 done\n");
-        break;
-      }
-    }
-  }
-  // ==================================================================================
-  // Import file IP Server protect
-  else if (strcmp(ID, "PORT1_SERVER_IPV4_ADD") == 0 ||
-           strcmp(ID, "PORT2_SERVER_IPV4_ADD") == 0 ||
-           strcmp(ID, "PORT3_SERVER_IPV4_ADD") == 0 ||
-           strcmp(ID, "PORT4_SERVER_IPV4_ADD") == 0 ||
-           strcmp(ID, "PORT5_SERVER_IPV4_ADD") == 0 ||
-           strcmp(ID, "PORT6_SERVER_IPV4_ADD") == 0 ||
-           strcmp(ID, "PORT7_SERVER_IPV4_ADD") == 0 ||
-           strcmp(ID, "PORT8_SERVER_IPV4_ADD") == 0)
-  {
-    write(serial_port, &keycham, sizeof(keycham));
-    usleep(1000);
-    write(serial_port, &enter, sizeof(enter));
-    usleep(10000);
-    write(serial_port, &key9, sizeof(key9));
-    usleep(10000);
-    if (ID[4] == '1')
-    {
-      write(serial_port, &key1, sizeof(key1));
-    }
-    else if (ID[4] == '2')
-    {
-      write(serial_port, &key2, sizeof(key2));
-    }
-    else if (ID[4] == '3')
-    {
-      write(serial_port, &key3, sizeof(key3));
-    }
-    else if (ID[4] == '4')
-    {
-      write(serial_port, &key4, sizeof(key4));
-    }
-    else if (ID[4] == '5')
-    {
-      write(serial_port, &key5, sizeof(key5));
-    }
-    else if (ID[4] == '6')
-    {
-      write(serial_port, &key6, sizeof(key6));
-    }
-    else if (ID[4] == '7')
-    {
-      write(serial_port, &key7, sizeof(key7));
-    }
-    else if (ID[4] == '8')
-    {
-      write(serial_port, &key8, sizeof(key8));
-    }
-    usleep(10000);
-    // b0: xu ly file and send qua core
-    send_ips_via_uart(Value);
-
-    // b1: dua vào hash
-    // load_ips_from_file(Value);
-    // b2: luu vào file http table
-    // append_ips_to_file(Value, LOGFILE_HTTP_IPV4);
+    // b1: xoa khoi  vào hash
+    load_remove_hash_ip_http_from_file(Value);
+    // b2: xoa khoi file http table
+    remove_matching_ips(Value, LOGFILE_HTTP_IPv6);
     // b4: phan hoi len GUI
-    usleep(1000000);
-
     while (1)
     {
       char *data1 = receive_data(serial_port);
@@ -5732,538 +4680,13 @@ void process_key(int serial_port, char *ID, char *Value, int client_sock, char *
         strcat(buffer, "$");
         strcat(buffer, Value);
         strcat(buffer, "$OK$");
-        printf("\nVPN_TABLE_IPV4 done\n");
-        break;
-      }
-    }
-  }
-  //=================================================================================================================
-  // Remove IP server fromfile
-  else if (strcmp(ID, "PORT1_SERVER_IPV4_REMOVE") == 0 ||
-           strcmp(ID, "PORT2_SERVER_IPV4_REMOVE") == 0 ||
-           strcmp(ID, "PORT3_SERVER_IPV4_REMOVE") == 0 ||
-           strcmp(ID, "PORT4_SERVER_IPV4_REMOVE") == 0 ||
-           strcmp(ID, "PORT5_SERVER_IPV4_REMOVE") == 0 ||
-           strcmp(ID, "PORT6_SERVER_IPV4_REMOVE") == 0 ||
-           strcmp(ID, "PORT7_SERVER_IPV4_REMOVE") == 0 ||
-           strcmp(ID, "PORT8_SERVER_IPV4_REMOVE") == 0)
-  {
-    write(serial_port, &keycham, sizeof(keycham));
-    usleep(1000);
-    write(serial_port, &enter, sizeof(enter));
-    usleep(10000);
-    write(serial_port, &keyhaicham, sizeof(keyhaicham));
-    usleep(10000);
-    if (ID[4] == '1')
-    {
-      write(serial_port, &key1, sizeof(key1));
-    }
-    else if (ID[4] == '2')
-    {
-      write(serial_port, &key2, sizeof(key2));
-    }
-    else if (ID[4] == '3')
-    {
-      write(serial_port, &key3, sizeof(key3));
-    }
-    else if (ID[4] == '4')
-    {
-      write(serial_port, &key4, sizeof(key4));
-    }
-    else if (ID[4] == '5')
-    {
-      write(serial_port, &key5, sizeof(key5));
-    }
-    else if (ID[4] == '6')
-    {
-      write(serial_port, &key6, sizeof(key6));
-    }
-    else if (ID[4] == '7')
-    {
-      write(serial_port, &key7, sizeof(key7));
-    }
-    else if (ID[4] == '8')
-    {
-      write(serial_port, &key8, sizeof(key8));
-    }
-    usleep(10000);
-    // b0: xu ly file and send qua core
-    send_ips_via_uart(Value);
-
-    // b1: dua vào hash
-    // load_ips_from_file(Value);
-    // b2: luu vào file http table
-    // append_ips_to_file(Value, LOGFILE_HTTP_IPV4);
-    // b4: phan hoi len GUI
-    usleep(1000000);
-
-    while (1)
-    {
-      char *data1 = receive_data(serial_port);
-      printf("\nReceived message: %s\n", data1);
-      if ((strchr(data1, 'Y') != NULL))
-      {
-        strcat(buffer, ID);
-        strcat(buffer, "$");
-        strcat(buffer, Value);
-        strcat(buffer, "$OK$");
-        printf("\nVPN_TABLE_IPV4 done\n");
-        break;
-      }
-    }
-  }
-  //=================================================================================================================
-  // Add IP6 server fromfile
-  else if (strcmp(ID, "PORT1_SERVER_IPV6_ADD") == 0 ||
-           strcmp(ID, "PORT2_SERVER_IPV6_ADD") == 0 ||
-           strcmp(ID, "PORT3_SERVER_IPV6_ADD") == 0 ||
-           strcmp(ID, "PORT4_SERVER_IPV6_ADD") == 0 ||
-           strcmp(ID, "PORT5_SERVER_IPV6_ADD") == 0 ||
-           strcmp(ID, "PORT6_SERVER_IPV6_ADD") == 0 ||
-           strcmp(ID, "PORT7_SERVER_IPV6_ADD") == 0 ||
-           strcmp(ID, "PORT8_SERVER_IPV6_ADD") == 0)
-  {
-    write(serial_port, &keycham, sizeof(keycham));
-    usleep(1000);
-    write(serial_port, &enter, sizeof(enter));
-    usleep(10000);
-    write(serial_port, &keychamphay, sizeof(keychamphay));
-    usleep(10000);
-    if (ID[4] == '1')
-    {
-      write(serial_port, &key1, sizeof(key1));
-    }
-    else if (ID[4] == '2')
-    {
-      write(serial_port, &key2, sizeof(key2));
-    }
-    else if (ID[4] == '3')
-    {
-      write(serial_port, &key3, sizeof(key3));
-    }
-    else if (ID[4] == '4')
-    {
-      write(serial_port, &key4, sizeof(key4));
-    }
-    else if (ID[4] == '5')
-    {
-      write(serial_port, &key5, sizeof(key5));
-    }
-    else if (ID[4] == '6')
-    {
-      write(serial_port, &key6, sizeof(key6));
-    }
-    else if (ID[4] == '7')
-    {
-      write(serial_port, &key7, sizeof(key7));
-    }
-    else if (ID[4] == '8')
-    {
-      write(serial_port, &key8, sizeof(key8));
-    }
-    usleep(10000);
-    // b0: xu ly file and send qua core
-    send_ips_via_uart(Value);
-
-    // b1: dua vào hash
-    // load_ips_from_file(Value);
-    // b2: luu vào file http table
-    // append_ips_to_file(Value, LOGFILE_HTTP_IPV4);
-    // b4: phan hoi len GUI
-    usleep(1000000);
-
-    while (1)
-    {
-      char *data1 = receive_data(serial_port);
-      printf("\nReceived message: %s\n", data1);
-      if ((strchr(data1, 'Y') != NULL))
-      {
-        strcat(buffer, ID);
-        strcat(buffer, "$");
-        strcat(buffer, Value);
-        strcat(buffer, "$OK$");
-        printf("\nVPN_TABLE_IPV4 done\n");
-        break;
-      }
-    }
-  }
-  //=================================================================================================================
-  // Remove IP6 server fromfile
-  else if (strcmp(ID, "PORT1_SERVER_IPV6_REMOVE") == 0 ||
-           strcmp(ID, "PORT2_SERVER_IPV6_REMOVE") == 0 ||
-           strcmp(ID, "PORT3_SERVER_IPV6_REMOVE") == 0 ||
-           strcmp(ID, "PORT4_SERVER_IPV6_REMOVE") == 0 ||
-           strcmp(ID, "PORT5_SERVER_IPV6_REMOVE") == 0 ||
-           strcmp(ID, "PORT6_SERVER_IPV6_REMOVE") == 0 ||
-           strcmp(ID, "PORT7_SERVER_IPV6_REMOVE") == 0 ||
-           strcmp(ID, "PORT8_SERVER_IPV6_REMOVE") == 0)
-  {
-    write(serial_port, &keycham, sizeof(keycham));
-    usleep(1000);
-    write(serial_port, &enter, sizeof(enter));
-    usleep(10000);
-    write(serial_port, &keybehon, sizeof(keybehon));
-    usleep(10000);
-    if (ID[4] == '1')
-    {
-      write(serial_port, &key1, sizeof(key1));
-    }
-    else if (ID[4] == '2')
-    {
-      write(serial_port, &key2, sizeof(key2));
-    }
-    else if (ID[4] == '3')
-    {
-      write(serial_port, &key3, sizeof(key3));
-    }
-    else if (ID[4] == '4')
-    {
-      write(serial_port, &key4, sizeof(key4));
-    }
-    else if (ID[4] == '5')
-    {
-      write(serial_port, &key5, sizeof(key5));
-    }
-    else if (ID[4] == '6')
-    {
-      write(serial_port, &key6, sizeof(key6));
-    }
-    else if (ID[4] == '7')
-    {
-      write(serial_port, &key7, sizeof(key7));
-    }
-    else if (ID[4] == '8')
-    {
-      write(serial_port, &key8, sizeof(key8));
-    }
-    usleep(10000);
-    // b0: xu ly file and send qua core
-    send_ips_via_uart(Value);
-
-    // b1: dua vào hash
-    // load_ips_from_file(Value);
-    // b2: luu vào file http table
-    // append_ips_to_file(Value, LOGFILE_HTTP_IPV4);
-    // b4: phan hoi len GUI
-    usleep(1000000);
-
-    while (1)
-    {
-      char *data1 = receive_data(serial_port);
-      printf("\nReceived message: %s\n", data1);
-      if ((strchr(data1, 'Y') != NULL))
-      {
-        strcat(buffer, ID);
-        strcat(buffer, "$");
-        strcat(buffer, Value);
-        strcat(buffer, "$OK$");
-        printf("\nVPN_TABLE_IPV4 done\n");
-        break;
-      }
-    }
-  }
-
-  // ==================================================================================
-  // Import file IP block ip client
-  else if (strcmp(ID, "PORT1_BLOCK_IPV4_ADD") == 0 ||
-           strcmp(ID, "PORT2_BLOCK_IPV4_ADD") == 0 ||
-           strcmp(ID, "PORT3_BLOCK_IPV4_ADD") == 0 ||
-           strcmp(ID, "PORT4_BLOCK_IPV4_ADD") == 0 ||
-           strcmp(ID, "PORT5_BLOCK_IPV4_ADD") == 0 ||
-           strcmp(ID, "PORT6_BLOCK_IPV4_ADD") == 0 ||
-           strcmp(ID, "PORT7_BLOCK_IPV4_ADD") == 0 ||
-           strcmp(ID, "PORT8_BLOCK_IPV4_ADD") == 0)
-  {
-    write(serial_port, &keycham, sizeof(keycham));
-    usleep(1000);
-    write(serial_port, &enter, sizeof(enter));
-    usleep(10000);
-    write(serial_port, &keybang, sizeof(keybang));
-    usleep(10000);
-    if (ID[4] == '1')
-    {
-      write(serial_port, &key1, sizeof(key1));
-    }
-    else if (ID[4] == '2')
-    {
-      write(serial_port, &key2, sizeof(key2));
-    }
-    else if (ID[4] == '3')
-    {
-      write(serial_port, &key3, sizeof(key3));
-    }
-    else if (ID[4] == '4')
-    {
-      write(serial_port, &key4, sizeof(key4));
-    }
-    else if (ID[4] == '5')
-    {
-      write(serial_port, &key5, sizeof(key5));
-    }
-    else if (ID[4] == '6')
-    {
-      write(serial_port, &key6, sizeof(key6));
-    }
-    else if (ID[4] == '7')
-    {
-      write(serial_port, &key7, sizeof(key7));
-    }
-    else if (ID[4] == '8')
-    {
-      write(serial_port, &key8, sizeof(key8));
-    }
-    usleep(10000);
-    // b0: xu ly file and send qua core
-    send_ips_via_uart(Value);
-
-    // b1: dua vào hash
-    // load_ips_from_file(Value);
-    // b2: luu vào file http table
-    // append_ips_to_file(Value, LOGFILE_HTTP_IPV4);
-    // b4: phan hoi len GUI
-    usleep(1000000);
-
-    while (1)
-    {
-      char *data1 = receive_data(serial_port);
-      printf("\nReceived message: %s\n", data1);
-      if ((strchr(data1, 'Y') != NULL))
-      {
-        strcat(buffer, ID);
-        strcat(buffer, "$");
-        strcat(buffer, Value);
-        strcat(buffer, "$OK$");
-        printf("\nVPN_TABLE_IPV4 done\n");
-        break;
-      }
-    }
-  }
-  //=================================================================================================================
-  // Remove IP BLOCK fromfile
-  else if (strcmp(ID, "PORT1_BLOCK_IPV4_REMOVE") == 0 ||
-           strcmp(ID, "PORT2_BLOCK_IPV4_REMOVE") == 0 ||
-           strcmp(ID, "PORT3_BLOCK_IPV4_REMOVE") == 0 ||
-           strcmp(ID, "PORT4_BLOCK_IPV4_REMOVE") == 0 ||
-           strcmp(ID, "PORT5_BLOCK_IPV4_REMOVE") == 0 ||
-           strcmp(ID, "PORT6_BLOCK_IPV4_REMOVE") == 0 ||
-           strcmp(ID, "PORT7_BLOCK_IPV4_REMOVE") == 0 ||
-           strcmp(ID, "PORT8_BLOCK_IPV4_REMOVE") == 0)
-  {
-    write(serial_port, &keycham, sizeof(keycham));
-    usleep(1000);
-    write(serial_port, &enter, sizeof(enter));
-    usleep(10000);
-    write(serial_port, &keylonhon, sizeof(keylonhon));
-    usleep(10000);
-    if (ID[4] == '1')
-    {
-      write(serial_port, &key1, sizeof(key1));
-    }
-    else if (ID[4] == '2')
-    {
-      write(serial_port, &key2, sizeof(key2));
-    }
-    else if (ID[4] == '3')
-    {
-      write(serial_port, &key3, sizeof(key3));
-    }
-    else if (ID[4] == '4')
-    {
-      write(serial_port, &key4, sizeof(key4));
-    }
-    else if (ID[4] == '5')
-    {
-      write(serial_port, &key5, sizeof(key5));
-    }
-    else if (ID[4] == '6')
-    {
-      write(serial_port, &key6, sizeof(key6));
-    }
-    else if (ID[4] == '7')
-    {
-      write(serial_port, &key7, sizeof(key7));
-    }
-    else if (ID[4] == '8')
-    {
-      write(serial_port, &key8, sizeof(key8));
-    }
-    usleep(10000);
-    // b0: xu ly file and send qua core
-    send_ips_via_uart(Value);
-
-    // b1: dua vào hash
-    // load_ips_from_file(Value);
-    // b2: luu vào file http table
-    // append_ips_to_file(Value, LOGFILE_HTTP_IPV4);
-    // b4: phan hoi len GUI
-    usleep(1000000);
-
-    while (1)
-    {
-      char *data1 = receive_data(serial_port);
-      printf("\nReceived message: %s\n", data1);
-      if ((strchr(data1, 'Y') != NULL))
-      {
-        strcat(buffer, ID);
-        strcat(buffer, "$");
-        strcat(buffer, Value);
-        strcat(buffer, "$OK$");
-        printf("\nVPN_TABLE_IPV4 done\n");
-        break;
-      }
-    }
-  }
-  //=================================================================================================================
-  // Add IP6 BLOCK fromfile
-  else if (strcmp(ID, "PORT1_BLOCK_IPV6_ADD") == 0 ||
-           strcmp(ID, "PORT2_BLOCK_IPV6_ADD") == 0 ||
-           strcmp(ID, "PORT3_BLOCK_IPV6_ADD") == 0 ||
-           strcmp(ID, "PORT4_BLOCK_IPV6_ADD") == 0 ||
-           strcmp(ID, "PORT5_BLOCK_IPV6_ADD") == 0 ||
-           strcmp(ID, "PORT6_BLOCK_IPV6_ADD") == 0 ||
-           strcmp(ID, "PORT7_BLOCK_IPV6_ADD") == 0 ||
-           strcmp(ID, "PORT8_BLOCK_IPV6_ADD") == 0)
-  {
-    write(serial_port, &keycham, sizeof(keycham));
-    usleep(1000);
-    write(serial_port, &enter, sizeof(enter));
-    usleep(10000);
-    write(serial_port, &keyhoi, sizeof(keyhoi));
-    usleep(10000);
-    if (ID[4] == '1')
-    {
-      write(serial_port, &key1, sizeof(key1));
-    }
-    else if (ID[4] == '2')
-    {
-      write(serial_port, &key2, sizeof(key2));
-    }
-    else if (ID[4] == '3')
-    {
-      write(serial_port, &key3, sizeof(key3));
-    }
-    else if (ID[4] == '4')
-    {
-      write(serial_port, &key4, sizeof(key4));
-    }
-    else if (ID[4] == '5')
-    {
-      write(serial_port, &key5, sizeof(key5));
-    }
-    else if (ID[4] == '6')
-    {
-      write(serial_port, &key6, sizeof(key6));
-    }
-    else if (ID[4] == '7')
-    {
-      write(serial_port, &key7, sizeof(key7));
-    }
-    else if (ID[4] == '8')
-    {
-      write(serial_port, &key8, sizeof(key8));
-    }
-    usleep(10000);
-    // b0: xu ly file and send qua core
-    send_ips_via_uart(Value);
-
-    // b1: dua vào hash
-    // load_ips_from_file(Value);
-    // b2: luu vào file http table
-    // append_ips_to_file(Value, LOGFILE_HTTP_IPV4);
-    // b4: phan hoi len GUI
-    usleep(1000000);
-    while (1)
-    {
-      char *data1 = receive_data(serial_port);
-      printf("\nReceived message: %s\n", data1);
-      if ((strchr(data1, 'Y') != NULL))
-      {
-        strcat(buffer, ID);
-        strcat(buffer, "$");
-        strcat(buffer, Value);
-        strcat(buffer, "$OK$");
-        printf("\nVPN_TABLE_IPV4 done\n");
-        break;
-      }
-    }
-  }
-  //=================================================================================================================
-  // Remove IP6 BLOCK fromfile
-  else if (strcmp(ID, "PORT1_BLOCK_IPV6_REMOVE") == 0 ||
-           strcmp(ID, "PORT2_BLOCK_IPV6_REMOVE") == 0 ||
-           strcmp(ID, "PORT3_BLOCK_IPV6_REMOVE") == 0 ||
-           strcmp(ID, "PORT4_BLOCK_IPV6_REMOVE") == 0 ||
-           strcmp(ID, "PORT5_BLOCK_IPV6_REMOVE") == 0 ||
-           strcmp(ID, "PORT6_BLOCK_IPV6_REMOVE") == 0 ||
-           strcmp(ID, "PORT7_BLOCK_IPV6_REMOVE") == 0 ||
-           strcmp(ID, "PORT8_BLOCK_IPV6_REMOVE") == 0)
-  {
-    write(serial_port, &keycham, sizeof(keycham));
-    usleep(1000);
-    write(serial_port, &enter, sizeof(enter));
-    usleep(10000);
-    write(serial_port, &keyacong, sizeof(keyacong));
-    usleep(10000);
-    if (ID[4] == '1')
-    {
-      write(serial_port, &key1, sizeof(key1));
-    }
-    else if (ID[4] == '2')
-    {
-      write(serial_port, &key2, sizeof(key2));
-    }
-    else if (ID[4] == '3')
-    {
-      write(serial_port, &key3, sizeof(key3));
-    }
-    else if (ID[4] == '4')
-    {
-      write(serial_port, &key4, sizeof(key4));
-    }
-    else if (ID[4] == '5')
-    {
-      write(serial_port, &key5, sizeof(key5));
-    }
-    else if (ID[4] == '6')
-    {
-      write(serial_port, &key6, sizeof(key6));
-    }
-    else if (ID[4] == '7')
-    {
-      write(serial_port, &key7, sizeof(key7));
-    }
-    else if (ID[4] == '8')
-    {
-      write(serial_port, &key8, sizeof(key8));
-    }
-    usleep(10000);
-    // b0: xu ly file and send qua core
-    send_ips_via_uart(Value);
-
-    // b1: dua vào hash
-    // load_ips_from_file(Value);
-    // b2: luu vào file http table
-    // append_ips_to_file(Value, LOGFILE_HTTP_IPV4);
-    // b4: phan hoi len GUI
-    usleep(1000000);
-
-    while (1)
-    {
-      char *data1 = receive_data(serial_port);
-      printf("\nReceived message: %s\n", data1);
-      if ((strchr(data1, 'Y') != NULL))
-      {
-        strcat(buffer, ID);
-        strcat(buffer, "$");
-        strcat(buffer, Value);
-        strcat(buffer, "$OK$");
-        printf("\nVPN_TABLE_IPV4 done\n");
+        printf("\nClear HTTP_TABLE_IPv6 done\n");
         break;
       }
     }
   }
   //================================================================================================================
-  // Nhiều port ( Cho vào 1 hàm ký tự khác)
+  // Nhi?u port ( Cho vào 1 hàm ký t? khác)
 
   // else if (strcmp(ID, "PROTECT_PORT1") == 0)
   // {
@@ -6590,78 +5013,24 @@ void process_key(int serial_port, char *ID, char *Value, int client_sock, char *
 
   //=================================================================================================================
   // Bao ve PORT hoac IP
-  else if (strcmp(ID, "PORT1_PROTECT") == 0 || strcmp(ID, "PORT2_PROTECT") == 0 || strcmp(ID, "PORT3_PROTECT") == 0 || strcmp(ID, "PORT4_PROTECT") == 0 || strcmp(ID, "PORT5_PROTECT") == 0 || strcmp(ID, "PORT6_PROTECT") == 0 || strcmp(ID, "PORT7_PROTECT") == 0 || strcmp(ID, "PORT8_PROTECT") == 0)
+  else if (strcmp(ID, "PROTECT_PORT1_MODE") == 0)
   {
     t = 0;
     write(serial_port, &key_07, sizeof(key_07));
     usleep(1000);
     write(serial_port, &enter, sizeof(enter));
     usleep(10000);
-    if (ID[4] == '1')
-    {
-      write(serial_port, &keyA, sizeof(keyA));
-      usleep(1000);
-      write(serial_port, &enter, sizeof(enter));
-      usleep(100000);
-    }
-    else if (ID[4] == '2')
-    {
-      write(serial_port, &keyB, sizeof(keyB));
-      usleep(1000);
-      write(serial_port, &enter, sizeof(enter));
-      usleep(100000);
-    }
-    else if (ID[4] == '3')
-    {
-      write(serial_port, &keyC, sizeof(keyC));
-      usleep(1000);
-      write(serial_port, &enter, sizeof(enter));
-      usleep(100000);
-    }
-
-    else if (ID[4] == '4')
-    {
-      write(serial_port, &keyD, sizeof(keyD));
-      usleep(1000);
-      write(serial_port, &enter, sizeof(enter));
-      usleep(100000);
-    }
-    else if (ID[4] == '5')
-    {
-      write(serial_port, &keyE, sizeof(keyE));
-      usleep(1000);
-      write(serial_port, &enter, sizeof(enter));
-      usleep(100000);
-    }
-    else if (ID[4] == '6')
-    {
-      write(serial_port, &keyF, sizeof(keyF));
-      usleep(1000);
-      write(serial_port, &enter, sizeof(enter));
-      usleep(100000);
-    }
-    else if (ID[4] == '7')
-    {
-      write(serial_port, &keyG, sizeof(keyG));
-      usleep(1000);
-      write(serial_port, &enter, sizeof(enter));
-      usleep(100000);
-    }
-    else if (ID[4] == '8')
-    {
-      write(serial_port, &key_FF, sizeof(key_FF));
-      usleep(1000);
-      write(serial_port, &enter, sizeof(enter));
-      usleep(100000);
-    }
-
-    if (strcmp(Value, "Port") == 0) // port
+    write(serial_port, &keyA, sizeof(keyA));
+    usleep(1000);
+    write(serial_port, &enter, sizeof(enter));
+    usleep(100000);
+    if (strcmp(Value, "1") == 0)
     {
       write(serial_port, &key1, sizeof(key1));
       usleep(1000);
       write(serial_port, &enter, sizeof(enter));
     }
-    else if (strcmp(Value, "IP") == 0) // Ip
+    else if (strcmp(Value, "0") == 0)
     {
       write(serial_port, &key0, sizeof(key0));
       usleep(1000);
@@ -6692,153 +5061,29 @@ void process_key(int serial_port, char *ID, char *Value, int client_sock, char *
       t++;
     }
   }
-  // =================================================================================================================
-  // Add IPV4 vào port
-  else if (strcmp(ID, "PORT1_ADD_IPV4") == 0 ||
-           strcmp(ID, "PORT2_ADD_IPV4") == 0 ||
-           strcmp(ID, "PORT3_ADD_IPV4") == 0 ||
-           strcmp(ID, "PORT4_ADD_IPV4") == 0 ||
-           strcmp(ID, "PORT5_ADD_IPV4") == 0 ||
-           strcmp(ID, "PORT6_ADD_IPV4") == 0 ||
-           strcmp(ID, "PORT7_ADD_IPV4") == 0 ||
-           strcmp(ID, "PORT8_ADD_IPV4") == 0)
+  else if (strcmp(ID, "PROTECT_PORT2_MODE") == 0)
   {
     t = 0;
     write(serial_port, &key_07, sizeof(key_07));
     usleep(1000);
     write(serial_port, &enter, sizeof(enter));
     usleep(10000);
-    if (ID[4] == '1')
-    {
-      write(serial_port, &keyH, sizeof(keyH));
-    }
-    else if (ID[4] == '2')
-    {
-      write(serial_port, &keyI, sizeof(keyI));
-    }
-    else if (ID[4] == '3')
-    {
-      write(serial_port, &keyJ, sizeof(keyJ));
-    }
-    else if (ID[4] == '4')
-    {
-      write(serial_port, &keyK, sizeof(keyK));
-    }
-    // else if(ID[4] == '5')
-    // {
-    //   write(serial_port, &keyE, sizeof(keyE));
-    // }
-    // else if(ID[4] == '6')
-    // {
-    //   write(serial_port, &keyF, sizeof(keyF));
-    // }
-    // else if(ID[4] == '7')
-    // {
-    //   write(serial_port, &keyG, sizeof(keyG));
-    // }
-    // else if(ID[4] == '8')
-    // {
-    //   write(serial_port, &key_FF, sizeof(key_FF));
-    // }
+    write(serial_port, &keyB, sizeof(keyB));
     usleep(1000);
     write(serial_port, &enter, sizeof(enter));
     usleep(100000);
-    int n = strlen(Value);
-    for (int i = 0; i < n; i++)
+    if (strcmp(Value, "1") == 0)
     {
-      char data = Value[i];
-      send_data(serial_port, &data, sizeof(data));
-      // printf("IP:%c\n", data);
-      usleep(100000);
-    }
-
-    write(serial_port, &enter, sizeof(enter));
-    while (1)
-    {
-      char *data1 = receive_data(serial_port);
-      printf("\nReceived message: %s\n", data1);
-      if ((strchr(data1, 'Y') != NULL))
-      {
-        strcat(buffer, ID);
-        strcat(buffer, "$");
-        strcat(buffer, Value);
-        strcat(buffer, "$OK$");
-        printf("\nADD IPV4 port %c done\n", ID[4]);
-        break;
-      }
-      else if ((strchr(data1, 'N') != NULL) || (t == 10))
-      {
-        strcat(buffer, ID);
-        strcat(buffer, "$");
-        strcat(buffer, Value);
-        strcat(buffer, "$ERROR$");
-        printf("\n ADD IPV4 port %c  ERROR\n", ID[4]);
-        break;
-      }
-      t++;
-    }
-  }
-  // Do chua co Port 5, 6, 7 nen bo di
-  // ================================================================================================================
-  // else if (strcmp(ID, "PORT5_ADD_IPV4") == 0)
-  else if (strcmp(ID, "PORT1_ADD_IPV4_SRC") == 0 ||
-           strcmp(ID, "PORT2_ADD_IPV4_SRC") == 0 ||
-           strcmp(ID, "PORT3_ADD_IPV4_SRC") == 0 ||
-           strcmp(ID, "PORT4_ADD_IPV4_SRC") == 0 ||
-           strcmp(ID, "PORT5_ADD_IPV4_SRC") == 0 ||
-           strcmp(ID, "PORT6_ADD_IPV4_SRC") == 0 ||
-           strcmp(ID, "PORT7_ADD_IPV4_SRC") == 0 ||
-           strcmp(ID, "PORT8_ADD_IPV4_SRC") == 0)
-  {
-    t = 0;
-    write(serial_port, &key_07, sizeof(key_07));
-    usleep(1000);
-    write(serial_port, &enter, sizeof(enter));
-    usleep(10000);
-    if (ID[4] == '1')
-    {
-      write(serial_port, &keyL, sizeof(keyL));
-    }
-    else if (ID[4] == '2')
-    {
-      write(serial_port, &keyhaicham, sizeof(keyhaicham));
-    }
-    else if (ID[4] == '3')
-    {
-      write(serial_port, &keyM, sizeof(keyM));
-    }
-    else if (ID[4] == '4')
-    {
-      write(serial_port, &keyN, sizeof(keyN));
-    }
-    // else if(ID[4] == '5')
-    // {
-    //   write(serial_port, &key_05, sizeof(key_05));
-    // }
-    // else if(ID[4] == '6')
-    // {
-    //   write(serial_port, &key_06, sizeof(key_06));
-    // }
-    // else if(ID[4] == '7')
-    // {
-    //   write(serial_port, &key_07, sizeof(key_07));
-    // }
-    // else if(ID[4] == '8')
-    // {
-    //   write(serial_port, &key_08, sizeof(key_08));
-    // }
-    usleep(1000);
-    write(serial_port, &enter, sizeof(enter));
-    usleep(100000);
-    int n = strlen(Value);
-    for (int i = 0; i < n; i++)
-    {
-      char data = Value[i];
-      send_data(serial_port, &data, sizeof(data));
-      // printf("IP:%c\n", data);
+      write(serial_port, &key1, sizeof(key1));
       usleep(1000);
+      write(serial_port, &enter, sizeof(enter));
     }
-    write(serial_port, &enter, sizeof(enter));
+    else if (strcmp(Value, "0") == 0)
+    {
+      write(serial_port, &key0, sizeof(key0));
+      usleep(1000);
+      write(serial_port, &enter, sizeof(enter));
+    }
     while (1)
     {
       char *data1 = receive_data(serial_port);
@@ -6849,7 +5094,7 @@ void process_key(int serial_port, char *ID, char *Value, int client_sock, char *
         strcat(buffer, "$");
         strcat(buffer, Value);
         strcat(buffer, "$OK$");
-        printf("\nADD IPV4 port %c done\n", ID[4]);
+        printf("\nPROTECT_PORT2 MODE done\n");
         break;
       }
       else if ((strchr(data1, 'N') != NULL) || (t == 10))
@@ -6858,45 +5103,263 @@ void process_key(int serial_port, char *ID, char *Value, int client_sock, char *
         strcat(buffer, "$");
         strcat(buffer, Value);
         strcat(buffer, "$ERROR$");
-        printf("\n ADD IPV4 port %c ERROR\n", ID[4]);
+        printf("\nPROTECT_PORT2 MODE error\n");
         break;
       }
       t++;
     }
   }
-
-  // =================================================================================================================
-  // XOA IPV4 TRONG PORT
-  else if (strcmp(ID, "PORT1_REMOVE_IPV4") == 0 ||
-           strcmp(ID, "PORT2_REMOVE_IPV4") == 0 ||
-           strcmp(ID, "PORT3_REMOVE_IPV4") == 0 ||
-           strcmp(ID, "PORT4_REMOVE_IPV4") == 0 ||
-           strcmp(ID, "PORT5_REMOVE_IPV4") == 0 ||
-           strcmp(ID, "PORT6_REMOVE_IPV4") == 0 ||
-           strcmp(ID, "PORT7_REMOVE_IPV4") == 0 ||
-           strcmp(ID, "PORT8_REMOVE_IPV4") == 0)
+  else if (strcmp(ID, "PROTECT_PORT3_MODE") == 0)
   {
     t = 0;
     write(serial_port, &key_07, sizeof(key_07));
     usleep(1000);
     write(serial_port, &enter, sizeof(enter));
     usleep(10000);
-    if (ID[4] == '1')
+    write(serial_port, &keyC, sizeof(keyC));
+    usleep(1000);
+    write(serial_port, &enter, sizeof(enter));
+    usleep(100000);
+    if (strcmp(Value, "1") == 0)
     {
-      write(serial_port, &keyO, sizeof(keyO));
+      write(serial_port, &key1, sizeof(key1));
+      usleep(1000);
+      write(serial_port, &enter, sizeof(enter));
     }
-    else if (ID[4] == '2')
+    else if (strcmp(Value, "0") == 0)
     {
-      write(serial_port, &keyP, sizeof(keyP));
+      write(serial_port, &key0, sizeof(key0));
+      usleep(1000);
+      write(serial_port, &enter, sizeof(enter));
     }
-    else if (ID[4] == '3')
+    while (1)
     {
-      write(serial_port, &keyQ, sizeof(keyQ));
+      char *data1 = receive_data(serial_port);
+      printf("\nReceived message: %s\n", data1);
+      if ((strchr(data1, 'Y') != NULL))
+      {
+        strcat(buffer, ID);
+        strcat(buffer, "$");
+        strcat(buffer, Value);
+        strcat(buffer, "$OK$");
+        printf("\nPROTECT_PORT3 MODE done\n");
+        break;
+      }
+      else if ((strchr(data1, 'N') != NULL) || (t == 10))
+      {
+        strcat(buffer, ID);
+        strcat(buffer, "$");
+        strcat(buffer, Value);
+        strcat(buffer, "$ERROR$");
+        printf("\nPROTECT_PORT3 MODE error\n");
+        break;
+      }
+      t++;
     }
-    else if (ID[4] == '4')
+  }
+  else if (strcmp(ID, "PROTECT_PORT4_MODE") == 0)
+  {
+    t = 0;
+    write(serial_port, &key_07, sizeof(key_07));
+    usleep(1000);
+    write(serial_port, &enter, sizeof(enter));
+    usleep(10000);
+    write(serial_port, &keyD, sizeof(keyD));
+    usleep(1000);
+    write(serial_port, &enter, sizeof(enter));
+    usleep(100000);
+    if (strcmp(Value, "1") == 0)
     {
-      write(serial_port, &keyR, sizeof(keyR));
+      write(serial_port, &key1, sizeof(key1));
+      usleep(1000);
+      write(serial_port, &enter, sizeof(enter));
     }
+    else if (strcmp(Value, "0") == 0)
+    {
+      write(serial_port, &key0, sizeof(key0));
+      usleep(1000);
+      write(serial_port, &enter, sizeof(enter));
+    }
+    while (1)
+    {
+      char *data1 = receive_data(serial_port);
+      printf("\nReceived message: %s\n", data1);
+      if ((strchr(data1, 'Y') != NULL))
+      {
+        strcat(buffer, ID);
+        strcat(buffer, "$");
+        strcat(buffer, Value);
+        strcat(buffer, "$OK$");
+        printf("\nPROTECT_PORT4 MODE done\n");
+        break;
+      }
+      else if ((strchr(data1, 'N') != NULL) || (t == 10))
+      {
+        strcat(buffer, ID);
+        strcat(buffer, "$");
+        strcat(buffer, Value);
+        strcat(buffer, "$ERROR$");
+        printf("\nPROTECT_PORT4 MODE error\n");
+        break;
+      }
+      t++;
+    }
+  }
+  else if (strcmp(ID, "PROTECT_PORT5_MODE") == 0)
+  {
+    t = 0;
+    write(serial_port, &key_07, sizeof(key_07));
+    usleep(1000);
+    write(serial_port, &enter, sizeof(enter));
+    usleep(10000);
+    write(serial_port, &keyE, sizeof(keyE));
+    usleep(1000);
+    write(serial_port, &enter, sizeof(enter));
+    usleep(100000);
+    if (strcmp(Value, "1") == 0)
+    {
+      write(serial_port, &key1, sizeof(key1));
+      usleep(1000);
+      write(serial_port, &enter, sizeof(enter));
+    }
+    else if (strcmp(Value, "0") == 0)
+    {
+      write(serial_port, &key0, sizeof(key0));
+      usleep(1000);
+      write(serial_port, &enter, sizeof(enter));
+    }
+    while (1)
+    {
+      char *data1 = receive_data(serial_port);
+      printf("\nReceived message: %s\n", data1);
+      if ((strchr(data1, 'Y') != NULL))
+      {
+        strcat(buffer, ID);
+        strcat(buffer, "$");
+        strcat(buffer, Value);
+        strcat(buffer, "$OK$");
+        printf("\nPROTECT_PORT5 MODE done\n");
+        break;
+      }
+      else if ((strchr(data1, 'N') != NULL) || (t == 10))
+      {
+        strcat(buffer, ID);
+        strcat(buffer, "$");
+        strcat(buffer, Value);
+        strcat(buffer, "$ERROR$");
+        printf("\nPROTECT_PORT5 MODE error\n");
+        break;
+      }
+      t++;
+    }
+  }
+  else if (strcmp(ID, "PROTECT_PORT6_MODE") == 0)
+  {
+    t = 0;
+    write(serial_port, &key_07, sizeof(key_07));
+    usleep(1000);
+    write(serial_port, &enter, sizeof(enter));
+    usleep(10000);
+    write(serial_port, &keyF, sizeof(keyF));
+    usleep(1000);
+    write(serial_port, &enter, sizeof(enter));
+    usleep(100000);
+    if (strcmp(Value, "1") == 0)
+    {
+      write(serial_port, &key1, sizeof(key1));
+      usleep(1000);
+      write(serial_port, &enter, sizeof(enter));
+    }
+    else if (strcmp(Value, "0") == 0)
+    {
+      write(serial_port, &key0, sizeof(key0));
+      usleep(1000);
+      write(serial_port, &enter, sizeof(enter));
+    }
+    while (1)
+    {
+      char *data1 = receive_data(serial_port);
+      printf("\nReceived message: %s\n", data1);
+      if ((strchr(data1, 'Y') != NULL))
+      {
+        strcat(buffer, ID);
+        strcat(buffer, "$");
+        strcat(buffer, Value);
+        strcat(buffer, "$OK$");
+        printf("\nPROTECT_PORT6 MODE done\n");
+        break;
+      }
+      else if ((strchr(data1, 'N') != NULL) || (t == 10))
+      {
+        strcat(buffer, ID);
+        strcat(buffer, "$");
+        strcat(buffer, Value);
+        strcat(buffer, "$ERROR$");
+        printf("\nPROTECT_PORT6  MODE error\n");
+        break;
+      }
+      t++;
+    }
+  }
+  else if (strcmp(ID, "PROTECT_PORT7_MODE") == 0)
+  {
+    t = 0;
+    write(serial_port, &key_07, sizeof(key_07));
+    usleep(1000);
+    write(serial_port, &enter, sizeof(enter));
+    usleep(10000);
+    write(serial_port, &keyG, sizeof(keyG));
+    usleep(1000);
+    write(serial_port, &enter, sizeof(enter));
+    usleep(100000);
+    if (strcmp(Value, "1") == 0)
+    {
+      write(serial_port, &key1, sizeof(key1));
+      usleep(1000);
+      write(serial_port, &enter, sizeof(enter));
+    }
+    else if (strcmp(Value, "0") == 0)
+    {
+      write(serial_port, &key0, sizeof(key0));
+      usleep(1000);
+      write(serial_port, &enter, sizeof(enter));
+    }
+    while (1)
+    {
+      char *data1 = receive_data(serial_port);
+      printf("\nReceived message: %s\n", data1);
+      if ((strchr(data1, 'Y') != NULL))
+      {
+        strcat(buffer, ID);
+        strcat(buffer, "$");
+        strcat(buffer, Value);
+        strcat(buffer, "$OK$");
+        printf("\nPROTECT_PORT7 MODE done\n");
+        break;
+      }
+      else if ((strchr(data1, 'N') != NULL) || (t == 10))
+      {
+        strcat(buffer, ID);
+        strcat(buffer, "$");
+        strcat(buffer, Value);
+        strcat(buffer, "$ERROR$");
+        printf("\nPROTECT_PORT7 MODE error\n");
+        break;
+      }
+      t++;
+    }
+  }
+  // =================================================================================================================
+  // Add IPv4 vào port
+
+  else if (strcmp(ID, "PORT1_ADD_IPv4") == 0)
+  {
+    t = 0;
+    write(serial_port, &key_07, sizeof(key_07));
+    usleep(1000);
+    write(serial_port, &enter, sizeof(enter));
+    usleep(10000);
+    write(serial_port, &keyH, sizeof(keyH));
     usleep(1000);
     write(serial_port, &enter, sizeof(enter));
     usleep(100000);
@@ -6905,9 +5368,10 @@ void process_key(int serial_port, char *ID, char *Value, int client_sock, char *
     {
       char data = Value[i];
       send_data(serial_port, &data, sizeof(data));
-      printf("IP:%c\n", data);
+      // printf("IP:%c\n", data);
       usleep(100000);
     }
+
     write(serial_port, &enter, sizeof(enter));
     while (1)
     {
@@ -6919,7 +5383,7 @@ void process_key(int serial_port, char *ID, char *Value, int client_sock, char *
         strcat(buffer, "$");
         strcat(buffer, Value);
         strcat(buffer, "$OK$");
-        printf("\nREMOVE IPV4 port %c done\n", ID[4]);
+        printf("\nADD IPv4 port 1 done\n");
         break;
       }
       else if ((strchr(data1, 'N') != NULL) || (t == 10))
@@ -6928,120 +5392,31 @@ void process_key(int serial_port, char *ID, char *Value, int client_sock, char *
         strcat(buffer, "$");
         strcat(buffer, Value);
         strcat(buffer, "$ERROR$");
-        printf("\n REMOVE IPV4 port %c ERROR\n", ID[4]);
+        printf("\n ADD IPv4 port 1 ERROR\n");
         break;
       }
       t++;
     }
   }
-  //============================================================================================================
 
-  else if (strcmp(ID, "PORT1_REMOVE_IPV4_SRC") == 0 ||
-           strcmp(ID, "PORT2_REMOVE_IPV4_SRC") == 0 ||
-           strcmp(ID, "PORT3_REMOVE_IPV4_SRC") == 0 ||
-           strcmp(ID, "PORT4_REMOVE_IPV4_SRC") == 0 ||
-           strcmp(ID, "PORT5_REMOVE_IPV4_SRC") == 0 ||
-           strcmp(ID, "PORT6_REMOVE_IPV4_SRC") == 0 ||
-           strcmp(ID, "PORT7_REMOVE_IPV4_SRC") == 0 ||
-           strcmp(ID, "PORT8_REMOVE_IPV4_SRC") == 0)
+  else if (strcmp(ID, "PORT2_ADD_IPv4") == 0)
   {
     t = 0;
     write(serial_port, &key_07, sizeof(key_07));
     usleep(1000);
     write(serial_port, &enter, sizeof(enter));
     usleep(10000);
-    if (ID[4] == '1')
-    {
-      write(serial_port, &keyS, sizeof(keyS));
-    }
-    else if (ID[4] == '2')
-    {
-      write(serial_port, &keyhoi, sizeof(keyhoi));
-    }
-    else if (ID[4] == '3')
-    {
-      write(serial_port, &keyT, sizeof(keyT));
-    }
-    else if (ID[4] == '4')
-    {
-      write(serial_port, &keyU, sizeof(keyU));
-    }
-    usleep(1000);
-    write(serial_port, &enter, sizeof(enter));
-    usleep(1000000);
-    int n = strlen(Value);
-    for (int i = 0; i < n; i++)
-    {
-      char data = Value[i];
-      send_data(serial_port, &data, sizeof(data));
-      // printf("IP:%c\n", data);
-      usleep(10000);
-    }
-    write(serial_port, &enter, sizeof(enter));
-    while (1)
-    {
-      char *data1 = receive_data(serial_port);
-      printf("\nReceived message: %s\n", data1);
-      if ((strchr(data1, 'Y') != NULL))
-      {
-        strcat(buffer, ID);
-        strcat(buffer, "$");
-        strcat(buffer, Value);
-        strcat(buffer, "$OK$");
-        printf("\nREMOVE IPV4 port %c done\n", ID[4]);
-        break;
-      }
-      else if ((strchr(data1, 'N') != NULL) || (t == 10))
-      {
-        strcat(buffer, ID);
-        strcat(buffer, "$");
-        strcat(buffer, Value);
-        strcat(buffer, "$ERROR$");
-        printf("\n REMOVE IPV4 port %c ERROR\n", ID[4]);
-        break;
-      }
-      t++;
-    }
-  }
-
-  // =================================================================================================================
-  // Thêm IPV6 trong PORT
-  else if (strcmp(ID, "PORT1_ADD_IPV6") == 0 ||
-           strcmp(ID, "PORT2_ADD_IPV6") == 0 ||
-           strcmp(ID, "PORT3_ADD_IPV6") == 0 ||
-           strcmp(ID, "PORT4_ADD_IPV6") == 0)
-  {
-    t = 0;
-    write(serial_port, &key_07, sizeof(key_07));
+    write(serial_port, &keyI, sizeof(keyI));
     usleep(1000);
     write(serial_port, &enter, sizeof(enter));
     usleep(100000);
-    if (ID[4] == '1')
-    {
-      write(serial_port, &keyV, sizeof(keyV));
-    }
-    else if (ID[4] == '2')
-    {
-      write(serial_port, &keyW, sizeof(keyW));
-    }
-    else if (ID[4] == '3')
-    {
-      write(serial_port, &keyX, sizeof(keyX));
-    }
-    else if (ID[4] == '4')
-    {
-      write(serial_port, &keyY, sizeof(keyY));
-    }
-    usleep(1000);
-    write(serial_port, &enter, sizeof(enter));
-    usleep(1000000);
     int n = strlen(Value);
     for (int i = 0; i < n; i++)
     {
       char data = Value[i];
       send_data(serial_port, &data, sizeof(data));
       // printf("IP:%c\n", data);
-      usleep(10000);
+      usleep(100000);
     }
 
     write(serial_port, &enter, sizeof(enter));
@@ -7055,7 +5430,7 @@ void process_key(int serial_port, char *ID, char *Value, int client_sock, char *
         strcat(buffer, "$");
         strcat(buffer, Value);
         strcat(buffer, "$OK$");
-        printf("\nADD IPV6 port %c done\n", ID[4]);
+        printf("\nADD IPv4 port 2 done\n");
         break;
       }
       else if ((strchr(data1, 'N') != NULL) || (t == 10))
@@ -7064,47 +5439,774 @@ void process_key(int serial_port, char *ID, char *Value, int client_sock, char *
         strcat(buffer, "$");
         strcat(buffer, Value);
         strcat(buffer, "$ERROR$");
-        printf("\n ADD IPV6 port %c ERROR\n", ID[4]);
+        printf("\n ADD IPv4 port 2 ERROR\n");
         break;
       }
       t++;
     }
   }
-  //============================================================================================================
-  // ADD SRC IPV6 trong PORT
-  else if (strcmp(ID, "PORT1_ADD_IPV6_SRC") == 0 ||
-           strcmp(ID, "PORT2_ADD_IPV6_SRC") == 0 ||
-           strcmp(ID, "PORT3_ADD_IPV6_SRC") == 0 ||
-           strcmp(ID, "PORT4_ADD_IPV6_SRC") == 0 ||
-           strcmp(ID, "PORT5_ADD_IPV6_SRC") == 0 ||
-           strcmp(ID, "PORT6_ADD_IPV6_SRC") == 0 ||
-           strcmp(ID, "PORT7_ADD_IPV6_SRC") == 0 ||
-           strcmp(ID, "PORT8_ADD_IPV6_SRC") == 0)
+  else if (strcmp(ID, "PORT3_ADD_IPv4") == 0)
   {
     t = 0;
     write(serial_port, &key_07, sizeof(key_07));
     usleep(1000);
     write(serial_port, &enter, sizeof(enter));
     usleep(10000);
-    if (ID[4] == '1')
-    {
-      write(serial_port, &keyZ, sizeof(keyZ));
-    }
-    else if (ID[4] == '2')
-    {
-      write(serial_port, &keychamphay, sizeof(keychamphay));
-    }
-    else if (ID[4] == '3')
-    {
-      write(serial_port, &key_07, sizeof(key_07));
-    }
-    else if (ID[4] == '4')
-    {
-      write(serial_port, &keycong, sizeof(keycong));
-    }
+    write(serial_port, &keyJ, sizeof(keyJ));
     usleep(1000);
     write(serial_port, &enter, sizeof(enter));
-    usleep(1000000);
+    usleep(100000);
+    int n = strlen(Value);
+    for (int i = 0; i < n; i++)
+    {
+      char data = Value[i];
+      send_data(serial_port, &data, sizeof(data));
+      // printf("IP:%c\n", data);
+      usleep(100000);
+    }
+
+    write(serial_port, &enter, sizeof(enter));
+    while (1)
+    {
+      char *data1 = receive_data(serial_port);
+      printf("\nReceived message: %s\n", data1);
+      if ((strchr(data1, 'Y') != NULL))
+      {
+        strcat(buffer, ID);
+        strcat(buffer, "$");
+        strcat(buffer, Value);
+        strcat(buffer, "$OK$");
+        printf("\nADD IPv4 port 3 done\n");
+        break;
+      }
+      else if ((strchr(data1, 'N') != NULL) || (t == 10))
+      {
+        strcat(buffer, ID);
+        strcat(buffer, "$");
+        strcat(buffer, Value);
+        strcat(buffer, "$ERROR$");
+        printf("\n ADD IPv4 port 3 ERROR\n");
+        break;
+      }
+      t++;
+    }
+  }
+  else if (strcmp(ID, "PORT4_ADD_IPv4") == 0)
+  {
+    t = 0;
+    write(serial_port, &key_07, sizeof(key_07));
+    usleep(1000);
+    write(serial_port, &enter, sizeof(enter));
+    usleep(10000);
+    write(serial_port, &keyK, sizeof(keyK));
+    usleep(1000);
+    write(serial_port, &enter, sizeof(enter));
+    usleep(100000);
+    int n = strlen(Value);
+    for (int i = 0; i < n; i++)
+    {
+      char data = Value[i];
+      send_data(serial_port, &data, sizeof(data));
+      // printf("IP:%c\n", data);
+      usleep(100000);
+    }
+
+    write(serial_port, &enter, sizeof(enter));
+    while (1)
+    {
+      char *data1 = receive_data(serial_port);
+      printf("\nReceived message: %s\n", data1);
+      if ((strchr(data1, 'Y') != NULL))
+      {
+        strcat(buffer, ID);
+        strcat(buffer, "$");
+        strcat(buffer, Value);
+        strcat(buffer, "$OK$");
+        printf("\nADD IPv4 port 4 done\n");
+        break;
+      }
+      else if ((strchr(data1, 'N') != NULL) || (t == 10))
+      {
+        strcat(buffer, ID);
+        strcat(buffer, "$");
+        strcat(buffer, Value);
+        strcat(buffer, "$ERROR$");
+        printf("\n ADD IPv4 port 4 ERROR\n");
+        break;
+      }
+      t++;
+    }
+  }
+
+  // else if (strcmp(ID, "PORT5_ADD_IPv4") == 0)
+  else if (strcmp(ID, "PORT1_ADD_IPv4_SRC") == 0)
+  {
+    t = 0;
+    write(serial_port, &key_07, sizeof(key_07));
+    usleep(1000);
+    write(serial_port, &enter, sizeof(enter));
+    usleep(10000);
+    write(serial_port, &keyL, sizeof(keyL));
+    usleep(1000);
+    write(serial_port, &enter, sizeof(enter));
+    usleep(100000);
+    int n = strlen(Value);
+    for (int i = 0; i < n; i++)
+    {
+      char data = Value[i];
+      send_data(serial_port, &data, sizeof(data));
+      // printf("IP:%c\n", data);
+      usleep(100000);
+    }
+
+    write(serial_port, &enter, sizeof(enter));
+    while (1)
+    {
+      char *data1 = receive_data(serial_port);
+      printf("\nReceived message: %s\n", data1);
+      if ((strchr(data1, 'Y') != NULL))
+      {
+        strcat(buffer, ID);
+        strcat(buffer, "$");
+        strcat(buffer, Value);
+        strcat(buffer, "$OK$");
+        printf("\nADD IPv4 port 5 done\n");
+        break;
+      }
+      else if ((strchr(data1, 'N') != NULL) || (t == 10))
+      {
+        strcat(buffer, ID);
+        strcat(buffer, "$");
+        strcat(buffer, Value);
+        strcat(buffer, "$ERROR$");
+        printf("\n ADD IPv4 port 5 ERROR\n");
+        break;
+      }
+      t++;
+    }
+  }
+
+  // else if (strcmp(ID, "PORT6_ADD_IPv4") == 0)
+  else if (strcmp(ID, "PORT3_ADD_IPv4_SRC") == 0)
+  {
+    t = 0;
+    write(serial_port, &key_07, sizeof(key_07));
+    usleep(1000);
+    write(serial_port, &enter, sizeof(enter));
+    usleep(10000);
+    write(serial_port, &keyM, sizeof(keyM));
+    usleep(1000);
+    write(serial_port, &enter, sizeof(enter));
+    usleep(100000);
+    int n = strlen(Value);
+    for (int i = 0; i < n; i++)
+    {
+      char data = Value[i];
+      send_data(serial_port, &data, sizeof(data));
+      // printf("IP:%c\n", data);
+      usleep(100000);
+    }
+
+    write(serial_port, &enter, sizeof(enter));
+    while (1)
+    {
+      char *data1 = receive_data(serial_port);
+      printf("\nReceived message: %s\n", data1);
+      if ((strchr(data1, 'Y') != NULL))
+      {
+        strcat(buffer, ID);
+        strcat(buffer, "$");
+        strcat(buffer, Value);
+        strcat(buffer, "$OK$");
+        printf("\nADD IPv4 port 6 done\n");
+        break;
+      }
+      else if ((strchr(data1, 'N') != NULL) || (t == 10))
+      {
+        strcat(buffer, ID);
+        strcat(buffer, "$");
+        strcat(buffer, Value);
+        strcat(buffer, "$ERROR$");
+        printf("\n ADD IPv4 port 6 ERROR\n");
+        break;
+      }
+      t++;
+    }
+  }
+
+  // else if (strcmp(ID, "PORT7_ADD_IPv4") == 0)
+  else if (strcmp(ID, "PORT4_ADD_IPv4_SRC") == 0)
+  {
+    t = 0;
+    write(serial_port, &key_07, sizeof(key_07));
+    usleep(1000);
+    write(serial_port, &enter, sizeof(enter));
+    usleep(10000);
+    write(serial_port, &keyN, sizeof(keyN));
+    usleep(1000);
+    write(serial_port, &enter, sizeof(enter));
+    usleep(100000);
+    int n = strlen(Value);
+    for (int i = 0; i < n; i++)
+    {
+      char data = Value[i];
+      send_data(serial_port, &data, sizeof(data));
+      // printf("IP:%c\n", data);
+      usleep(100000);
+    }
+
+    write(serial_port, &enter, sizeof(enter));
+    while (1)
+    {
+      char *data1 = receive_data(serial_port);
+      printf("\nReceived message: %s\n", data1);
+      if ((strchr(data1, 'Y') != NULL))
+      {
+        strcat(buffer, ID);
+        strcat(buffer, "$");
+        strcat(buffer, Value);
+        strcat(buffer, "$OK$");
+        printf("\nADD IPv4 port 7 done\n");
+        break;
+      }
+      else if ((strchr(data1, 'N') != NULL) || (t == 10))
+      {
+        strcat(buffer, ID);
+        strcat(buffer, "$");
+        strcat(buffer, Value);
+        strcat(buffer, "$ERROR$");
+        printf("\n ADD IPv4 port 7 ERROR\n");
+        break;
+      }
+      t++;
+    }
+  }
+  // =================================================================================================================
+
+  // XOA IPv4 TRONG PORT
+  else if (strcmp(ID, "PORT1_REMOVE_IPv4") == 0)
+  {
+    t = 0;
+    write(serial_port, &key_07, sizeof(key_07));
+    usleep(1000);
+    write(serial_port, &enter, sizeof(enter));
+    usleep(10000);
+    write(serial_port, &keyO, sizeof(keyO));
+    usleep(1000);
+    write(serial_port, &enter, sizeof(enter));
+    usleep(100000);
+    int n = strlen(Value);
+    for (int i = 0; i < n; i++)
+    {
+      char data = Value[i];
+      send_data(serial_port, &data, sizeof(data));
+      // printf("IP:%c\n", data);
+      usleep(100000);
+    }
+
+    write(serial_port, &enter, sizeof(enter));
+    while (1)
+    {
+      char *data1 = receive_data(serial_port);
+      printf("\nReceived message: %s\n", data1);
+      if ((strchr(data1, 'Y') != NULL))
+      {
+        strcat(buffer, ID);
+        strcat(buffer, "$");
+        strcat(buffer, Value);
+        strcat(buffer, "$OK$");
+        printf("\nREMOVE IPv4 port 1 done\n");
+        break;
+      }
+      else if ((strchr(data1, 'N') != NULL) || (t == 10))
+      {
+        strcat(buffer, ID);
+        strcat(buffer, "$");
+        strcat(buffer, Value);
+        strcat(buffer, "$ERROR$");
+        printf("\n REMOVE IPv4 port 1 ERROR\n");
+        break;
+      }
+      t++;
+    }
+  }
+  else if (strcmp(ID, "PORT2_REMOVE_IPv4") == 0)
+  {
+    t = 0;
+    write(serial_port, &key_07, sizeof(key_07));
+    usleep(1000);
+    write(serial_port, &enter, sizeof(enter));
+    usleep(10000);
+    write(serial_port, &keyP, sizeof(keyP));
+    usleep(1000);
+    write(serial_port, &enter, sizeof(enter));
+    usleep(100000);
+    int n = strlen(Value);
+    for (int i = 0; i < n; i++)
+    {
+      char data = Value[i];
+      send_data(serial_port, &data, sizeof(data));
+      // printf("IP:%c\n", data);
+      usleep(100000);
+    }
+
+    write(serial_port, &enter, sizeof(enter));
+    while (1)
+    {
+      char *data1 = receive_data(serial_port);
+      printf("\nReceived message: %s\n", data1);
+      if ((strchr(data1, 'Y') != NULL))
+      {
+        strcat(buffer, ID);
+        strcat(buffer, "$");
+        strcat(buffer, Value);
+        strcat(buffer, "$OK$");
+        printf("\nREMOVE IPv4 port 2 done\n");
+        break;
+      }
+      else if ((strchr(data1, 'N') != NULL) || (t == 10))
+      {
+        strcat(buffer, ID);
+        strcat(buffer, "$");
+        strcat(buffer, Value);
+        strcat(buffer, "$ERROR$");
+        printf("\n REMOVE IPv4 port 2 ERROR\n");
+        break;
+      }
+      t++;
+    }
+  }
+  else if (strcmp(ID, "PORT3_REMOVE_IPv4") == 0)
+  {
+    t = 0;
+    write(serial_port, &key_07, sizeof(key_07));
+    usleep(1000);
+    write(serial_port, &enter, sizeof(enter));
+    usleep(10000);
+    write(serial_port, &keyQ, sizeof(keyQ));
+    usleep(1000);
+    write(serial_port, &enter, sizeof(enter));
+    usleep(100000);
+    int n = strlen(Value);
+    for (int i = 0; i < n; i++)
+    {
+      char data = Value[i];
+      send_data(serial_port, &data, sizeof(data));
+      // printf("IP:%c\n", data);
+      usleep(100000);
+    }
+
+    write(serial_port, &enter, sizeof(enter));
+    while (1)
+    {
+      char *data1 = receive_data(serial_port);
+      printf("\nReceived message: %s\n", data1);
+      if ((strchr(data1, 'Y') != NULL))
+      {
+        strcat(buffer, ID);
+        strcat(buffer, "$");
+        strcat(buffer, Value);
+        strcat(buffer, "$OK$");
+        printf("\nREMOVE IPv4 port 3 done\n");
+        break;
+      }
+      else if ((strchr(data1, 'N') != NULL) || (t == 10))
+      {
+        strcat(buffer, ID);
+        strcat(buffer, "$");
+        strcat(buffer, Value);
+        strcat(buffer, "$ERROR$");
+        printf("\n REMOVE IPv4 port 3 ERROR\n");
+        break;
+      }
+      t++;
+    }
+  }
+  else if (strcmp(ID, "PORT4_REMOVE_IPv4") == 0)
+  {
+    t = 0;
+    write(serial_port, &key_07, sizeof(key_07));
+    usleep(1000);
+    write(serial_port, &enter, sizeof(enter));
+    usleep(10000);
+    write(serial_port, &keyR, sizeof(keyR));
+    usleep(1000);
+    write(serial_port, &enter, sizeof(enter));
+    usleep(100000);
+    int n = strlen(Value);
+    for (int i = 0; i < n; i++)
+    {
+      char data = Value[i];
+      send_data(serial_port, &data, sizeof(data));
+      // printf("IP:%c\n", data);
+      usleep(100000);
+    }
+
+    write(serial_port, &enter, sizeof(enter));
+    while (1)
+    {
+      char *data = receive_data(serial_port);
+      printf("\nReceived message: %s\n", data);
+      if ((strchr(data, 'Y') != NULL))
+      {
+        strcat(buffer, ID);
+        strcat(buffer, "$");
+        strcat(buffer, Value);
+        strcat(buffer, "$OK$");
+        printf("\nREMOVE IPv4 port 4 done\n");
+        break;
+      }
+      else if ((strchr(data, 'N') != NULL) || (t == 10))
+      {
+        strcat(buffer, ID);
+        strcat(buffer, "$");
+        strcat(buffer, Value);
+        strcat(buffer, "$ERROR$");
+        printf("\n REMOVE IPv4 port 4 ERROR\n");
+        break;
+      }
+      t++;
+    }
+  }
+  // else if (strcmp(ID, "PORT5_REMOVE_IPv4") == 0)
+  else if (strcmp(ID, "PORT1_REMOVE_IPv4_SRC") == 0)
+  {
+    t = 0;
+    write(serial_port, &key_07, sizeof(key_07));
+    usleep(1000);
+    write(serial_port, &enter, sizeof(enter));
+    usleep(10000);
+    write(serial_port, &keyS, sizeof(keyS));
+    usleep(1000);
+    write(serial_port, &enter, sizeof(enter));
+    usleep(100000);
+    int n = strlen(Value);
+    for (int i = 0; i < n; i++)
+    {
+      char data = Value[i];
+      send_data(serial_port, &data, sizeof(data));
+      // printf("IP:%c\n", data);
+      usleep(100000);
+    }
+
+    write(serial_port, &enter, sizeof(enter));
+    while (1)
+    {
+      char *data1 = receive_data(serial_port);
+      printf("\nReceived message: %s\n", data1);
+      if ((strchr(data1, 'Y') != NULL))
+      {
+        strcat(buffer, ID);
+        strcat(buffer, "$");
+        strcat(buffer, Value);
+        strcat(buffer, "$OK$");
+        printf("\nREMOVE IPv4 port 5 done\n");
+        break;
+      }
+      else if ((strchr(data1, 'N') != NULL) || (t == 10))
+      {
+        strcat(buffer, ID);
+        strcat(buffer, "$");
+        strcat(buffer, Value);
+        strcat(buffer, "$ERROR$");
+        printf("\n REMOVE IPv4 port 5 ERROR\n");
+        break;
+      }
+      t++;
+    }
+  }
+  // else if (strcmp(ID, "PORT6_REMOVE_IPv4") == 0)
+  else if (strcmp(ID, "PORT3_REMOVE_IPv4_SRC") == 0)
+  {
+    t = 0;
+    write(serial_port, &key_07, sizeof(key_07));
+    usleep(1000);
+    write(serial_port, &enter, sizeof(enter));
+    usleep(10000);
+    write(serial_port, &keyT, sizeof(keyT));
+    usleep(1000);
+    write(serial_port, &enter, sizeof(enter));
+    usleep(100000);
+    int n = strlen(Value);
+    for (int i = 0; i < n; i++)
+    {
+      char data = Value[i];
+      send_data(serial_port, &data, sizeof(data));
+      // printf("IP:%c\n", data);
+      usleep(100000);
+    }
+
+    write(serial_port, &enter, sizeof(enter));
+    while (1)
+    {
+      char *data1 = receive_data(serial_port);
+      printf("\nReceived message: %s\n", data1);
+      if ((strchr(data1, 'Y') != NULL))
+      {
+        strcat(buffer, ID);
+        strcat(buffer, "$");
+        strcat(buffer, Value);
+        strcat(buffer, "$OK$");
+        printf("\nREMOVE IPv4 port 6 done\n");
+        break;
+      }
+      else if ((strchr(data1, 'N') != NULL) || (t == 10))
+      {
+        strcat(buffer, ID);
+        strcat(buffer, "$");
+        strcat(buffer, Value);
+        strcat(buffer, "$ERROR$");
+        printf("\n REMOVE IPv4 port 6 ERROR\n");
+        break;
+      }
+      t++;
+    }
+  }
+  // else if (strcmp(ID, "PORT7_REMOVE_IPv4") == 0)
+  else if (strcmp(ID, "PORT4_REMOVE_IPv4_SRC") == 0)
+  {
+    t = 0;
+    write(serial_port, &key_07, sizeof(key_07));
+    usleep(1000);
+    write(serial_port, &enter, sizeof(enter));
+    usleep(10000);
+    write(serial_port, &keyU, sizeof(keyU));
+    usleep(1000);
+    write(serial_port, &enter, sizeof(enter));
+    usleep(100000);
+    int n = strlen(Value);
+    for (int i = 0; i < n; i++)
+    {
+      char data = Value[i];
+      send_data(serial_port, &data, sizeof(data));
+      // printf("IP:%c\n", data);
+      usleep(100000);
+    }
+
+    write(serial_port, &enter, sizeof(enter));
+    while (1)
+    {
+      char *data1 = receive_data(serial_port);
+      printf("\nReceived message: %s\n", data1);
+      if ((strchr(data1, 'Y') != NULL))
+      {
+        strcat(buffer, ID);
+        strcat(buffer, "$");
+        strcat(buffer, Value);
+        strcat(buffer, "$OK$");
+        printf("\nREMOVE IPv4 port 7 done\n");
+        break;
+      }
+      else if ((strchr(data1, 'N') != NULL) || (t == 10))
+      {
+        strcat(buffer, ID);
+        strcat(buffer, "$");
+        strcat(buffer, Value);
+        strcat(buffer, "$ERROR$");
+        printf("\n REMOVE IPv4 port 7 ERROR\n");
+        break;
+      }
+      t++;
+    }
+  }
+  // =================================================================================================================
+  // Thêm IPv6 trong PORT
+  else if (strcmp(ID, "PORT1_ADD_IPv6") == 0)
+  {
+    t = 0;
+    write(serial_port, &key_07, sizeof(key_07));
+    usleep(1000);
+    write(serial_port, &enter, sizeof(enter));
+    usleep(10000);
+    write(serial_port, &keyV, sizeof(keyV));
+    usleep(1000);
+    write(serial_port, &enter, sizeof(enter));
+    usleep(100000);
+    int n = strlen(Value);
+    for (int i = 0; i < n; i++)
+    {
+      char data = Value[i];
+      send_data(serial_port, &data, sizeof(data));
+      // printf("IP:%c\n", data);
+      usleep(100000);
+    }
+
+    write(serial_port, &enter, sizeof(enter));
+    while (1)
+    {
+      char *data1 = receive_data(serial_port);
+      printf("\nReceived message: %s\n", data1);
+      if ((strchr(data1, 'Y') != NULL))
+      {
+        strcat(buffer, ID);
+        strcat(buffer, "$");
+        strcat(buffer, Value);
+        strcat(buffer, "$OK$");
+        printf("\nADD IPv6 port 1 done\n");
+        break;
+      }
+      else if ((strchr(data1, 'N') != NULL) || (t == 10))
+      {
+        strcat(buffer, ID);
+        strcat(buffer, "$");
+        strcat(buffer, Value);
+        strcat(buffer, "$ERROR$");
+        printf("\n ADD IPv6 port 1 ERROR\n");
+        break;
+      }
+      t++;
+    }
+  }
+  else if (strcmp(ID, "PORT2_ADD_IPv6") == 0)
+  {
+    t = 0;
+    write(serial_port, &key_07, sizeof(key_07));
+    usleep(1000);
+    write(serial_port, &enter, sizeof(enter));
+    usleep(10000);
+    write(serial_port, &keyW, sizeof(keyW));
+    usleep(1000);
+    write(serial_port, &enter, sizeof(enter));
+    usleep(100000);
+    int n = strlen(Value);
+    for (int i = 0; i < n; i++)
+    {
+      char data = Value[i];
+      send_data(serial_port, &data, sizeof(data));
+      // printf("IP:%c\n", data);
+      usleep(100000);
+    }
+
+    write(serial_port, &enter, sizeof(enter));
+    while (1)
+    {
+      char *data1 = receive_data(serial_port);
+      printf("\nReceived message: %s\n", data1);
+      if ((strchr(data1, 'Y') != NULL))
+      {
+        strcat(buffer, ID);
+        strcat(buffer, "$");
+        strcat(buffer, Value);
+        strcat(buffer, "$OK$");
+        printf("\nADD IPv6 port 2 done\n");
+        break;
+      }
+      else if ((strchr(data1, 'N') != NULL) || (t == 10))
+      {
+        strcat(buffer, ID);
+        strcat(buffer, "$");
+        strcat(buffer, Value);
+        strcat(buffer, "$ERROR$");
+        printf("\n ADD IPv6 port 2 ERROR\n");
+        break;
+      }
+      t++;
+    }
+  }
+  else if (strcmp(ID, "PORT3_ADD_IPv6") == 0)
+  {
+    t = 0;
+    write(serial_port, &key_07, sizeof(key_07));
+    usleep(1000);
+    write(serial_port, &enter, sizeof(enter));
+    usleep(10000);
+    write(serial_port, &keyX, sizeof(keyX));
+    usleep(1000);
+    write(serial_port, &enter, sizeof(enter));
+    usleep(100000);
+    int n = strlen(Value);
+    for (int i = 0; i < n; i++)
+    {
+      char data = Value[i];
+      send_data(serial_port, &data, sizeof(data));
+      // printf("IP:%c\n", data);
+      usleep(100000);
+    }
+
+    write(serial_port, &enter, sizeof(enter));
+    while (1)
+    {
+      char *data1 = receive_data(serial_port);
+      printf("\nReceived message: %s\n", data1);
+      if ((strchr(data1, 'Y') != NULL))
+      {
+        strcat(buffer, ID);
+        strcat(buffer, "$");
+        strcat(buffer, Value);
+        strcat(buffer, "$OK$");
+        printf("\nADD IPv6 port 3 done\n");
+        break;
+      }
+      else if ((strchr(data1, 'N') != NULL) || (t == 10))
+      {
+        strcat(buffer, ID);
+        strcat(buffer, "$");
+        strcat(buffer, Value);
+        strcat(buffer, "$ERROR$");
+        printf("\n ADD IPv6 port 3 ERROR\n");
+        break;
+      }
+      t++;
+    }
+  }
+  else if (strcmp(ID, "PORT4_ADD_IPv6") == 0)
+  {
+    t = 0;
+    write(serial_port, &key_07, sizeof(key_07));
+    usleep(1000);
+    write(serial_port, &enter, sizeof(enter));
+    usleep(10000);
+    write(serial_port, &keyY, sizeof(keyY));
+    usleep(1000);
+    write(serial_port, &enter, sizeof(enter));
+    usleep(100000);
+    int n = strlen(Value);
+    for (int i = 0; i < n; i++)
+    {
+      char data = Value[i];
+      send_data(serial_port, &data, sizeof(data));
+      // printf("IP:%c\n", data);
+      usleep(100000);
+    }
+
+    write(serial_port, &enter, sizeof(enter));
+    while (1)
+    {
+      char *data1 = receive_data(serial_port);
+      printf("\nReceived message: %s\n", data1);
+      if ((strchr(data1, 'Y') != NULL))
+      {
+        strcat(buffer, ID);
+        strcat(buffer, "$");
+        strcat(buffer, Value);
+        strcat(buffer, "$OK$");
+        printf("\nADD IPv6 port 4 done\n");
+        break;
+      }
+      else if ((strchr(data1, 'N') != NULL) || (t == 10))
+      {
+        strcat(buffer, ID);
+        strcat(buffer, "$");
+        strcat(buffer, Value);
+        strcat(buffer, "$ERROR$");
+        printf("\n ADD IPv6 port 4 ERROR\n");
+        break;
+      }
+      t++;
+    }
+  }
+  // else if (strcmp(ID, "PORT5_ADD_IPv6") == 0)
+  else if (strcmp(ID, "PORT1_ADD_IPv6_SRC") == 0)
+  {
+    t = 0;
+    write(serial_port, &key_07, sizeof(key_07));
+    usleep(1000);
+    write(serial_port, &enter, sizeof(enter));
+    usleep(10000);
+    write(serial_port, &keyZ, sizeof(keyZ));
+    usleep(1000);
+    write(serial_port, &enter, sizeof(enter));
+    usleep(100000);
     int n = strlen(Value);
     for (int i = 0; i < n; i++)
     {
@@ -7125,7 +6227,7 @@ void process_key(int serial_port, char *ID, char *Value, int client_sock, char *
         strcat(buffer, "$");
         strcat(buffer, Value);
         strcat(buffer, "$OK$");
-        printf("\nADD IPV6 port %c done\n", ID[4]);
+        printf("\nADD IPv6 port 5 done\n");
         break;
       }
       else if ((strchr(data1, 'N') != NULL) || (t == 10))
@@ -7134,43 +6236,120 @@ void process_key(int serial_port, char *ID, char *Value, int client_sock, char *
         strcat(buffer, "$");
         strcat(buffer, Value);
         strcat(buffer, "$ERROR$");
-        printf("\n ADD IPV6 port %c ERROR\n", ID[4]);
+        printf("\n ADD IPv6 port 5 ERROR\n");
+        break;
+      }
+      t++;
+    }
+  }
+
+  // else if (strcmp(ID, "PORT6_ADD_IPv6") == 0)
+  else if (strcmp(ID, "PORT3_ADD_IPv6_SRC") == 0)
+  {
+    t = 0;
+    write(serial_port, &key_07, sizeof(key_07));
+    usleep(1000);
+    write(serial_port, &enter, sizeof(enter));
+    usleep(10000);
+    write(serial_port, &keychamphay, sizeof(keychamphay));
+    usleep(1000);
+    write(serial_port, &enter, sizeof(enter));
+    usleep(100000);
+    int n = strlen(Value);
+    for (int i = 0; i < n; i++)
+    {
+      char data = Value[i];
+      send_data(serial_port, &data, sizeof(data));
+      // printf("IP:%c\n", data);
+      usleep(100000);
+    }
+
+    write(serial_port, &enter, sizeof(enter));
+    while (1)
+    {
+      char *data1 = receive_data(serial_port);
+      printf("\nReceived message: %s\n", data1);
+      if ((strchr(data1, 'Y') != NULL))
+      {
+        strcat(buffer, ID);
+        strcat(buffer, "$");
+        strcat(buffer, Value);
+        strcat(buffer, "$OK$");
+        printf("\nADD IPv6 port 6 done\n");
+        break;
+      }
+      else if ((strchr(data1, 'N') != NULL) || (t == 10))
+      {
+        strcat(buffer, ID);
+        strcat(buffer, "$");
+        strcat(buffer, Value);
+        strcat(buffer, "$ERROR$");
+        printf("\n ADD IPv6 port 6 ERROR\n");
+        break;
+      }
+      t++;
+    }
+  }
+  // else if (strcmp(ID, "PORT7_ADD_IPv6") == 0)
+  else if (strcmp(ID, "PORT4_ADD_IPv6_SRC") == 0)
+  {
+    t = 0;
+    write(serial_port, &key_07, sizeof(key_07));
+    usleep(1000);
+    write(serial_port, &enter, sizeof(enter));
+    usleep(10000);
+    write(serial_port, &keycong, sizeof(keycong));
+    usleep(1000);
+    write(serial_port, &enter, sizeof(enter));
+    usleep(100000);
+    int n = strlen(Value);
+    for (int i = 0; i < n; i++)
+    {
+      char data = Value[i];
+      send_data(serial_port, &data, sizeof(data));
+      // printf("IP:%c\n", data);
+      usleep(100000);
+    }
+
+    write(serial_port, &enter, sizeof(enter));
+    while (1)
+    {
+      char *data1 = receive_data(serial_port);
+      printf("\nReceived message: %s\n", data1);
+      if ((strchr(data1, 'Y') != NULL))
+      {
+        strcat(buffer, ID);
+        strcat(buffer, "$");
+        strcat(buffer, Value);
+        strcat(buffer, "$OK$");
+        printf("\nADD IPv6 port 7 done\n");
+        break;
+      }
+      else if ((strchr(data1, 'N') != NULL) || (t == 10))
+      {
+        strcat(buffer, ID);
+        strcat(buffer, "$");
+        strcat(buffer, Value);
+        strcat(buffer, "$ERROR$");
+        printf("\n ADD IPv6 port 7 ERROR\n");
         break;
       }
       t++;
     }
   }
   // ==================================================================================================================
-  // XOA IPV6 TRONG PORT DST
-  else if (strcmp(ID, "PORT1_REMOVE_IPV6") == 0 ||
-           strcmp(ID, "PORT2_REMOVE_IPV6") == 0 ||
-           strcmp(ID, "PORT3_REMOVE_IPV6") == 0 ||
-           strcmp(ID, "PORT4_REMOVE_IPV6") == 0)
+  // XOA IPv6 TRONG PORT
+  else if (strcmp(ID, "PORT1_REMOVE_IPv6") == 0)
   {
     t = 0;
     write(serial_port, &key_07, sizeof(key_07));
     usleep(1000);
     write(serial_port, &enter, sizeof(enter));
-    usleep(100000);
-    if (ID[4] == '1')
-    {
-      write(serial_port, &keytru, sizeof(keytru));
-    }
-    else if (ID[4] == '2')
-    {
-      write(serial_port, &key_02, sizeof(key_02));
-    }
-    else if (ID[4] == '3')
-    {
-      write(serial_port, &key_0D, sizeof(key_0D));
-    }
-    else if (ID[4] == '4')
-    {
-      write(serial_port, &key_04, sizeof(key_04));
-    }
+    usleep(10000);
+    write(serial_port, &keytru, sizeof(keytru));
     usleep(1000);
     write(serial_port, &enter, sizeof(enter));
-    usleep(1000000);
+    usleep(100000);
     int n = strlen(Value);
     for (int i = 0; i < n; i++)
     {
@@ -7179,6 +6358,7 @@ void process_key(int serial_port, char *ID, char *Value, int client_sock, char *
       // printf("IP:%c\n", data);
       usleep(100000);
     }
+
     write(serial_port, &enter, sizeof(enter));
     while (1)
     {
@@ -7190,7 +6370,7 @@ void process_key(int serial_port, char *ID, char *Value, int client_sock, char *
         strcat(buffer, "$");
         strcat(buffer, Value);
         strcat(buffer, "$OK$");
-        printf("\nREMOVE IPV6 port %c done\n", ID[4]);
+        printf("\nREMOVE IPv6 port 1 done\n");
         break;
       }
       else if ((strchr(data1, 'N') != NULL) || (t == 10))
@@ -7199,44 +6379,20 @@ void process_key(int serial_port, char *ID, char *Value, int client_sock, char *
         strcat(buffer, "$");
         strcat(buffer, Value);
         strcat(buffer, "$ERROR$");
-        printf("\n REMOVE IPV6 port %c ERROR\n", ID[4]);
+        printf("\n REMOVE IPv6 port 1 ERROR\n");
         break;
       }
       t++;
     }
   }
-  //===============================================================================================================
-  // XOA IPV6 TRONG PORT SRC
-  else if (strcmp(ID, "PORT1_REMOVE_IPV6_SRC") == 0 ||
-           strcmp(ID, "PORT2_REMOVE_IPV6_SRC") == 0 ||
-           strcmp(ID, "PORT3_REMOVE_IPV6_SRC") == 0 ||
-           strcmp(ID, "PORT4_REMOVE_IPV6_SRC") == 0 ||
-           strcmp(ID, "PORT5_REMOVE_IPV6_SRC") == 0 ||
-           strcmp(ID, "PORT6_REMOVE_IPV6_SRC") == 0 ||
-           strcmp(ID, "PORT7_REMOVE_IPV6_SRC") == 0 ||
-           strcmp(ID, "PORT8_REMOVE_IPV6_SRC") == 0)
+  else if (strcmp(ID, "PORT2_REMOVE_IPv6") == 0)
   {
     t = 0;
     write(serial_port, &key_07, sizeof(key_07));
     usleep(1000);
     write(serial_port, &enter, sizeof(enter));
-    usleep(1000000);
-    if (ID[4] == '1')
-    {
-      write(serial_port, &key_05, sizeof(key_05));
-    }
-    else if (ID[4] == '2')
-    {
-      write(serial_port, &keyhaicham, sizeof(keyhaicham));
-    }
-    else if (ID[4] == '3')
-    {
-      write(serial_port, &key_06, sizeof(key_06));
-    }
-    else if (ID[4] == '4')
-    {
-      write(serial_port, &key_08, sizeof(key_08));
-    }
+    usleep(10000);
+    write(serial_port, &key_02, sizeof(key_02));
     usleep(1000);
     write(serial_port, &enter, sizeof(enter));
     usleep(100000);
@@ -7260,7 +6416,7 @@ void process_key(int serial_port, char *ID, char *Value, int client_sock, char *
         strcat(buffer, "$");
         strcat(buffer, Value);
         strcat(buffer, "$OK$");
-        printf("\nREMOVE IPV6 port %c done\n", ID[4]);
+        printf("\nREMOVE IPv6 port 2 done\n");
         break;
       }
       else if ((strchr(data1, 'N') != NULL) || (t == 10))
@@ -7269,1555 +6425,256 @@ void process_key(int serial_port, char *ID, char *Value, int client_sock, char *
         strcat(buffer, "$");
         strcat(buffer, Value);
         strcat(buffer, "$ERROR$");
-        printf("\n REMOVE IPV6 port %c ERROR\n", ID[4]);
+        printf("\n REMOVE IPv6 port 2 ERROR\n");
         break;
       }
       t++;
     }
   }
+  else if (strcmp(ID, "PORT3_REMOVE_IPv6") == 0)
+  {
+    t = 0;
+    write(serial_port, &key_07, sizeof(key_07));
+    usleep(1000);
+    write(serial_port, &enter, sizeof(enter));
+    usleep(10000);
+    write(serial_port, &key_0D, sizeof(key_0D));
+    usleep(1000);
+    write(serial_port, &enter, sizeof(enter));
+    usleep(100000);
+    int n = strlen(Value);
+    for (int i = 0; i < n; i++)
+    {
+      char data = Value[i];
+      send_data(serial_port, &data, sizeof(data));
+      // printf("IP:%c\n", data);
+      usleep(100000);
+    }
+
+    write(serial_port, &enter, sizeof(enter));
+    while (1)
+    {
+      char *data1 = receive_data(serial_port);
+      printf("\nReceived message: %s\n", data1);
+      if ((strchr(data1, 'Y') != NULL))
+      {
+        strcat(buffer, ID);
+        strcat(buffer, "$");
+        strcat(buffer, Value);
+        strcat(buffer, "$OK$");
+        printf("\nREMOVE IPv6 port 3 done\n");
+        break;
+      }
+      else if ((strchr(data1, 'N') != NULL) || (t == 10))
+      {
+        strcat(buffer, ID);
+        strcat(buffer, "$");
+        strcat(buffer, Value);
+        strcat(buffer, "$ERROR$");
+        printf("\n REMOVE IPv6 port 3 ERROR\n");
+        break;
+      }
+      t++;
+    }
+  }
+  else if (strcmp(ID, "PORT4_REMOVE_IPv6") == 0)
+
+  {
+    t = 0;
+    write(serial_port, &key_07, sizeof(key_07));
+    usleep(1000);
+    write(serial_port, &enter, sizeof(enter));
+    usleep(10000);
+    write(serial_port, &key_04, sizeof(key_04));
+    usleep(1000);
+    write(serial_port, &enter, sizeof(enter));
+    usleep(100000);
+    int n = strlen(Value);
+    for (int i = 0; i < n; i++)
+    {
+      char data = Value[i];
+      send_data(serial_port, &data, sizeof(data));
+      // printf("IP:%c\n", data);
+      usleep(100000);
+    }
+
+    write(serial_port, &enter, sizeof(enter));
+    while (1)
+    {
+      char *data1 = receive_data(serial_port);
+      printf("\nReceived message: %s\n", data1);
+      if ((strchr(data1, 'Y') != NULL))
+      {
+        strcat(buffer, ID);
+        strcat(buffer, "$");
+        strcat(buffer, Value);
+        strcat(buffer, "$OK$");
+        printf("\nREMOVE IPv6 port 4 done\n");
+        break;
+      }
+      else if ((strchr(data1, 'N') != NULL) || (t == 10))
+      {
+        strcat(buffer, ID);
+        strcat(buffer, "$");
+        strcat(buffer, Value);
+        strcat(buffer, "$ERROR$");
+        printf("\n REMOVE IPv6 port 4 ERROR\n");
+        break;
+      }
+      t++;
+    }
+  }
+  // else if (strcmp(ID, "PORT5_REMOVE_IPv6") == 0)
+  else if (strcmp(ID, "PORT1_REMOVE_IPv6_SRC") == 0)
+  {
+    t = 0;
+    write(serial_port, &key_07, sizeof(key_07));
+    usleep(1000);
+    write(serial_port, &enter, sizeof(enter));
+    usleep(10000);
+
+    write(serial_port, &key_05, sizeof(key_05));
+    usleep(1000);
+    write(serial_port, &enter, sizeof(enter));
+    usleep(100000);
+    int n = strlen(Value);
+    for (int i = 0; i < n; i++)
+    {
+      char data = Value[i];
+      send_data(serial_port, &data, sizeof(data));
+      // printf("IP:%c\n", data);
+      usleep(100000);
+    }
+
+    write(serial_port, &enter, sizeof(enter));
+    while (1)
+    {
+      char *data1 = receive_data(serial_port);
+      printf("\nReceived message: %s\n", data1);
+      if ((strchr(data1, 'Y') != NULL))
+      {
+        strcat(buffer, ID);
+        strcat(buffer, "$");
+        strcat(buffer, Value);
+        strcat(buffer, "$OK$");
+        printf("\nREMOVE IPv6 port 5 done\n");
+        break;
+      }
+      else if ((strchr(data1, 'N') != NULL) || (t == 10))
+      {
+        strcat(buffer, ID);
+        strcat(buffer, "$");
+        strcat(buffer, Value);
+        strcat(buffer, "$ERROR$");
+        printf("\n REMOVE IPv6 port 5 ERROR\n");
+        break;
+      }
+      t++;
+    }
+  }
+  // else if (strcmp(ID, "PORT6_REMOVE_IPv6") == 0)
+  else if (strcmp(ID, "PORT3_REMOVE_IPv6_SRC") == 0)
+
+  {
+    t = 0;
+    write(serial_port, &key_07, sizeof(key_07));
+    usleep(1000);
+    write(serial_port, &enter, sizeof(enter));
+    usleep(1000);
+    write(serial_port, &key_06, sizeof(key_06));
+    usleep(1000);
+    write(serial_port, &enter, sizeof(enter));
+    usleep(100000);
+    int n = strlen(Value);
+    for (int i = 0; i < n; i++)
+    {
+      char data = Value[i];
+      send_data(serial_port, &data, sizeof(data));
+      // printf("IP:%c\n", data);
+      usleep(100000);
+    }
+
+    write(serial_port, &enter, sizeof(enter));
+    while (1)
+    {
+      char *data1 = receive_data(serial_port);
+      printf("\nReceived message: %s\n", data1);
+      if ((strchr(data1, 'Y') != NULL))
+      {
+        strcat(buffer, ID);
+        strcat(buffer, "$");
+        strcat(buffer, Value);
+        strcat(buffer, "$OK$");
+        printf("\nREMOVE IPv6 port 6 done\n");
+        break;
+      }
+      else if ((strchr(data1, 'N') != NULL) || (t == 10))
+      {
+        strcat(buffer, ID);
+        strcat(buffer, "$");
+        strcat(buffer, Value);
+        strcat(buffer, "$ERROR$");
+        printf("\n REMOVE IPv6 port 6 ERROR\n");
+        break;
+      }
+      t++;
+    }
+  }
+  //  else if (strcmp(ID, "PORT7_REMOVE_IPv6") == 0)
+  else if (strcmp(ID, "PORT4_REMOVE_IPv6_SRC") == 0)
+
+  {
+    t = 0;
+    write(serial_port, &key_07, sizeof(key_07));
+    usleep(1000);
+    write(serial_port, &enter, sizeof(enter));
+    usleep(1000);
+    write(serial_port, &key_08, sizeof(key_08));
+    usleep(1000);
+    write(serial_port, &enter, sizeof(enter));
+    usleep(100000);
+    int n = strlen(Value);
+    for (int i = 0; i < n; i++)
+    {
+      char data = Value[i];
+      send_data(serial_port, &data, sizeof(data));
+      // printf("IP:%c\n", data);
+      usleep(100000);
+    }
+
+    write(serial_port, &enter, sizeof(enter));
+    while (1)
+    {
+      char *data1 = receive_data(serial_port);
+      printf("\nReceived message: %s\n", data1);
+      if ((strchr(data1, 'Y') != NULL))
+      {
+        strcat(buffer, ID);
+        strcat(buffer, "$");
+        strcat(buffer, Value);
+        strcat(buffer, "$OK$");
+        printf("\nREMOVE IPv6 port 7 done\n");
+        break;
+      }
+      else if ((strchr(data1, 'N') != NULL) || (t == 10))
+      {
+        strcat(buffer, ID);
+        strcat(buffer, "$");
+        strcat(buffer, Value);
+        strcat(buffer, "$ERROR$");
+        printf("\n REMOVE IPv6 port 7 ERROR\n");
+        break;
+      }
+      t++;
+    }
+  }
+
   //=================================================================================================================
-  // PORT MIRRORING
-  //=================================================================================================================
-
-  // PORT MONITORED 1
-  else if (strcmp(ID, "PORT1_MONITORED") == 0 || strcmp(ID, "PORT2_MONITORED") == 0 || strcmp(ID, "PORT3_MONITORED") == 0 || strcmp(ID, "PORT4_MONITORED") == 0 || strcmp(ID, "PORT5_MONITORED") == 0 || strcmp(ID, "PORT6_MONITORED") == 0 || strcmp(ID, "PORT7_MONITORED") == 0 || strcmp(ID, "PORT8_MONITORED") == 0)
-  {
-    t = 0;
-    write(serial_port, &key_08, sizeof(key_08));
-    usleep(1000);
-    write(serial_port, &enter, sizeof(enter));
-    usleep(1000);
-    write(serial_port, &keyX, sizeof(keyX));
-    usleep(100000);
-    // printf("\nID: %c\n", ID[4]);
-    // printf("\nID: %c\n", ID[4]);
-    // printf("\nID: %c\n", ID[4]);
-    if (ID[4] == '1')
-    {
-      write(serial_port, &key1, sizeof(key1));
-    }
-    else if (ID[4] == '2')
-    {
-      write(serial_port, &key2, sizeof(key2));
-    }
-    else if (ID[4] == '3')
-    {
-      write(serial_port, &key3, sizeof(key3));
-    }
-    else if (ID[4] == '4')
-    {
-      write(serial_port, &key4, sizeof(key4));
-    }
-    else if (ID[4] == '5')
-    {
-      write(serial_port, &key5, sizeof(key5));
-    }
-    else if (ID[4] == '6')
-    {
-      write(serial_port, &key6, sizeof(key6));
-    }
-    else if (ID[4] == '7')
-    {
-      write(serial_port, &key7, sizeof(key7));
-    }
-    else if (ID[4] == '8')
-    {
-      write(serial_port, &key8, sizeof(key8));
-    }
-    usleep(10000);
-    if (strcmp(Value, "1") == 0)
-    {
-      write(serial_port, &key1, sizeof(key1));
-    }
-    else if (strcmp(Value, "0") == 0)
-    {
-      write(serial_port, &key0, sizeof(key0));
-    }
-    while (1)
-    {
-      char *data1 = receive_data(serial_port);
-      printf("\nReceived message: %s\n", data1);
-      if ((strchr(data1, 'Y') != NULL))
-      // if ((strchr(data1, 'X') != NULL))
-      {
-        strcat(buffer, ID);
-        strcat(buffer, "$");
-        strcat(buffer, Value);
-        strcat(buffer, "$OK$");
-        printf("\nENABLE PORT%c_MONITORED done\n", ID[4]);
-        break;
-      }
-      else if ((strchr(data1, 'N') != NULL) || (t == 10))
-      {
-        strcat(buffer, ID);
-        strcat(buffer, "$");
-        strcat(buffer, Value);
-        strcat(buffer, "$ERROR$");
-        printf("\nENABLE PORT%c_MONITORED ERROR\n", ID[4]);
-        break;
-      }
-      t++;
-    }
-  }
-
-  //==================================================================================================================
-  // PORT MONITORED SRC MAC
-  else if (strcmp(ID, "PORT1_MONITORED_SRC_MAC") == 0 || strcmp(ID, "PORT2_MONITORED_SRC_MAC") == 0 || strcmp(ID, "PORT3_MONITORED_SRC_MAC") == 0 || strcmp(ID, "PORT4_MONITORED_SRC_MAC") == 0 || strcmp(ID, "PORT5_MONITORED_SRC_MAC") == 0 || strcmp(ID, "PORT6_MONITORED_SRC_MAC") == 0 || strcmp(ID, "PORT7_MONITORED_SRC_MAC") == 0 || strcmp(ID, "PORT8_MONITORED_SRC_MAC") == 0)
-  {
-    t = 0;
-    write(serial_port, &key_08, sizeof(key_08));
-    usleep(1000);
-    write(serial_port, &enter, sizeof(enter));
-    usleep(1000);
-
-    write(serial_port, &keyA, sizeof(keyA));
-    usleep(100000);
-    if (ID[4] == '1')
-    {
-      write(serial_port, &key1, sizeof(key1));
-    }
-    else if (ID[4] == '2')
-    {
-      write(serial_port, &key2, sizeof(key2));
-    }
-    else if (ID[4] == '3')
-    {
-      write(serial_port, &key3, sizeof(key3));
-    }
-    else if (ID[4] == '4')
-    {
-      write(serial_port, &key4, sizeof(key4));
-    }
-    else if (ID[4] == '5')
-    {
-      write(serial_port, &key5, sizeof(key5));
-    }
-    else if (ID[4] == '6')
-    {
-      write(serial_port, &key6, sizeof(key6));
-    }
-    else if (ID[4] == '7')
-    {
-      write(serial_port, &key7, sizeof(key7));
-    }
-    else if (ID[4] == '8')
-    {
-      write(serial_port, &key8, sizeof(key8));
-    }
-    usleep(10000);
-    int n = strlen(Value);
-    for (int i = 0; i < n; i++)
-    {
-      char data = Value[i];
-      send_data(serial_port, &data, sizeof(data));
-      // printf("IP:%c\n", data);
-      usleep(100000);
-    }
-
-    write(serial_port, &enter, sizeof(enter));
-    while (1)
-    {
-      char *data1 = receive_data(serial_port);
-      printf("\nReceived message: %s\n", data1);
-      if ((strchr(data1, 'Y') != NULL))
-      {
-        strcat(buffer, ID);
-        strcat(buffer, "$");
-        strcat(buffer, Value);
-        strcat(buffer, "$OK$");
-        printf("\nREMOVE IPV6 port 7 done\n");
-        break;
-      }
-      else if ((strchr(data1, 'N') != NULL) || (t == 10))
-      {
-        strcat(buffer, ID);
-        strcat(buffer, "$");
-        strcat(buffer, Value);
-        strcat(buffer, "$ERROR$");
-        printf("\n REMOVE IPV6 port 7 ERROR\n");
-        break;
-      }
-      t++;
-    }
-  }
-  //==================================================================================================================
-  // PORT MONITORED SRC MAC REMOVE
-  else if (strcmp(ID, "PORT1_MONITORED_SRC_MAC_REMOVE") == 0 || strcmp(ID, "PORT2_MONITORED_SRC_MAC_REMOVE") == 0 || strcmp(ID, "PORT3_MONITORED_SRC_MAC_REMOVE") == 0 || strcmp(ID, "PORT4_MONITORED_SRC_MAC_REMOVE") == 0 || strcmp(ID, "PORT5_MONITORED_SRC_MAC_REMOVE") == 0 || strcmp(ID, "PORT6_MONITORED_SRC_MAC_REMOVE") == 0 || strcmp(ID, "PORT7_MONITORED_SRC_MAC_REMOVE") == 0 || strcmp(ID, "PORT8_MONITORED_SRC_MAC_REMOVE") == 0)
-  {
-    t = 0;
-    write(serial_port, &key_08, sizeof(key_08));
-    usleep(1000);
-    write(serial_port, &enter, sizeof(enter));
-    usleep(1000);
-
-    write(serial_port, &key1, sizeof(key1));
-    usleep(100000);
-    if (ID[4] == '1')
-    {
-      write(serial_port, &key1, sizeof(key1));
-    }
-    else if (ID[4] == '2')
-    {
-      write(serial_port, &key2, sizeof(key2));
-    }
-    else if (ID[4] == '3')
-    {
-      write(serial_port, &key3, sizeof(key3));
-    }
-    else if (ID[4] == '4')
-    {
-      write(serial_port, &key4, sizeof(key4));
-    }
-    else if (ID[4] == '5')
-    {
-      write(serial_port, &key5, sizeof(key5));
-    }
-    else if (ID[4] == '6')
-    {
-      write(serial_port, &key6, sizeof(key6));
-    }
-    else if (ID[4] == '7')
-    {
-      write(serial_port, &key7, sizeof(key7));
-    }
-    else if (ID[4] == '8')
-    {
-      write(serial_port, &key8, sizeof(key8));
-    }
-    usleep(10000);
-    int n = strlen(Value);
-    for (int i = 0; i < n; i++)
-    {
-      char data = Value[i];
-      send_data(serial_port, &data, sizeof(data));
-      // printf("IP:%c\n", data);
-      usleep(100000);
-    }
-
-    write(serial_port, &enter, sizeof(enter));
-    while (1)
-    {
-      char *data1 = receive_data(serial_port);
-      printf("\nReceived message: %s\n", data1);
-      if ((strchr(data1, 'Y') != NULL))
-      {
-        strcat(buffer, ID);
-        strcat(buffer, "$");
-        strcat(buffer, Value);
-        strcat(buffer, "$OK$");
-        printf("\nADD SRC PORT %c MINOTORED done\n", ID[4]);
-        break;
-      }
-      else if ((strchr(data1, 'N') != NULL) || (t == 10))
-      {
-        strcat(buffer, ID);
-        strcat(buffer, "$");
-        strcat(buffer, Value);
-        strcat(buffer, "$ERROR$");
-        printf("\nADD SRC PORT %c MINOTORED error\n", ID[4]);
-        break;
-      }
-      t++;
-    }
-  }
-
-  //==================================================================================================================
-  // PORT MONITORED DST MAC
-  else if (strcmp(ID, "PORT1_MONITORED_DST_MAC") == 0 || strcmp(ID, "PORT2_MONITORED_DST_MAC") == 0 || strcmp(ID, "PORT3_MONITORED_DST_MAC") == 0 || strcmp(ID, "PORT4_MONITORED_DST_MAC") == 0 || strcmp(ID, "PORT5_MONITORED_DST_MAC") == 0 || strcmp(ID, "PORT6_MONITORED_DST_MAC") == 0 || strcmp(ID, "PORT7_MONITORED_DST_MAC") == 0 || strcmp(ID, "PORT8_MONITORED_DST_MAC") == 0)
-  {
-    t = 0;
-    write(serial_port, &key_08, sizeof(key_08));
-    usleep(1000);
-    write(serial_port, &enter, sizeof(enter));
-    usleep(1000);
-    write(serial_port, &keyB, sizeof(keyB));
-
-    usleep(1000);
-    if (ID[4] == '1')
-    {
-      write(serial_port, &key1, sizeof(key1));
-    }
-    else if (ID[4] == '2')
-    {
-      write(serial_port, &key2, sizeof(key2));
-    }
-    else if (ID[4] == '3')
-    {
-      write(serial_port, &key3, sizeof(key3));
-    }
-    else if (ID[4] == '4')
-    {
-      write(serial_port, &key4, sizeof(key4));
-    }
-    else if (ID[4] == '5')
-    {
-      write(serial_port, &key5, sizeof(key5));
-    }
-    else if (ID[4] == '6')
-    {
-      write(serial_port, &key6, sizeof(key6));
-    }
-    else if (ID[4] == '7')
-    {
-      write(serial_port, &key7, sizeof(key7));
-    }
-    else if (ID[4] == '8')
-    {
-      write(serial_port, &key8, sizeof(key8));
-    }
-    usleep(100000);
-    int n = strlen(Value);
-    for (int i = 0; i < n; i++)
-    {
-      char data = Value[i];
-      send_data(serial_port, &data, sizeof(data));
-      // printf("IP:%c\n", data);
-      usleep(100000);
-    }
-
-    write(serial_port, &enter, sizeof(enter));
-    while (1)
-    {
-      char *data1 = receive_data(serial_port);
-      printf("\nReceived message: %s\n", data1);
-      if ((strchr(data1, 'Y') != NULL))
-      {
-        strcat(buffer, ID);
-        strcat(buffer, "$");
-        strcat(buffer, Value);
-        strcat(buffer, "$OK$");
-        printf("\nREMOVE SRC PORT %c MINOTORED done\n", ID[4]);
-        break;
-      }
-      else if ((strchr(data1, 'N') != NULL) || (t == 10))
-      {
-        strcat(buffer, ID);
-        strcat(buffer, "$");
-        strcat(buffer, Value);
-        strcat(buffer, "$ERROR$");
-        printf("\nREMOVE SRC PORT %c MINOTORED done\n", ID[4]);
-        break;
-      }
-      t++;
-    }
-  }
-
-  //==================================================================================================================
-  // PORT MONITORED DST MAC REMOVE
-  else if (strcmp(ID, "PORT1_MONITORED_DST_MAC_REMOVE") == 0 || strcmp(ID, "PORT2_MONITORED_DST_MAC_REMOVE") == 0 || strcmp(ID, "PORT3_MONITORED_DST_MAC_REMOVE") == 0 || strcmp(ID, "PORT4_MONITORED_DST_MAC_REMOVE") == 0 || strcmp(ID, "PORT5_MONITORED_DST_MAC_REMOVE") == 0 || strcmp(ID, "PORT6_MONITORED_DST_MAC_REMOVE") == 0 || strcmp(ID, "PORT7_MONITORED_DST_MAC_REMOVE") == 0 || strcmp(ID, "PORT8_MONITORED_DST_MAC_REMOVE") == 0)
-  {
-    t = 0;
-    write(serial_port, &key_08, sizeof(key_08));
-    usleep(1000);
-    write(serial_port, &enter, sizeof(enter));
-    usleep(1000);
-    write(serial_port, &key2, sizeof(key2));
-
-    usleep(1000);
-    if (ID[4] == '1')
-    {
-      write(serial_port, &key1, sizeof(key1));
-    }
-    else if (ID[4] == '2')
-    {
-      write(serial_port, &key2, sizeof(key2));
-    }
-    else if (ID[4] == '3')
-    {
-      write(serial_port, &key3, sizeof(key3));
-    }
-    else if (ID[4] == '4')
-    {
-      write(serial_port, &key4, sizeof(key4));
-    }
-    else if (ID[4] == '5')
-    {
-      write(serial_port, &key5, sizeof(key5));
-    }
-    else if (ID[4] == '6')
-    {
-      write(serial_port, &key6, sizeof(key6));
-    }
-    else if (ID[4] == '7')
-    {
-      write(serial_port, &key7, sizeof(key7));
-    }
-    else if (ID[4] == '8')
-    {
-      write(serial_port, &key8, sizeof(key8));
-    }
-    usleep(100000);
-    int n = strlen(Value);
-    for (int i = 0; i < n; i++)
-    {
-      char data = Value[i];
-      send_data(serial_port, &data, sizeof(data));
-      // printf("IP:%c\n", data);
-      usleep(100000);
-    }
-
-    write(serial_port, &enter, sizeof(enter));
-    while (1)
-    {
-      char *data1 = receive_data(serial_port);
-      printf("\nReceived message: %s\n", data1);
-      if ((strchr(data1, 'Y') != NULL))
-      {
-        strcat(buffer, ID);
-        strcat(buffer, "$");
-        strcat(buffer, Value);
-        strcat(buffer, "$OK$");
-        printf("\nREMOVE SRC PORT %c MINOTORED done\n", ID[4]);
-        break;
-      }
-      else if ((strchr(data1, 'N') != NULL) || (t == 10))
-      {
-        strcat(buffer, ID);
-        strcat(buffer, "$");
-        strcat(buffer, Value);
-        strcat(buffer, "$ERROR$");
-        printf("\nREMOVE SRC PORT %c MINOTORED error\n", ID[4]);
-        break;
-      }
-      t++;
-    }
-  }
-  //===================================================================================================================
-  // PORT MONITORED SRC IP4
-  else if (strcmp(ID, "PORT1_MONITORED_SRC_IPV4") == 0 || strcmp(ID, "PORT2_MONITORED_SRC_IPV4") == 0 || strcmp(ID, "PORT3_MONITORED_SRC_IPV4") == 0 || strcmp(ID, "PORT4_MONITORED_SRC_IPV4") == 0 || strcmp(ID, "PORT5_MONITORED_SRC_IPV4") == 0 || strcmp(ID, "PORT6_MONITORED_SRC_IPV4") == 0 || strcmp(ID, "PORT7_MONITORED_SRC_IPV4") == 0 || strcmp(ID, "PORT8_MONITORED_SRC_IPV4") == 0)
-  {
-    t = 0;
-    write(serial_port, &key_08, sizeof(key_08));
-    usleep(1000);
-    write(serial_port, &enter, sizeof(enter));
-    usleep(1000);
-
-    write(serial_port, &keyC, sizeof(keyC));
-    usleep(10000);
-    if (ID[4] == '1')
-    {
-      write(serial_port, &key1, sizeof(key1));
-    }
-    else if (ID[4] == '2')
-    {
-      write(serial_port, &key2, sizeof(key2));
-    }
-    else if (ID[4] == '3')
-    {
-      write(serial_port, &key3, sizeof(key3));
-    }
-    else if (ID[4] == '4')
-    {
-      write(serial_port, &key4, sizeof(key4));
-    }
-    else if (ID[4] == '5')
-    {
-      write(serial_port, &key5, sizeof(key5));
-    }
-    else if (ID[4] == '6')
-    {
-      write(serial_port, &key6, sizeof(key6));
-    }
-    else if (ID[4] == '7')
-    {
-      write(serial_port, &key7, sizeof(key7));
-    }
-    else if (ID[4] == '8')
-    {
-      write(serial_port, &key8, sizeof(key8));
-    }
-    usleep(100000);
-    int n = strlen(Value);
-    for (int i = 0; i < n; i++)
-    {
-      char data = Value[i];
-      send_data(serial_port, &data, sizeof(data));
-      // printf("IP:%c\n", data);
-      usleep(100000);
-    }
-
-    write(serial_port, &enter, sizeof(enter));
-    while (1)
-    {
-      char *data1 = receive_data(serial_port);
-      printf("\nReceived message: %s\n", data1);
-      if ((strchr(data1, 'Y') != NULL))
-      {
-        strcat(buffer, ID);
-        strcat(buffer, "$");
-        strcat(buffer, Value);
-        strcat(buffer, "$OK$");
-        printf("\nADD SRC IPV4 %c MINOTORED done\n", ID[4]);
-        break;
-      }
-      else if ((strchr(data1, 'N') != NULL) || (t == 10))
-      {
-        strcat(buffer, ID);
-        strcat(buffer, "$");
-        strcat(buffer, Value);
-        strcat(buffer, "$ERROR$");
-        printf("\nADD SRC IPV4 %c MINOTORED ERROR\n", ID[4]);
-        break;
-      }
-      t++;
-    }
-  }
-  //===================================================================================================================
-  // PORT MONITORED SRC IPV4 REMOVE
-  else if (strcmp(ID, "PORT1_MONITORED_SRC_IPV4_REMOVE") == 0 || strcmp(ID, "PORT2_MONITORED_SRC_IPV4_REMOVE") == 0 || strcmp(ID, "PORT3_MONITORED_SRC_IPV4_REMOVE") == 0 || strcmp(ID, "PORT4_MONITORED_SRC_IPV4_REMOVE") == 0 || strcmp(ID, "PORT5_MONITORED_SRC_IPV4_REMOVE") == 0 || strcmp(ID, "PORT6_MONITORED_SRC_IPV4_REMOVE") == 0 || strcmp(ID, "PORT7_MONITORED_SRC_IPV4_REMOVE") == 0 || strcmp(ID, "PORT8_MONITORED_SRC_IPV4_REMOVE") == 0)
-  {
-    t = 0;
-    write(serial_port, &key_08, sizeof(key_08));
-    usleep(1000);
-    write(serial_port, &enter, sizeof(enter));
-    usleep(10000);
-
-    write(serial_port, &key3, sizeof(key3));
-    usleep(10000);
-    if (ID[4] == '1')
-    {
-      write(serial_port, &key1, sizeof(key1));
-    }
-    else if (ID[4] == '2')
-    {
-      write(serial_port, &key2, sizeof(key2));
-    }
-    else if (ID[4] == '3')
-    {
-      write(serial_port, &key3, sizeof(key3));
-    }
-    else if (ID[4] == '4')
-    {
-      write(serial_port, &key4, sizeof(key4));
-    }
-    else if (ID[4] == '5')
-    {
-      write(serial_port, &key5, sizeof(key5));
-    }
-    else if (ID[4] == '6')
-    {
-      write(serial_port, &key6, sizeof(key6));
-    }
-    else if (ID[4] == '7')
-    {
-      write(serial_port, &key7, sizeof(key7));
-    }
-    else if (ID[4] == '8')
-    {
-      write(serial_port, &key8, sizeof(key8));
-    }
-    usleep(100000);
-    int n = strlen(Value);
-    for (int i = 0; i < n; i++)
-    {
-      char data = Value[i];
-      send_data(serial_port, &data, sizeof(data));
-      // printf("IP:%c\n", data);
-      usleep(100000);
-    }
-
-    write(serial_port, &enter, sizeof(enter));
-    while (1)
-    {
-      char *data1 = receive_data(serial_port);
-      printf("\nReceived message: %s\n", data1);
-      if ((strchr(data1, 'Y') != NULL))
-      {
-        strcat(buffer, ID);
-        strcat(buffer, "$");
-        strcat(buffer, Value);
-        strcat(buffer, "$OK$");
-        printf("\nREMOVE SRC IPV4 %c MINOTORED done\n", ID[4]);
-        break;
-      }
-      else if ((strchr(data1, 'N') != NULL) || (t == 10))
-      {
-        strcat(buffer, ID);
-        strcat(buffer, "$");
-        strcat(buffer, Value);
-        strcat(buffer, "$ERROR$");
-        printf("\nREMOVE SRC IPV4 %c MINOTORED ERROR\n", ID[4]);
-        break;
-      }
-      t++;
-    }
-  }
-  //====================================================================================================================
-  // PORT MONITORED DST IPV4
-  else if (strcmp(ID, "PORT1_MONITORED_DST_IPV4") == 0 || strcmp(ID, "PORT2_MONITORED_DST_IPV4") == 0 || strcmp(ID, "PORT3_MONITORED_DST_IPV4") == 0 || strcmp(ID, "PORT4_MONITORED_DST_IPV4") == 0 || strcmp(ID, "PORT5_MONITORED_DST_IPV4") == 0 || strcmp(ID, "PORT6_MONITORED_DST_IPV4") == 0 || strcmp(ID, "PORT7_MONITORED_DST_IPV4") == 0 || strcmp(ID, "PORT8_MONITORED_DST_IPV4") == 0)
-  {
-    t = 0;
-    write(serial_port, &key_08, sizeof(key_08));
-    usleep(1000);
-    write(serial_port, &enter, sizeof(enter));
-    usleep(1000);
-
-    write(serial_port, &keyD, sizeof(keyD));
-    usleep(100000);
-    if (ID[4] == '1')
-    {
-      write(serial_port, &key1, sizeof(key1));
-    }
-    else if (ID[4] == '2')
-    {
-      write(serial_port, &key2, sizeof(key2));
-    }
-    else if (ID[4] == '3')
-    {
-      write(serial_port, &key3, sizeof(key3));
-    }
-    else if (ID[4] == '4')
-    {
-      write(serial_port, &key4, sizeof(key4));
-    }
-    else if (ID[4] == '5')
-    {
-      write(serial_port, &key5, sizeof(key5));
-    }
-    else if (ID[4] == '6')
-    {
-      write(serial_port, &key6, sizeof(key6));
-    }
-    else if (ID[4] == '7')
-    {
-      write(serial_port, &key7, sizeof(key7));
-    }
-    else if (ID[4] == '8')
-    {
-      write(serial_port, &key8, sizeof(key8));
-    }
-    usleep(100000);
-    int n = strlen(Value);
-    for (int i = 0; i < n; i++)
-    {
-      char data = Value[i];
-      send_data(serial_port, &data, sizeof(data));
-      // printf("IP:%c\n", data);
-      usleep(100000);
-    }
-
-    write(serial_port, &enter, sizeof(enter));
-    while (1)
-    {
-      char *data1 = receive_data(serial_port);
-      printf("\nReceived message: %s\n", data1);
-      if ((strchr(data1, 'Y') != NULL))
-      {
-        strcat(buffer, ID);
-        strcat(buffer, "$");
-        strcat(buffer, Value);
-        strcat(buffer, "$OK$");
-        printf("\nADD DST IPV4 %c MINOTORED done\n", ID[4]);
-        break;
-      }
-      else if ((strchr(data1, 'N') != NULL) || (t == 10))
-      {
-        strcat(buffer, ID);
-        strcat(buffer, "$");
-        strcat(buffer, Value);
-        strcat(buffer, "$ERROR$");
-        printf("\nADD DST IPV4 %c MINOTORED ERROR\n", ID[4]);
-        break;
-      }
-      t++;
-    }
-  }
-  // PORT MONITORED DST IPV4 REMOVE
-  else if (strcmp(ID, "PORT1_MONITORED_DST_IPV4_REMOVE") == 0 || strcmp(ID, "PORT2_MONITORED_DST_IPV4_REMOVE") == 0 || strcmp(ID, "PORT3_MONITORED_DST_IPV4_REMOVE") == 0 || strcmp(ID, "PORT4_MONITORED_DST_IPV4_REMOVE") == 0 || strcmp(ID, "PORT5_MONITORED_DST_IPV4_REMOVE") == 0 || strcmp(ID, "PORT6_MONITORED_DST_IPV4_REMOVE") == 0 || strcmp(ID, "PORT7_MONITORED_DST_IPV4_REMOVE") == 0 || strcmp(ID, "PORT8_MONITORED_DST_IPV4_REMOVE") == 0)
-  {
-    t = 0;
-    write(serial_port, &key_08, sizeof(key_08));
-    usleep(1000);
-    write(serial_port, &enter, sizeof(enter));
-    usleep(1000);
-
-    write(serial_port, &key4, sizeof(key4));
-    usleep(10000);
-    if (ID[4] == '1')
-    {
-      write(serial_port, &key1, sizeof(key1));
-    }
-    else if (ID[4] == '2')
-    {
-      write(serial_port, &key2, sizeof(key2));
-    }
-    else if (ID[4] == '3')
-    {
-      write(serial_port, &key3, sizeof(key3));
-    }
-    else if (ID[4] == '4')
-    {
-      write(serial_port, &key4, sizeof(key4));
-    }
-    else if (ID[4] == '5')
-    {
-      write(serial_port, &key5, sizeof(key5));
-    }
-    else if (ID[4] == '6')
-    {
-      write(serial_port, &key6, sizeof(key6));
-    }
-    else if (ID[4] == '7')
-    {
-      write(serial_port, &key7, sizeof(key7));
-    }
-    else if (ID[4] == '8')
-    {
-      write(serial_port, &key8, sizeof(key8));
-    }
-    usleep(100000);
-    int n = strlen(Value);
-    for (int i = 0; i < n; i++)
-    {
-      char data = Value[i];
-      send_data(serial_port, &data, sizeof(data));
-      // printf("IP:%c\n", data);
-      usleep(100000);
-    }
-
-    write(serial_port, &enter, sizeof(enter));
-    while (1)
-    {
-      char *data1 = receive_data(serial_port);
-      printf("\nReceived message: %s\n", data1);
-      if ((strchr(data1, 'Y') != NULL))
-      {
-        strcat(buffer, ID);
-        strcat(buffer, "$");
-        strcat(buffer, Value);
-        strcat(buffer, "$OK$");
-        printf("\nREMOVE DST IPV4 %c MINOTORED done\n", ID[4]);
-        break;
-      }
-      else if ((strchr(data1, 'N') != NULL) || (t == 10))
-      {
-        strcat(buffer, ID);
-        strcat(buffer, "$");
-        strcat(buffer, Value);
-        strcat(buffer, "$ERROR$");
-        printf("\nREMOVE DST IPV4 %c MINOTORED ERROR\n", ID[4]);
-        break;
-      }
-      t++;
-    }
-  }
-  //=================================================================================================================
-  // PORT MONITORED SRC IPV6
-  else if (strcmp(ID, "PORT1_MONITORED_SRC_IPV6") == 0 || strcmp(ID, "PORT2_MONITORED_SRC_IPV6") == 0 || strcmp(ID, "PORT3_MONITORED_SRC_IPV6") == 0 || strcmp(ID, "PORT4_MONITORED_SRC_IPV6") == 0 || strcmp(ID, "PORT5_MONITORED_SRC_IPV6") == 0 || strcmp(ID, "PORT6_MONITORED_SRC_IPV6") == 0 || strcmp(ID, "PORT7_MONITORED_SRC_IPV6") == 0 || strcmp(ID, "PORT8_MONITORED_SRC_IPV6") == 0)
-  {
-    t = 0;
-    write(serial_port, &key_08, sizeof(key_08));
-    usleep(1000);
-    write(serial_port, &enter, sizeof(enter));
-    usleep(1000);
-
-    write(serial_port, &keyE, sizeof(keyE));
-    usleep(1000000);
-    if (ID[4] == '1')
-    {
-      write(serial_port, &key1, sizeof(key1));
-    }
-    else if (ID[4] == '2')
-    {
-      write(serial_port, &key2, sizeof(key2));
-    }
-    else if (ID[4] == '3')
-    {
-      write(serial_port, &key3, sizeof(key3));
-    }
-    else if (ID[4] == '4')
-    {
-      write(serial_port, &key4, sizeof(key4));
-    }
-    else if (ID[4] == '5')
-    {
-      write(serial_port, &key5, sizeof(key5));
-    }
-    else if (ID[4] == '6')
-    {
-      write(serial_port, &key6, sizeof(key6));
-    }
-    else if (ID[4] == '7')
-    {
-      write(serial_port, &key7, sizeof(key7));
-    }
-    else if (ID[4] == '8')
-    {
-      write(serial_port, &key8, sizeof(key8));
-    }
-    usleep(10000);
-    int n = strlen(Value);
-    for (int i = 0; i < n; i++)
-    {
-      char data = Value[i];
-      send_data(serial_port, &data, sizeof(data));
-      // printf("IP:%c\n", data);
-      usleep(10000);
-    }
-
-    write(serial_port, &enter, sizeof(enter));
-    while (1)
-    {
-      char *data1 = receive_data(serial_port);
-      printf("\nReceived message: %s\n", data1);
-      if ((strchr(data1, 'Y') != NULL))
-      {
-        strcat(buffer, ID);
-        strcat(buffer, "$");
-        strcat(buffer, Value);
-        strcat(buffer, "$OK$");
-        printf("\nADD PORT %c MINOTORED done\n", ID[4]);
-        break;
-      }
-      else if ((strchr(data1, 'N') != NULL) || (t == 10))
-      {
-        strcat(buffer, ID);
-        strcat(buffer, "$");
-        strcat(buffer, Value);
-        strcat(buffer, "$ERROR$");
-        printf("\nADD PORT %c MINOTORED ERROR\n", ID[4]);
-        break;
-      }
-      t++;
-    }
-  }
-  // PORT MONITORED SRC IPV6 REMOVE
-  else if (strcmp(ID, "PORT1_MONITORED_SRC_IPV6_REMOVE") == 0 || strcmp(ID, "PORT2_MONITORED_SRC_IPV6_REMOVE") == 0 || strcmp(ID, "PORT3_MONITORED_SRC_IPV6_REMOVE") == 0 || strcmp(ID, "PORT4_MONITORED_SRC_IPV6_REMOVE") == 0 || strcmp(ID, "PORT5_MONITORED_SRC_IPV6_REMOVE") == 0 || strcmp(ID, "PORT6_MONITORED_SRC_IPV6_REMOVE") == 0 || strcmp(ID, "PORT7_MONITORED_SRC_IPV6_REMOVE") == 0 || strcmp(ID, "PORT8_MONITORED_SRC_IPV6_REMOVE") == 0)
-  {
-    t = 0;
-
-    write(serial_port, &key_08, sizeof(key_08));
-    usleep(1000);
-    write(serial_port, &enter, sizeof(enter));
-    usleep(1000);
-
-    write(serial_port, &key5, sizeof(key5));
-    usleep(1000000);
-    // if (ID[4] == '1')
-    // {
-    //   write(serial_port, &key1, sizeof(key1));
-    // }
-    // else if (ID[4] == '2')
-    // {
-    //   write(serial_port, &key2, sizeof(key2));
-    // }
-    // else if (ID[4] == '3')
-    // {
-    //   write(serial_port, &key3, sizeof(key3));
-    // }
-    // else if (ID[4] == '4')
-    // {
-    //   write(serial_port, &key4, sizeof(key4));
-    // }
-    // else if (ID[4] == '5')
-    // {
-    //   write(serial_port, &key5, sizeof(key5));
-    // }
-    // else if (ID[4] == '6')
-    // {
-    //   write(serial_port, &key6, sizeof(key6));
-    // }
-    // else if (ID[4] == '7')
-    // {
-    //   write(serial_port, &key7, sizeof(key7));
-    // }
-    // else if (ID[4] == '8')
-    // {
-    //   write(serial_port, &key8, sizeof(key8));
-    // }
-    // usleep(2000000);
-    // int n = strlen(Value);
-    // for (int i = 0; i < n; i++)
-    // {
-    //   char data = Value[i];
-    //   send_data(serial_port, &data, sizeof(data));
-    //   // printf("IP:%c\n", data);
-    //   usleep(10000);
-    // }
-
-    // write(serial_port, &enter, sizeof(enter));
-    while (1)
-    {
-      char *data1 = receive_data(serial_port);
-      printf("\nReceived message: %s\n", data1);
-      if ((strchr(data1, 'Y') != NULL))
-      // if ((strchr(data1, 'K') != NULL))
-      {
-        strcat(buffer, ID);
-        strcat(buffer, "$");
-        strcat(buffer, Value);
-        strcat(buffer, "$OK$");
-        printf("\nREMOVE PORT %c MINOTORED done\n", ID[4]);
-        break;
-      }
-      else if ((strchr(data1, 'N') != NULL) || (t == 10))
-      {
-        strcat(buffer, ID);
-        strcat(buffer, "$");
-        strcat(buffer, Value);
-        strcat(buffer, "$ERROR$");
-        printf("\nREMOVE PORT %c MINOTORED ERROR\n", ID[4]);
-        break;
-      }
-      t++;
-    }
-  }
-  //===================================================================================================================
-  // PORT MONITORED DST IPV6
-  else if (strcmp(ID, "PORT1_MONITORED_DST_IPV6") == 0 || strcmp(ID, "PORT2_MONITORED_DST_IPV6") == 0 || strcmp(ID, "PORT3_MONITORED_DST_IPV6") == 0 || strcmp(ID, "PORT4_MONITORED_DST_IPV6") == 0 || strcmp(ID, "PORT5_MONITORED_DST_IPV6") == 0 || strcmp(ID, "PORT6_MONITORED_DST_IPV6") == 0 || strcmp(ID, "PORT7_MONITORED_DST_IPV6") == 0 || strcmp(ID, "PORT8_MONITORED_DST_IPV6") == 0)
-  {
-    t = 0;
-    write(serial_port, &key_08, sizeof(key_08));
-    usleep(1000);
-    write(serial_port, &enter, sizeof(enter));
-    usleep(1000);
-
-    write(serial_port, &keyF, sizeof(keyF));
-    usleep(1000000);
-
-    if (ID[4] == '1')
-    {
-      write(serial_port, &key1, sizeof(key1));
-    }
-    else if (ID[4] == '2')
-    {
-      write(serial_port, &key2, sizeof(key2));
-    }
-    else if (ID[4] == '3')
-    {
-      write(serial_port, &key3, sizeof(key3));
-    }
-    else if (ID[4] == '4')
-    {
-      write(serial_port, &key4, sizeof(key4));
-    }
-    else if (ID[4] == '5')
-    {
-      write(serial_port, &key5, sizeof(key5));
-    }
-    else if (ID[4] == '6')
-    {
-      write(serial_port, &key6, sizeof(key6));
-    }
-    else if (ID[4] == '7')
-    {
-      write(serial_port, &key7, sizeof(key7));
-    }
-    else if (ID[4] == '8')
-    {
-      write(serial_port, &key8, sizeof(key8));
-    }
-    usleep(10000);
-    int n = strlen(Value);
-    for (int i = 0; i < n; i++)
-    {
-      char data = Value[i];
-      send_data(serial_port, &data, sizeof(data));
-      // printf("IP:%c\n", data);
-      usleep(10000);
-    }
-
-    write(serial_port, &enter, sizeof(enter));
-    while (1)
-    {
-      char *data1 = receive_data(serial_port);
-      printf("\nReceived message: %s\n", data1);
-      if ((strchr(data1, 'Y') != NULL))
-      {
-        strcat(buffer, ID);
-        strcat(buffer, "$");
-        strcat(buffer, Value);
-        strcat(buffer, "$OK$");
-        printf("\nREMOVE IPV6 port 7 done\n");
-        break;
-      }
-      else if ((strchr(data1, 'N') != NULL) || (t == 10))
-      {
-        strcat(buffer, ID);
-        strcat(buffer, "$");
-        strcat(buffer, Value);
-        strcat(buffer, "$ERROR$");
-        printf("\n REMOVE IPV6 port 7 ERROR\n");
-        break;
-      }
-      t++;
-    }
-  }
-  //=================================================================================================================
-  // PORT MONITORED DST IPV6
-  else if (strcmp(ID, "PORT1_MONITORED_DST_IPV6_REMOVE") == 0 || strcmp(ID, "PORT2_MONITORED_DST_IPV6_REMOVE") == 0 || strcmp(ID, "PORT3_MONITORED_DST_IPV6_REMOVE") == 0 || strcmp(ID, "PORT4_MONITORED_DST_IPV6_REMOVE") == 0 || strcmp(ID, "PORT5_MONITORED_DST_IPV6_REMOVE") == 0 || strcmp(ID, "PORT6_MONITORED_DST_IPV6_REMOVE") == 0 || strcmp(ID, "PORT7_MONITORED_DST_IPV6_REMOVE") == 0 || strcmp(ID, "PORT8_MONITORED_DST_IPV6_REMOVE") == 0)
-  {
-    t = 0;
-    write(serial_port, &key_08, sizeof(key_08));
-    usleep(1000);
-    write(serial_port, &enter, sizeof(enter));
-    usleep(1000);
-
-    write(serial_port, &keyM, sizeof(keyM));
-    usleep(1000000);
-
-    // if (ID[4] == '1')
-    // {
-    //   write(serial_port, &key1, sizeof(key1));
-    // }
-    // else if (ID[4] == '2')
-    // {
-    //   write(serial_port, &key2, sizeof(key2));
-    // }
-    // else if (ID[4] == '3')
-    // {
-    //   write(serial_port, &key3, sizeof(key3));
-    // }
-    // else if (ID[4] == '4')
-    // {
-    //   write(serial_port, &key4, sizeof(key4));
-    // }
-    // else if (ID[4] == '5')
-    // {
-    //   write(serial_port, &key5, sizeof(key5));
-    // }
-    // else if (ID[4] == '6')
-    // {
-    //   write(serial_port, &key6, sizeof(key6));
-    // }
-    // else if (ID[4] == '7')
-    // {
-    //   write(serial_port, &key7, sizeof(key7));
-    // }
-    // else if (ID[4] == '8')
-    // {
-    //   write(serial_port, &key8, sizeof(key8));
-    // }
-    // usleep(1000000);
-    // int n = strlen(Value);
-    // for (int i = 0; i < n; i++)
-    // {
-    //   char data = Value[i];
-    //   send_data(serial_port, &data, sizeof(data));
-    //   // printf("IP:%c\n", data);
-    //   usleep(10000);
-    // }
-
-    // write(serial_port, &enter, sizeof(enter));
-    while (1)
-    {
-      char *data1 = receive_data(serial_port);
-      printf("\nReceived message: %s\n", data1);
-      if ((strchr(data1, 'Y') != NULL))
-      {
-        strcat(buffer, ID);
-        strcat(buffer, "$");
-        strcat(buffer, Value);
-        strcat(buffer, "$OK$");
-        printf("\nADD PORT %c MINOTORED dst6 done\n", ID[4]);
-        break;
-      }
-      else if ((strchr(data1, 'N') != NULL) || (t == 10))
-      {
-        strcat(buffer, ID);
-        strcat(buffer, "$");
-        strcat(buffer, Value);
-        strcat(buffer, "$ERROR$");
-        printf("\nREMOVE PORT %c MINOTORED  dst6 done\n", ID[4]);
-        break;
-      }
-      t++;
-    }
-  }
-  //=================================================================================================================
-  // PORT MONITORED  PORT
-  else if (strcmp(ID, "PORT1_MONITORED_PORT") == 0 || strcmp(ID, "PORT2_MONITORED_PORT") == 0 || strcmp(ID, "PORT3_MONITORED_PORT") == 0 || strcmp(ID, "PORT4_MONITORED_PORT") == 0 || strcmp(ID, "PORT5_MONITORED_PORT") == 0 || strcmp(ID, "PORT6_MONITORED_PORT") == 0 || strcmp(ID, "PORT7_MONITORED_PORT") == 0 || strcmp(ID, "PORT8_MONITORED_PORT") == 0)
-  {
-    t = 0;
-    write(serial_port, &key_08, sizeof(key_08));
-    usleep(1000);
-    write(serial_port, &enter, sizeof(enter));
-    usleep(1000);
-    write(serial_port, &keyG, sizeof(keyG));
-    usleep(100000);
-    if (ID[4] == '1')
-    {
-      write(serial_port, &key1, sizeof(key1));
-    }
-    else if (ID[4] == '2')
-    {
-      write(serial_port, &key2, sizeof(key2));
-    }
-    else if (ID[4] == '3')
-    {
-      write(serial_port, &key3, sizeof(key3));
-    }
-    else if (ID[4] == '4')
-    {
-      write(serial_port, &key4, sizeof(key4));
-    }
-    else if (ID[4] == '5')
-    {
-      write(serial_port, &key5, sizeof(key5));
-    }
-    else if (ID[4] == '6')
-    {
-      write(serial_port, &key6, sizeof(key6));
-    }
-    else if (ID[4] == '7')
-    {
-      write(serial_port, &key7, sizeof(key7));
-    }
-    else if (ID[4] == '8')
-    {
-      write(serial_port, &key8, sizeof(key8));
-    }
-    usleep(10000);
-    int n = strlen(Value);
-    for (int i = 0; i < n; i++)
-    {
-      char data = Value[i];
-      send_data(serial_port, &data, sizeof(data));
-      // printf("IP:%c\n", data);
-      usleep(100000);
-    }
-
-    // src-dst
-    write(serial_port, &enter, sizeof(enter));
-    while (1)
-    {
-      char *data1 = receive_data(serial_port);
-      printf("\nReceived message: %s\n", data1);
-      if ((strchr(data1, 'Y') != NULL))
-      {
-        strcat(buffer, ID);
-        strcat(buffer, "$");
-        strcat(buffer, Value);
-        strcat(buffer, "$OK$");
-        printf("\nADD PORT port mirored done\n");
-        break;
-      }
-      else if ((strchr(data1, 'N') != NULL) || (t == 10))
-      {
-        strcat(buffer, ID);
-        strcat(buffer, "$");
-        strcat(buffer, Value);
-        strcat(buffer, "$ERROR$");
-        printf("\n ADD PORT port mirored ERROR\n");
-        break;
-      }
-      t++;
-    }
-  }
-  // PORT MONITORED  PORT
-  else if (strcmp(ID, "PORT1_MONITORED_PORT_REMOVE") == 0 || strcmp(ID, "PORT2_MONITORED_PORT_REMOVE") == 0 || strcmp(ID, "PORT3_MONITORED_PORT_REMOVE") == 0 || strcmp(ID, "PORT4_MONITORED_PORT_REMOVE") == 0 || strcmp(ID, "PORT5_MONITORED_PORT_REMOVE") == 0 || strcmp(ID, "PORT6_MONITORED_PORT_REMOVE") == 0 || strcmp(ID, "PORT7_MONITORED_PORT_REMOVE") == 0 || strcmp(ID, "PORT8_MONITORED_PORT_REMOVE") == 0)
-  {
-    t = 0;
-    write(serial_port, &key_08, sizeof(key_08));
-    usleep(1000);
-    write(serial_port, &enter, sizeof(enter));
-    usleep(1000);
-
-    write(serial_port, &key7, sizeof(key7));
-
-    usleep(100000);
-    if (ID[4] == '1')
-    {
-      write(serial_port, &key1, sizeof(key1));
-    }
-    else if (ID[4] == '2')
-    {
-      write(serial_port, &key2, sizeof(key2));
-    }
-    else if (ID[4] == '3')
-    {
-      write(serial_port, &key3, sizeof(key3));
-    }
-    else if (ID[4] == '4')
-    {
-      write(serial_port, &key4, sizeof(key4));
-    }
-    else if (ID[4] == '5')
-    {
-      write(serial_port, &key5, sizeof(key5));
-    }
-    else if (ID[4] == '6')
-    {
-      write(serial_port, &key6, sizeof(key6));
-    }
-    else if (ID[4] == '7')
-    {
-      write(serial_port, &key7, sizeof(key7));
-    }
-    else if (ID[4] == '8')
-    {
-      write(serial_port, &key8, sizeof(key8));
-    }
-    usleep(10000);
-    int n = strlen(Value);
-    for (int i = 0; i < n; i++)
-    {
-      char data = Value[i];
-      send_data(serial_port, &data, sizeof(data));
-      usleep(100000);
-    }
-    write(serial_port, &enter, sizeof(enter));
-    while (1)
-    {
-      char *data1 = receive_data(serial_port);
-      printf("\nReceived message: %s\n", data1);
-      if ((strchr(data1, 'Y') != NULL))
-      {
-        strcat(buffer, ID);
-        strcat(buffer, "$");
-        strcat(buffer, Value);
-        strcat(buffer, "$OK$");
-        printf("\nREMOVE PORT port mirored done\n");
-        break;
-      }
-      else if ((strchr(data1, 'N') != NULL) || (t == 10))
-      {
-        strcat(buffer, ID);
-        strcat(buffer, "$");
-        strcat(buffer, Value);
-        strcat(buffer, "$ERROR$");
-        printf("\n REMOVE PORT port mirored ERROR\n");
-        break;
-      }
-      t++;
-    }
-  }
-
-  // =================================================================================================================
-  // PORT MONITORED PROTOCOL
-  else if (strcmp(ID, "PORT1_MONITORED_PROTOCOL") == 0 || strcmp(ID, "PORT2_MONITORED_PROTOCOL") == 0 || strcmp(ID, "PORT3_MONITORED_PROTOCOL") == 0 || strcmp(ID, "PORT4_MONITORED_PROTOCOL") == 0 || strcmp(ID, "PORT5_MONITORED_PROTOCOL") == 0 || strcmp(ID, "PORT6_MONITORED_PROTOCOL") == 0 || strcmp(ID, "PORT7_MONITORED_PROTOCOL") == 0 || strcmp(ID, "PORT8_MONITORED_PROTOCOL") == 0)
-  {
-    t = 0;
-    write(serial_port, &key_08, sizeof(key_08));
-    usleep(1000);
-    write(serial_port, &enter, sizeof(enter));
-    usleep(1000);
-
-    write(serial_port, &keyI, sizeof(keyI));
-
-    usleep(10000);
-    if (ID[4] == '1')
-    {
-      write(serial_port, &key1, sizeof(key1));
-    }
-    else if (ID[4] == '2')
-    {
-      write(serial_port, &key2, sizeof(key2));
-    }
-    else if (ID[4] == '3')
-    {
-      write(serial_port, &key3, sizeof(key3));
-    }
-    else if (ID[4] == '4')
-    {
-      write(serial_port, &key4, sizeof(key4));
-    }
-    else if (ID[4] == '5')
-    {
-      write(serial_port, &key5, sizeof(key5));
-    }
-    else if (ID[4] == '6')
-    {
-      write(serial_port, &key6, sizeof(key6));
-    }
-    else if (ID[4] == '7')
-    {
-      write(serial_port, &key7, sizeof(key7));
-    }
-    else if (ID[4] == '8')
-    {
-      write(serial_port, &key8, sizeof(key8));
-    }
-    usleep(10000);
-    if (strcmp(Value, "TCP") == 0)
-    {
-      write(serial_port, &key1, sizeof(key1));
-    }
-    else if (strcmp(Value, "UDP") == 0)
-    {
-      write(serial_port, &key2, sizeof(key2));
-    }
-    else if (strcmp(Value, "ICMP") == 0)
-    {
-      write(serial_port, &key3, sizeof(key3));
-    }
-
-    while (1)
-    {
-      char *data1 = receive_data(serial_port);
-      printf("\nReceived message: %s\n", data1);
-      if ((strchr(data1, 'Y') != NULL))
-      {
-        strcat(buffer, ID);
-        strcat(buffer, "$");
-        strcat(buffer, Value);
-        strcat(buffer, "$OK$");
-        printf("\nmiroring protocol  done\n");
-        break;
-      }
-      else if ((strchr(data1, 'N') != NULL) || (t == 10))
-      {
-        strcat(buffer, ID);
-        strcat(buffer, "$");
-        strcat(buffer, Value);
-        strcat(buffer, "$ERROR$");
-        printf("\nmiroring protocol  ERROR\n");
-        break;
-      }
-      t++;
-    }
-  }
-  // PORT MONITORED PROTOCOL
-  else if (strcmp(ID, "PORT1_MONITORED_PROTOCOL_REMOVE") == 0 || strcmp(ID, "PORT2_MONITORED_PROTOCOL_REMOVE") == 0 || strcmp(ID, "PORT3_MONITORED_PROTOCOL_REMOVE") == 0 || strcmp(ID, "PORT4_MONITORED_PROTOCOL_REMOVE") == 0 || strcmp(ID, "PORT5_MONITORED_PROTOCOL_REMOVE") == 0 || strcmp(ID, "PORT6_MONITORED_PROTOCOL_REMOVE") == 0 || strcmp(ID, "PORT7_MONITORED_PROTOCOL_REMOVE") == 0 || strcmp(ID, "PORT8_MONITORED_PROTOCOL_REMOVE") == 0)
-  {
-    t = 0;
-    write(serial_port, &key_08, sizeof(key_08));
-    usleep(1000);
-    write(serial_port, &enter, sizeof(enter));
-    usleep(1000);
-
-    write(serial_port, &key8, sizeof(key8));
-
-    usleep(10000);
-    if (ID[4] == '1')
-    {
-      write(serial_port, &key1, sizeof(key1));
-    }
-    else if (ID[4] == '2')
-    {
-      write(serial_port, &key2, sizeof(key2));
-    }
-    else if (ID[4] == '3')
-    {
-      write(serial_port, &key3, sizeof(key3));
-    }
-    else if (ID[4] == '4')
-    {
-      write(serial_port, &key4, sizeof(key4));
-    }
-    else if (ID[4] == '5')
-    {
-      write(serial_port, &key5, sizeof(key5));
-    }
-    else if (ID[4] == '6')
-    {
-      write(serial_port, &key6, sizeof(key6));
-    }
-    else if (ID[4] == '7')
-    {
-      write(serial_port, &key7, sizeof(key7));
-    }
-    else if (ID[4] == '8')
-    {
-      write(serial_port, &key8, sizeof(key8));
-    }
-    usleep(10000);
-    if (strcmp(Value, "TCP") == 0)
-    {
-      write(serial_port, &key1, sizeof(key1));
-    }
-    else if (strcmp(Value, "UDP") == 0)
-    {
-      write(serial_port, &key2, sizeof(key2));
-    }
-    else if (strcmp(Value, "ICMP") == 0)
-    {
-      write(serial_port, &key3, sizeof(key3));
-    }
-
-    while (1)
-    {
-      char *data1 = receive_data(serial_port);
-      printf("\nReceived message: %s\n", data1);
-      if ((strchr(data1, 'Y') != NULL))
-      {
-        strcat(buffer, ID);
-        strcat(buffer, "$");
-        strcat(buffer, Value);
-        strcat(buffer, "$OK$");
-        printf("\n remove miroring protocol  done\n");
-        break;
-      }
-      else if ((strchr(data1, 'N') != NULL) || (t == 10))
-      {
-        strcat(buffer, ID);
-        strcat(buffer, "$");
-        strcat(buffer, Value);
-        strcat(buffer, "$ERROR$");
-        printf("\n removemiroring protocol  ERROR\n");
-        break;
-      }
-      t++;
-    }
-  }
-  //===================================================================================================================
-  // Mode mirroring
-  //  PORT MONITORED MODE
-  else if (strcmp(ID, "PORT1_MIRRORING") == 0 || strcmp(ID, "PORT2_MIRRORING") == 0 || strcmp(ID, "PORT3_MIRRORING") == 0 || strcmp(ID, "PORT4_MIRRORING") == 0 || strcmp(ID, "PORT5_MIRRORING") == 0 || strcmp(ID, "PORT6_MIRRORING") == 0 || strcmp(ID, "PORT7_MIRRORING") == 0 || strcmp(ID, "PORT8_MIRRORING") == 0)
-  {
-    t = 0;
-    write(serial_port, &key_08, sizeof(key_08));
-    usleep(1000);
-    write(serial_port, &enter, sizeof(enter));
-    usleep(1000);
-
-    write(serial_port, &keyK, sizeof(keyK));
-    usleep(10000);
-    if (ID[4] == '1')
-    {
-      write(serial_port, &key1, sizeof(key1));
-    }
-    else if (ID[4] == '2')
-    {
-      write(serial_port, &key2, sizeof(key2));
-    }
-    else if (ID[4] == '3')
-    {
-      write(serial_port, &key3, sizeof(key3));
-    }
-    else if (ID[4] == '4')
-    {
-      write(serial_port, &key4, sizeof(key4));
-    }
-    else if (ID[4] == '5')
-    {
-      write(serial_port, &key5, sizeof(key5));
-    }
-    else if (ID[4] == '6')
-    {
-      write(serial_port, &key6, sizeof(key6));
-    }
-    else if (ID[4] == '7')
-    {
-      write(serial_port, &key7, sizeof(key7));
-    }
-    else if (ID[4] == '8')
-    {
-      write(serial_port, &key8, sizeof(key8));
-    }
-    usleep(100000);
-    if (strcmp(Value, "I") == 0)
-    {
-      write(serial_port, &key1, sizeof(key1));
-    }
-    else if (strcmp(Value, "E") == 0)
-    {
-      write(serial_port, &key2, sizeof(key2));
-    }
-    else if (strcmp(Value, "IE") == 0)
-    {
-      write(serial_port, &key3, sizeof(key3));
-    }
-
-    while (1)
-    {
-      char *data1 = receive_data(serial_port);
-      printf("\nReceived message: %s\n", data1);
-      if ((strchr(data1, 'Y') != NULL))
-      {
-        strcat(buffer, ID);
-        strcat(buffer, "$");
-        strcat(buffer, Value);
-        strcat(buffer, "$OK$");
-        printf("\nmiroring mode  done\n");
-        break;
-      }
-      else if ((strchr(data1, 'N') != NULL) || (t == 10))
-      {
-        strcat(buffer, ID);
-        strcat(buffer, "$");
-        strcat(buffer, Value);
-        strcat(buffer, "$ERROR$");
-        printf("\nmiroring mode  ERROR\n");
-        break;
-      }
-      t++;
-    }
-  }
-
-  //  PORT MONITORED MODE
-  else if (strcmp(ID, "PORT1_MIRRORING_REMOVE") == 0 || strcmp(ID, "PORT2_MIRRORING_REMOVE") == 0 || strcmp(ID, "PORT3_MIRRORING_REMOVE") == 0 || strcmp(ID, "PORT4_MIRRORING_REMOVE") == 0 || strcmp(ID, "PORT5_MIRRORING_REMOVE") == 0 || strcmp(ID, "PORT6_MIRRORING_REMOVE") == 0 || strcmp(ID, "PORT7_MIRRORING_REMOVE") == 0 || strcmp(ID, "PORT8_MIRRORING_REMOVE") == 0)
-  {
-    t = 0;
-    write(serial_port, &key_08, sizeof(key_08));
-    usleep(1000);
-    write(serial_port, &enter, sizeof(enter));
-    usleep(100000);
-
-    write(serial_port, &key9, sizeof(key9));
-    usleep(10000);
-    if (ID[4] == '1')
-    {
-      write(serial_port, &key1, sizeof(key1));
-    }
-    else if (ID[4] == '2')
-    {
-      write(serial_port, &key2, sizeof(key2));
-    }
-    else if (ID[4] == '3')
-    {
-      write(serial_port, &key3, sizeof(key3));
-    }
-    else if (ID[4] == '4')
-    {
-      write(serial_port, &key4, sizeof(key4));
-    }
-    else if (ID[4] == '5')
-    {
-      write(serial_port, &key5, sizeof(key5));
-    }
-    else if (ID[4] == '6')
-    {
-      write(serial_port, &key6, sizeof(key6));
-    }
-    else if (ID[4] == '7')
-    {
-      write(serial_port, &key7, sizeof(key7));
-    }
-    else if (ID[4] == '8')
-    {
-      write(serial_port, &key8, sizeof(key8));
-    }
-    usleep(10000);
-    write(serial_port, &key0, sizeof(key0)); // xoa
-    usleep(100000);
-    while (1)
-    {
-      char *data1 = receive_data(serial_port);
-      printf("\nReceived message: %s\n", data1);
-      if ((strchr(data1, 'Y') != NULL))
-      // if ((strchr(data1, 'G') != NULL))
-      {
-        strcat(buffer, ID);
-        strcat(buffer, "$");
-        strcat(buffer, Value);
-        strcat(buffer, "$OK$");
-        printf("\n remove miroring mode  done\n");
-        break;
-      }
-      else if ((strchr(data1, 'N') != NULL) || (t == 10))
-      {
-        strcat(buffer, ID);
-        strcat(buffer, "$");
-        strcat(buffer, Value);
-        strcat(buffer, "$ERROR$");
-        printf("\nremovemiroring mode  ERROR\n");
-        break;
-      }
-      t++;
-    }
-  }
-  //==================================================================================================================
-  //==================================================================================================================
+  // Thêm IPv4 source vao port
+  //=============================================== ==================================================================
   // HEADER CUOI CUA GOI TIN
   else if (strcmp(ID, "DONE") == 0)
   {
-      strcat(buffer, ID);
-        strcat(buffer, "$");
-        strcat(buffer, Value);
-        strcat(buffer, "$OK$");
-
-
     printf("\nokkkk");
     printf("\n\rBUFFER SEND GUI \n:%s", buffer);
     printf("\nokkkk");
@@ -8935,11 +6792,10 @@ void send_ips_via_uart(const char *filename)
 {
   char buffer[BUFFER_SIZE_SEND_IP_VIA_UART] = "";
   char ip[MAX_IP_LEN];
-  printf("hello\n");
+
   FILE *file = fopen(filename, "r");
   if (!file)
   {
-    printf("hello1\n");
     perror("Open file error");
     return;
   }
@@ -8948,7 +6804,6 @@ void send_ips_via_uart(const char *filename)
     ip[strcspn(ip, "\n")] = '\0';
     if (strlen(buffer) + strlen(ip) + 2 > BUFFER_SIZE)
     {
-      printf("hello2\n");
       fprintf(stderr, "Full buffer\n");
       fclose(file);
       return;
@@ -8962,9 +6817,8 @@ void send_ips_via_uart(const char *filename)
   {
     buffer[len - 1] = '\0';
   }
-  printf("File Name:%s\n", filename);
-  printf("Buffer to send: %s\n", buffer);
-  // uart_send(buffer, serial_port);
+
+  uart_send(buffer, serial_port);
 }
 
 // Remove IP from file
@@ -9189,7 +7043,7 @@ void create_http_filelog(const char *filename)
 }
 
 // Send data http ip via core when start
-void send_http_IPV4_start(int serial_port, const char *filename)
+void send_http_ipv4_start(int serial_port, const char *filename)
 {
   FILE *file = fopen(filename, "r");
   // Kiem tra kich thuoc file
@@ -9210,21 +7064,21 @@ void send_http_IPV4_start(int serial_port, const char *filename)
   usleep(1000);
   write(serial_port, &enter, sizeof(enter));
   usleep(10000);
-  send_ips_via_uart(LOGFILE_HTTP_IPV4);
+  send_ips_via_uart(LOGFILE_HTTP_IPv4);
   while (1)
   {
     char *data1 = receive_data(serial_port);
     printf("\nReceived message: %s\n", data1);
     if ((strchr(data1, 'Y') != NULL))
     {
-      printf("\nSend HTTP_TABLE_IPV4 done\n");
+      printf("\nSend HTTP_TABLE_IPv4 done\n");
       break;
     }
   }
 }
 
 // Send data http ip via core when start
-void send_http_IPV6_start(int serial_port, const char *filename)
+void send_http_ipv6_start(int serial_port, const char *filename)
 {
   FILE *file = fopen(filename, "r");
 
@@ -9246,14 +7100,14 @@ void send_http_IPV6_start(int serial_port, const char *filename)
   usleep(1000);
   write(serial_port, &enter, sizeof(enter));
   usleep(10000);
-  send_ips_via_uart(LOGFILE_HTTP_IPV6);
+  send_ips_via_uart(LOGFILE_HTTP_IPv6);
   while (1)
   {
     char *data1 = receive_data(serial_port);
     printf("\nReceived message: %s\n", data1);
     if ((strchr(data1, 'Y') != NULL))
     {
-      printf("\nSend HTTP_TABLE_IPV6 done\n");
+      printf("\nSend HTTP_TABLE_IPv6 done\n");
       break;
     }
   }
@@ -9709,10 +7563,10 @@ void process_packet(unsigned char *buffer, int size)
     // port
     char name_port_str[32];
     //
-    if (port_n == 4)
-    {
-      return;
-    }
+    // if (port_n == 2 || port_n == 4)
+    // {
+    //   return;
+    // }
     switch (port_n)
     {
     case 1:
@@ -9759,9 +7613,6 @@ void process_packet(unsigned char *buffer, int size)
     case 58:
       strcpy(protocol_str, "ICMP");
       break;
-    case 50:
-      strcpy(protocol_str, "ESP");
-      break;
     default:
       strcpy(protocol_str, "Unknown");
       break;
@@ -9770,13 +7621,14 @@ void process_packet(unsigned char *buffer, int size)
     char binary[11];
     for (int i = 0; i < 10; i++)
     {
-      binary[i] = (id_value & (1 << (9 - i))) ? '1' : '0';
+      binary[i] = (id_value & (1 << (8 - i))) ? '1' : '0';
     }
-    binary[11] = '\0';
+    binary[10] = '\0';
 
     int result_str_size = 1;
     char *result_str = NULL;
-    char *mapping[] = {" HTTPS Flood ", " HTTP Flood ", " UDP Fragmentation attack ", " TCP Fragmentation attack ", " IPeSc IKE Flood ", " ICMP Flood ", " DNS Flood ", " UDP Flood ", " LAND Attack ", " SYN Flood "};
+    char *mapping[] = {" HTTPS Flood ", " HTTP Flood ", " UDP Fragmentation attack ", " TCP Fragmentation attack ", " IPSec IKE Flood ", " ICMP Flood ", " DNS Flood ", " UDP Flood ", " LAND Attack ", " SYN Flood "};
+
     for (int i = 0; i < 9; i++)
     {
       if (binary[i] == '1')
@@ -9832,6 +7684,7 @@ void process_packet(unsigned char *buffer, int size)
     }
     else
     {
+
       sprintf(bw1, "%d", bw_accumulated);
 
       bw_accumulated = bw;
@@ -9860,18 +7713,21 @@ void process_packet(unsigned char *buffer, int size)
     {
       if (strlen(src_ip) > 20)
       {
-        process_ip(LOGFILE_HTTP_IPV6, src_ip);
+        process_ip(LOGFILE_HTTP_IPv6, src_ip);
       }
       else
       {
-        process_ip(LOGFILE_HTTP_IPV4, src_ip);
+        process_ip(LOGFILE_HTTP_IPv4, src_ip);
       }
     }
     count_tancong++;
   }
+
   else if ((memcmp(eth->h_dest, target_mac, 6) == 0))
   {
+
     static const unsigned char zero_array[16] = {0};
+
     if (memcmp(payload + 6, zero_array, 16) == 0 || memcmp(payload + 22, zero_array, 16) == 0)
     {
       return;
@@ -9939,10 +7795,10 @@ void process_packet(unsigned char *buffer, int size)
     char name_port_str[8];
     char protocol_str[32];
 
-    if (port_name == 4)
-    {
-      return;
-    }
+    // if (port_name == 2 || port_name == 4)
+    // {
+    //   return;
+    // }
     //
     switch (port_name)
     {
@@ -10003,9 +7859,6 @@ void process_packet(unsigned char *buffer, int size)
 
     printf("%s  %s  %s  %u  %u  %s  %s  %u  %u  %s\n",
            time_str, src_ip, dst_ip, src_port, dst_port, protocol_str, type_str, bw, pkt_counter, name_port_str);
-
-    // printf("%s  %s  %s  %u  %u  %s  %s  %u  %u  %s\n",
-    //        time_str, src_ip, dst_ip, src_port, dst_port, protocol_str, type_str, bw, pkt_counter, name_port_str);
     // printf("2\n");
     // test1 = test1 + pkt_counter;
     // Log to file
@@ -10279,17 +8132,22 @@ void remove_old_logs(void)
   }
   closedir(dir);
 }
-
 void *memory_check_thread_function(void *arg)
 {
+  time_t saved_time = save_current_time();
+
   struct statvfs stat1;
   while (1)
   {
-
-      read_config_mode_save_logfile();
-  read_threshold_from_file();
-  read_threshold_timecounter_from_file();
+    read_threshold_from_file();
+    read_time_check_create_logfile();
     check_connect_eth();
+    if (check_time_create_log(saved_time))
+    {
+      create_new_log_file();
+      saved_time = save_current_time();
+    }
+
     if (statvfs("/", &stat1) != 0)
     {
       perror("statvfs error");
@@ -10299,206 +8157,42 @@ void *memory_check_thread_function(void *arg)
     unsigned long total_space = stat1.f_blocks * stat1.f_frsize;
     unsigned long used_space = (stat1.f_blocks - stat1.f_bfree) * stat1.f_frsize;
     float memory_usage = (float)used_space / total_space * 100;
+    // //printf("\n Memory:%f\n", memory_usage);
 
-    // IF USER >= MEMORY
-    if (memory_usage >= Threshold_SD)
+    if (memory_usage > Threshold_SD)
     {
 
-      int check_empty_dir = open_and_check_dir(LOG_NORMAL_DIR);
-      if (check_empty_dir == 1)
+      if (current_log_file_flood != NULL)
       {
-        empty_log_normal = true;
+        fclose(current_log_file_flood);
+        current_log_file_flood = NULL;
       }
-      else if (check_empty_dir == 0)
+      if (current_log_file_normal != NULL)
       {
-        empty_log_normal = false;
+        fclose(current_log_file_normal);
+        current_log_file_normal = NULL;
       }
 
-      if (auto_delete_logs)
-      {
-
-        pthread_mutex_lock(&log_mutex);
-        if (!empty_log_normal)
-        {
-          DIR *dir = opendir(LOG_NORMAL_DIR);
-          struct dirent *entry;
-          time_t oldest_time = time(NULL);
-          char oldest_file[256] = {0};
-          int file_count = 0;
-          while ((entry = readdir(dir)) != NULL)
-          {
-            if (entry->d_type == DT_REG)
-            {
-              file_count++;
-              char file_path[256];
-              sprintf(file_path, "%s/%s", LOG_NORMAL_DIR, entry->d_name);
-              struct stat file_stat;
-              stat(file_path, &file_stat);
-              if (file_stat.st_mtime < oldest_time)
-              {
-                oldest_time = file_stat.st_mtime;
-                strcpy(oldest_file, file_path);
-              }
-            }
-          }
-          closedir(dir);
-
-          if (file_count > 0 && oldest_file[0] != '\0')
-          {
-            printf("Deleted oldest file: %s\n", oldest_file);
-            unlink(oldest_file);
-          }
-          else if (file_count == 0)
-          {
-            empty_log_normal = true;
-          }
-        }
-
-        else
-        {
-          DIR *dir = opendir(LOG_FLOOD_DIR);
-          struct dirent *entry;
-          time_t oldest_time = time(NULL);
-          char oldest_file[256] = {0};
-          int file_count = 0;
-          while ((entry = readdir(dir)) != NULL)
-          {
-            if (entry->d_type == DT_REG)
-            {
-              file_count++;
-              char file_path[256];
-              sprintf(file_path, "%s/%s", LOG_FLOOD_DIR, entry->d_name);
-              struct stat file_stat;
-              stat(file_path, &file_stat);
-              if (file_stat.st_mtime < oldest_time)
-              {
-                oldest_time = file_stat.st_mtime;
-                strcpy(oldest_file, file_path);
-              }
-            }
-          }
-          closedir(dir);
-
-          if (file_count > 1 && oldest_file[0] != '\0')
-          {
-            printf("Deleted oldest file: %s\n", oldest_file);
-            unlink(oldest_file);
-          }
-          else if (file_count == 1)
-          {
-
-            if (current_log_file_flood != NULL)
-            {
-              fclose(current_log_file_flood);
-              current_log_file_flood = NULL;
-              close_flood_log = true;
-            }
-
-            full_sd = true;
-          }
-        }
-        pthread_mutex_unlock(&log_mutex);
-      }
-      else
-      {
-
-        if (current_log_file_flood != NULL)
-        {
-          fclose(current_log_file_flood);
-          current_log_file_flood = NULL;
-        }
-        if (current_log_file_normal != NULL)
-        {
-          fclose(current_log_file_normal);
-          current_log_file_normal = NULL;
-        }
-        close_flood_log = true;
-        close_normal_log = true;
-        full_sd = true;
-      }
-      // stop_writing = true;
+      stop_writing = true;
     }
-
-    // IF USE < MEMORY
-    if (memory_usage < Threshold_SD)
+    else if (memory_usage < Threshold_SD && stop_writing)
     {
-      if (empty_log_normal)
+
+      current_log_file_flood = fopen(name_logfile_flood, "a");
+      current_log_file_normal = fopen(name_logfile_normal, "a");
+      if (current_log_file_flood == NULL || current_log_file_normal == NULL)
       {
-        char new_log_file1[32];
-        char current_date1[11];
-        get_current_date(current_date1);
-        time_t now = time(NULL);
-        struct tm *timeinfo = localtime(&now);
-        char time_str[9];
-        strftime(time_str, sizeof(time_str), "%H-%M-%S", timeinfo);
-        sprintf(new_log_file1, "%s/%s_%s.log", LOG_NORMAL_DIR, current_date1, time_str);
-        strcpy(name_logfile_normal, new_log_file1);
-        if (current_log_file_normal != NULL)
-        {
-          fclose(current_log_file_normal);
-        }
-        current_log_file_normal = fopen(new_log_file1, "a");
-        // if (current_log_file_normal == NULL)
-        // {
-        //   perror("fopen error");
-        //   return;
-        // }
-        empty_log_normal = false;
-        close_normal_log = false;
+        perror("Error opening log file");
+        pthread_exit(NULL);
       }
 
-      //     full_sd2 = false;
-      if (close_flood_log)
-      {
-        current_log_file_flood = fopen(name_logfile_flood, "a");
-        if (current_log_file_flood == NULL || current_log_file_normal == NULL)
-        {
-          perror("Error opening log file");
-          pthread_exit(NULL);
-        }
-        close_flood_log = false;
-      }
-      if (close_normal_log)
-      {
-        current_log_file_normal = fopen(name_logfile_normal, "a");
-        if (current_log_file_flood == NULL || current_log_file_normal == NULL)
-        {
-          perror("Error opening log file");
-          pthread_exit(NULL);
-        }
-        close_normal_log = false;
-      }
-      full_sd = false;
-      // stop_writing = false;
+      stop_writing = false;
     }
+    // printf("\nTong so packet tan cong: %d", test);
+    // printf("\nTong so packet binh thuong: %d", test1);
     sleep(3);
   }
   pthread_exit(NULL);
-}
-//
-int open_and_check_dir(const char *dir_path)
-{
-  DIR *dir;
-  struct dirent *entry;
-  int is_empty = 1;
-
-  dir = opendir(dir_path);
-  if (dir == NULL)
-  {
-    perror("opendir error");
-    return -1;
-  }
-  while ((entry = readdir(dir)) != NULL)
-  {
-    if (entry->d_name[0] == '.' && (entry->d_name[1] == '\0' || (entry->d_name[1] == '.' && entry->d_name[2] == '\0')))
-    {
-      continue;
-    }
-    is_empty = 0;
-    break;
-  }
-  closedir(dir);
-  return is_empty;
 }
 
 // void *log_buffer_thread(void *arg)
@@ -10611,7 +8305,6 @@ void previous_mode_fc()
 
   fclose(file);
 }
-
 void *run(void *arg)
 {
   wiringPiSetup();
@@ -10707,10 +8400,9 @@ void *run(void *arg)
   struct sockaddr saddr;
   int saddr_len = sizeof(saddr);
 
-  pthread_mutex_lock(&mutex_new_log);                               
+  pthread_mutex_lock(&mutex_new_log);
   create_new_log_file();
   pthread_mutex_unlock(&mutex_new_log);
-  //test_attack_packets();
   while (1)
   {
     int data_size = recvfrom(sock_raw, buffer, BUFFER_SIZE, 0, &saddr, (socklen_t *)&saddr_len);
@@ -10761,91 +8453,6 @@ void *run(void *arg)
   pthread_cond_destroy(&lcd_queue.cond);
 }
 
-
-void test_attack_packets()
-{
-srand(time(NULL));
-
-    while (1)
-    {
-        // 5 loại tấn công
-        for (int attack_type = 1; attack_type <= 5; attack_type++)
-        {
-            unsigned char fake_packet[128] = {0};
-            struct ethhdr *eth = (struct ethhdr *)fake_packet;
-
-            memcpy(eth->h_dest, target_mac_attack, 6);
-            memcpy(eth->h_source, "\xaa\xbb\xcc\xdd\xee\xff", 6);
-            eth->h_proto = htons(0x0800); // IPv4
-
-            unsigned char *payload = fake_packet + sizeof(struct ethhdr);
-
-            // id_value: đánh dấu kiểu attack
-            payload[2] = 0x00;
-            payload[3] = (1 << (10 - attack_type));
-
-            payload[5] = 0x42; // IPv4
-
-            // Random IP
-            unsigned char src_ip[4] = {192, 168, 1, (unsigned char)(rand() % 254 + 1)};
-            unsigned char dst_ip[4] = {192, 168, 1, (unsigned char)(rand() % 254 + 1)};
-            memcpy(payload + 18, src_ip, 4);
-            memcpy(payload + 34, dst_ip, 4);
-
-            // Random ports
-            uint16_t src_port = rand() % 64511 + 1024;
-            uint16_t dst_port = rand() % 64511 + 1024;
-            payload[38] = (src_port >> 8) & 0xFF;
-            payload[39] = src_port & 0xFF;
-            payload[40] = (dst_port >> 8) & 0xFF;
-            payload[41] = dst_port & 0xFF;
-
-            payload[42] = 6; // TCP
-
-            // time = attack_type
-            payload[43] = 0x00;
-            payload[44] = 0x00;
-            payload[45] = 0x00;
-            payload[46] = (unsigned char)attack_type;
-
-            // bw random 1000–50000
-            uint32_t bw = (rand() % 49100) + 1000;
-            payload[47] = (bw >> 24) & 0xFF;
-            payload[48] = (bw >> 16) & 0xFF;
-            payload[49] = (bw >> 8) & 0xFF;
-            payload[50] = bw & 0xFF;
-
-            // pkt_counter random 10–1000
-            uint32_t pkt_counter = (rand() % 991) + 10;
-            payload[51] = (pkt_counter >> 24) & 0xFF;
-            payload[52] = (pkt_counter >> 16) & 0xFF;
-            payload[53] = (pkt_counter >> 8) & 0xFF;
-            payload[54] = pkt_counter & 0xFF;
-
-            payload[55] = attack_type;
-            payload[56] = 1;
-
-            process_packet(fake_packet, sizeof(struct ethhdr) + 57);
-        }
-
-        // Gói bình thường (normal) — MAC khác
-        unsigned char normal_packet[128] = {0};
-        struct ethhdr *eth = (struct ethhdr *)normal_packet;
-        memcpy(eth->h_dest, target_mac, 6);
-        memcpy(eth->h_source, "\xff\xee\xdd\xcc\xbb\xaa", 6);
-        eth->h_proto = htons(0x0800);
-
-        unsigned char *payload = normal_packet + sizeof(struct ethhdr);
-        payload[5] = 0x42;
-        payload[55] = 0; // attack_type = 0 = normal
-        payload[56] = 1;
-
-        process_packet(normal_packet, sizeof(struct ethhdr) + 57);
-
-        sleep(1); // đợi 1s
-    }
-}
-
 // Main C
 int main()
 {
@@ -10860,15 +8467,15 @@ int main()
   read_config_mode_save_logfile();
   read_threshold_from_file();
   read_threshold_timecounter_from_file();
-  // create_http_filelog(LOGFILE_HTTP_IPV4);
-  // create_http_filelog(LOGFILE_HTTP_IPV6);
+  // create_http_filelog(LOGFILE_HTTP_IPv4);
+  // create_http_filelog(LOGFILE_HTTP_IPv6);
   // ip_table = g_hash_table_new_full(g_str_hash, g_str_equal, g_free, NULL);
   // batch_queue = g_queue_new();
-  // load_ips_from_file(LOGFILE_HTTP_IPV4);
-  // load_ips_from_file(LOGFILE_HTTP_IPV6);
-  // send_http_IPV4_start(serial_port, LOGFILE_HTTP_IPV4);
+  // load_ips_from_file(LOGFILE_HTTP_IPv4);
+  // load_ips_from_file(LOGFILE_HTTP_IPv6);
+  // send_http_ipv4_start(serial_port, LOGFILE_HTTP_IPv4);
   // sleep(1);
-  // send_http_IPV6_start(serial_port, LOGFILE_HTTP_IPV6);
+  // send_http_ipv6_start(serial_port, LOGFILE_HTTP_IPv6);
   connect_to_server();
   previous_mode_fc();
 
@@ -10886,14 +8493,14 @@ int main()
   pthread_mutex_unlock(&run_mutex);
   /******************************************************************/
   // Sync Time
-   send_data_sync_time(serial_port);
+   //send_data_sync_time(serial_port);
 
   // Sync GUI
   // send_data_sync_gui(serial_port);
   ModeGui(serial_port);
   /*************************************************************************/
-  // flush_batch_to_file(LOGFILE_HTTP_IPV4);
-  // flush_batch_to_file(LOGFILE_HTTP_IPV6);
+  // flush_batch_to_file(LOGFILE_HTTP_IPv4);
+  // flush_batch_to_file(LOGFILE_HTTP_IPv6);
   // g_queue_free(batch_queue);
   // g_hash_table_destroy(ip_table);
   if (pthread_join(run_thread, NULL) != 0)
@@ -10903,7 +8510,8 @@ int main()
   }
   close(serial_port);
   close_connection();
+
   return 0;
 }
 
-// 5/7 by thi
+// 31/3 thi
