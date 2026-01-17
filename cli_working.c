@@ -30,16 +30,141 @@
 #include <sys/wait.h>
 #include <sys/types.h>
 #include <glib.h>
+#include <sqlite3.h>
+#include <curl/curl.h>
+#include <cjson/cJSON.h>
+#include <jansson.h>
+#include <stddef.h>
 
+// #include "test_attack.h"
+// #include "test_attack.c"
+
+#define PRINT_BUFFER_SIZE 1024
+GHashTable *hash_table = NULL;
+GQueue *queue = NULL;
+// ...existing code...
+// char print_buffer[PRINT_BUFFER_SIZE];
+// int print_buffer_pos = 0;
+// ...existing code...// ...existing code...
+// extern char print_buffer[PRINT_BUFFER_SIZE];
+// extern int print_buffer_pos;
+// ...existing code...
+
+typedef enum
+{
+    CONFIG_NONE,
+    CONFIG_SYN_THRESHOLD,
+    CONFIG_ACK_THRESHOLD,
+    CONFIG_UDP_THRESHOLD,
+    CONFIG_UDP_1S_THRESHOLD,
+    CONFIG_DNS_THRESHOLD,
+    CONFIG_ICMP_THRESHOLD,
+    CONFIG_ICMP_1S_THRESHOLD,
+    CONFIG_IPSEC_IKE_THRESHOLD,
+    CONFIG_SYN_DEFENDER,
+    CONFIG_LAND_DEFENDER,
+    CONFIG_UDP_DEFENDER,
+    CONFIG_DNS_DEFENDER,
+    CONFIG_ICMP_DEFENDER,
+    CONFIG_IPSEC_IKE_DEFENDER,
+    CONFIG_TCP_FRAG_DEFENDER,
+    CONFIG_UDP_FRAG_DEFENDER,
+    CONFIG_HTTP_DEFENDER,
+    CONFIG_HTTPS_DEFENDER,
+    CONFIG_PORT_DEFENDER,
+    CONFIG_IPV4_PROTECT,
+    CONFIG_IPV6_PROTECT,
+    CONFIG_IPV4_BLOCK,
+    CONFIG_IPV6_BLOCK,
+    CONFIG_REMOVE_IPV4_BLOCK,
+    CONFIG_REMOVE_IPV6_BLOCK,
+    CONFIG_REMOVE_IPV4_PROTECT,
+    CONFIG_REMOVE_IPV6_PROTECT,
+    SETTING_TIME_WHITE_LIST,
+    SETTING_ATTACKER_IP_TABLE,
+    CONFIG_IPV4_HTTP,
+    CONFIG_IPV6_HTTP,
+    CONFIG_REMOVE_IPV4_HTTP,
+    CONFIG_REMOVE_IPV6_HTTP,
+    // CONFIG_REMOVE_IPV4_VPN,
+    CONFIG_IPV4_VPN,
+    CONFIG_IPV6_VPN,
+    CONFIG_REMOVE_IPV6_VPN,
+    CONFIG_REMOVE_IPV4_VPN
+} ConfigType;
+
+ConfigType current_config_type = CONFIG_NONE;
+
+typedef struct
+{
+    char interface_name[20];
+    int is_mirroring;
+    int monitor_target_id; // InterfaceToMonitorInterfaceId
+    char mirror_setting[20];
+    char mirror_type[128];
+    char value[256];
+} PortMirroringConfig;
+// Add at the top after includes
+static int current_port = 0; // Global variable to track current port
+
+// CÃ¡c key constants
+#define key6_1 '6'   // SYN enable/disable
+#define keyC_1 'C'   // UDP threshold
+#define keyD_1 'D'   // UDP threshold per second
+#define keyB_1 'B'   // UDP enable/disable
+#define key7_1 '7'   // SYN threshold
+#define key8_1 '8'   // ACK threshold
+#define keyF_1 'F'   // DNS threshold
+#define keyH_1 'H'   // ICMP threshold
+#define keyI_1 'I'   // ICMP threshold per second
+#define keyK_1 'K'   // IPSec IKE threshold
+#define keyA_1 'A'   // LAND enable/disable
+#define keyE_1 'E'   // DNS enable/disable
+#define keyG_1 'G'   // ICMP enable/disable
+#define keyJ_1 'J'   // IPSec IKE enable/disable
+#define keyN_1 'N'   // TCP Fragment enable/disable
+#define keyO_1 'O'   // UDP Fragment enable/disable
+#define keyP_1 'P'   // HTTP enable/disable
+#define keyFF_1 0xFF // HTTPS enable/disable
+#define key9_1 '9'   // Whitelist timeout
+#define key1_1 '1'
+#define key2_1 '2'
+#define key3_1 '3'
+#define key4_1 '4'
+#define key5_1 '5'
+#define keyY_1 'Y'
+#define keyN_1 'N'
+#define enter_1 '\r'
+
+// // Add after current_port declaration
+// #define CONFIG_FILE_PORT "port_config.txt"
+// #define AUTO_MANUAL_CONFIG_FILE "/home/acs/DDoS_HUY/Setting/config_auto_manual.conf"
+// #define DB_PATH "/home/acs/DDoS_HUY/GUI/server/database/sysnetdef.db"
+
+// #define CONFIG_FILE_PORT "port_config.txt"
+// #define AUTO_MANUAL_CONFIG_FILE "/home/antiddos/DDoS_V1/Setting/config_auto_manual.conf"
+// #define DB_PATH "./GUI/server/database/sysnetdef.db"
+#define CONFIG_FILE_PORT "port_config.txt"
+#define AUTO_MANUAL_CONFIG_FILE "/home/antiddos/DDoS_V1/Setting/config_auto_manual.conf"
+#define DB_PATH "./GUI/server/database/sysnetdef.db"
+// // // #define DB_PATH "/home/acs/DDoS_HUY/GUI_HUY/server/database/sysnetdef.db"
+
+// Function prototypes
+void SetHTTPSDefender(int serial_port);
+void new_menu(int serial_port);
+void port_mirroring_menu(int serial_port);
+
+void Display_table_2(int port);
 void send_reset(int serial_port);
 void *key_listener(void *arg);
 int configure_serial_port(const char *device, int baud_rate);
 int send_data(int serial_port, const char *data, size_t size);
 char *receive_data(int serial_port);
+char *receive_data2(int serial_port);
 void ModeStart_cnt(int serial_port);
 void ModeStart(int serial_port);
-vo, ,
-    int kbhit(void);
+void options_mode1(int serial_port);
+int kbhit(void);
 void mode_select_login(int serial_port);
 void reconfig(int serial_port);
 void change_info_acc_admin_mode(int serial_port);
@@ -48,16 +173,26 @@ void display_logo2();
 void ReturnMode2(int serial_port);
 void ReturnMode2b(int serial_port);
 void ReturnMode3();
-void send_ipv4_address(int serial_port);
-void send_ipv6_address(int serial_port);
-void send_ipv4_address_http_add(int serial_port);
-void send_ipv6_address_http_add(int serial_port);
-void send_ipv4_address_http_remove(int serial_port);
-void send_ipv6_address_http_remove(int serial_port);
+// void send_ipv4_address(int serial_port);
+// void send_ipv6_address(int serial_port);
+// void send_ipv4_address_http_add(int serial_port , temp_ipv4_address);
+// void send_ipv6_address_http_add(int serial_port);
+// void send_ipv4_address_http_remove(int serial_port);
+// void send_ipv6_address_http_remove(int serial_port);
+
+// ...existing code...
+void send_ipv4_address(int serial_port, const char *ip_address);
+void send_ipv6_address(int serial_port, const char *ipv6_address);
+void send_ipv4_address_http_add(int serial_port, const char *ip_address);
+void send_ipv4_address_http_remove(int serial_port, const char *ip_address);
+void send_ipv6_address_http_add(int serial_port, const char *ipv6_address);
+void send_ipv6_address_http_remove(int serial_port, const char *ipv6_address);
+// ...existing code...
 int validate_ip_address(const char *ip_address);
+int validate_ipv6_address(const char *ip_address);
 void SaveEEPROM(int serial_port);
 void printf_uart1(int serial_port);
-void send_array(int serial_port);
+int send_array(int serial_port);
 void send_duration_time(int serial_port);
 void printf_uart(int serial_port);
 void send_user_time(int serial_port);
@@ -92,10 +227,11 @@ void SetIPSecDefender(int serial_port);
 void SetTCPFragDefender(int serial_port);
 void SetUDPFragDefender(int serial_port);
 void SetHTTPDefender(int serial_port);
-void SetHTTPSDefender(int serial_port);
+void SetHTTPDefender(int serial_port);
 void set_HTTP_IP_Table(int serial_port);
 void remove_ip_HTTP_from_hash(const char *ip);
 void remove_ip_from_file(const char *filename, const char *ip);
+void display_port_mirroring_config_from_db(int serial_port, int show_prompt);
 //
 void SetTimeflood(int serial_port);
 void SetSynThresh(int serial_port);
@@ -112,7 +248,78 @@ void RemoveIPv4VPN(int serial_port);
 void AddIPv6VPN(int serial_port);
 void RemoveIPv6VPN(int serial_port);
 void SetDurationTime(int serial_port);
+void InputDestMAC(char *mac);
+void InputSourceMAC(char *mac);
+char InputDestIP(char *ip);
+void InputProtocol(int *protocol, char *protocol_str);
+void InputDestMAC(char *mac);
+char InputSourceIP(char *ip);
+void InputSourceMAC(char *mac);
+void InputDestPort(char *port);
+void InputSourcePort(char *port);
+void RemoveIPv4HTTPBlock(int serial_port);
+void RemoveIPv6HTTPBlock(int serial_port);
+void SetIPv4HTTPBlock(int serial_port);
+void SetIPv6HTTPBlock(int serial_port);
+
+// PORT MIRRORING
+void Delete_port_mirroring(int serial_port);
+void Update_port_mirroring(int serial_port);
+void ConfigTypePacket(int serial_port, PortMirroringConfig *cfg);
+void Select_traffic_mirroring_mode(int serial_port, PortMirroringConfig *cfg);
+void Add_port_mirroring(int serial_port);
+void save_port_mirroring_to_db(const PortMirroringConfig *cfg);
+// void display_port_mirroring_config_api(int serial_port);
+// Display
+void send_Threshold_value(int serial_port, int value, const char *label, char *ID, char *Value, char *buffer);
+void Send_enable_value(int serial_port, int enable, const char *label, char *ID, char *Value, char *buffer);
+
+// VPN Tables
+void Display_IPv4_vpn_table();
+void Display_IPv6_vpn_table();
+// HTTP Tables
+void Display_IP_http_table();
+void Display_http_ipv4_table();
+void Display_http_ipv6_table();
+// Blocked Tables
+void Display_IPv4_block_table();
+void Display_IPv6_block_table();
+// Protected Tables
+void Display_IPv4_Protected_Table();
+void Display_IPv6_Protected_Table();
+// VPN
+void update_vpn_ipv4(const char *ip);
+void update_vpn_ipv6(const char *ip);
+// HTTP
+void update_http_ipv4(const char *ip);
+void update_http_ipv6(const char *ip);
+// Blocked
+void update_blocked_ipv4(const char *ip, const char *port);
+void update_blocked_ipv6(const char *ip, const char *port);
+// Protected
+void update_protected_ipv4_port(const char *ip, const char *new_port);
+void update_protected_ipv6_port(const char *ip, const char *new_port);
+// VPN
+void delete_vpn_ipv4(const char *ip);
+void delete_vpn_ipv6(const char *ip);
+// HTTP
+void delete_http_ipv4(const char *ip);
+void delete_http_ipv6(const char *ip);
+// Blocked
+void delete_blocked_ipv4(const char *ip);
+void delete_blocked_ipv6(const char *ip);
+// Protected
+void delete_protected_ipv4(const char *ip);
+void delete_protected_ipv6(const char *ip);
+// SAVE CONFIGURATION
+void ConfirmAndSaveConfig(int serial_port);
+void clear_input();
+// void inject_fake_packet(int type) ;
+//  void test_attack();
+//  void generate_random_packet(uint8_t *packet, int is_attack);
 //
+void UpdateDefenseProfileField(int port, const char *field, int value);
+void SetSynThresh(int serial_port);
 void DisplayAccount(int serial_port);
 void reset_account(int serial_port);
 void change_root(int serial_port);
@@ -191,7 +398,7 @@ void uart_send(const char *data, int serial_port);
 #define LOGFILE_HTTP_IPv6 "HTTP_ip_table/http_ipv6.log"
 #define MAX_LOG_DAYS 5
 #define SAMPLING_RATE 1
-//
+
 #define KRED "\x1B[31m"
 #define KGRN "\x1B[32m"
 #define KYEL "\x1B[33m"
@@ -205,11 +412,11 @@ void uart_send(const char *data, int serial_port);
 int serial_port;
 float Threshold_SD;
 int Threshold_time_counter;
-const char *previous_mode = "/home/antiddos/DDoS_HUY/Setting/mode.conf";
-// const char *time_check_create_log = "/home/antiddos/DDoS_V1/Setting/time_check_create_log.txt";
-const char *threshold_logfile = "/home/antiddos/DDoS_HUY/Setting/threshold_logfile.conf";
-const char *time_counter = "/home/antiddos/DDoS_HUY/Setting/time_counter.conf";
-#define CONFIG_FILE "/home/antiddos/DDoS_HUY/Setting/config_auto_manual.conf"
+const char *previous_mode = "/home/antiddos/DDoS_V1/Setting/mode.conf";
+
+const char *threshold_logfile = "/home/antiddos/DDoS_V1/Setting/threshold_logfile.conf";
+const char *time_counter = "/home/antiddos/DDoS_V1/Setting/time_counter.conf";
+#define CONFIG_FILE "/home/antiddos/DDoS_V1/Setting/config_auto_manual.conf"
 volatile bool auto_delete_logs;
 volatile int stop_scrolling = 0;
 bool reset_program = false;
@@ -218,6 +425,11 @@ static unsigned char prev_time[4] = {0}; // Luu th?i gian c?a g i tru?c d
 static unsigned int bw_accumulated = 0;
 char uds_msg[256];
 char name_logfile[32];
+/////////////
+static char temp_ipv4_address[16] = "";
+static char temp_ipv6_address[64] = "";
+static char full_ipv6_address[64] = "";
+
 //
 I2C16x2 lcd;
 unsigned char target_mac[6] = TARGET_MAC;
@@ -246,23 +458,29 @@ char key_show_info = '*';
 #define QUEUE_SIZE 1024
 typedef struct
 {
-  char messages[QUEUE_SIZE][255];
-  int front;
-  int rear;
-  pthread_mutex_t mutex;
-  pthread_cond_t cond;
+    char messages[QUEUE_SIZE][255];
+    int front;
+    int rear;
+    pthread_mutex_t mutex;
+    pthread_cond_t cond;
 } MessageQueue;
 MessageQueue lcd_queue;
+
+// struct MemoryStruct
+// {
+//   char *memory;
+//   size_t size;
+// };
 
 // Packet queue
 #define PACKET_QUEUE_SIZE 4096
 typedef struct
 {
-  unsigned char packets[PACKET_QUEUE_SIZE][BUFFER_SIZE];
-  int front;
-  int rear;
-  pthread_mutex_t mutex;
-  pthread_cond_t cond;
+    unsigned char packets[PACKET_QUEUE_SIZE][BUFFER_SIZE];
+    int front;
+    int rear;
+    pthread_mutex_t mutex;
+    pthread_cond_t cond;
 } PacketQueue;
 PacketQueue packet_queue;
 
@@ -272,8 +490,9 @@ PacketQueue packet_queue;
 // int log_buffer_pos = 0;
 
 // Buffer printf terminal
-#define PRINT_BUFFER_SIZE 1024
+// #define PRINT_BUFFER_SIZE 1024
 char print_buffer[PRINT_BUFFER_SIZE];
+
 int print_buffer_pos = 0;
 char name_logfile_flood[64];
 char name_logfile_normal[64];
@@ -295,193 +514,199 @@ bool close_flood_log = false;
 int count_tancong = 0;
 int count_tong = 0;
 int count_bth = 0;
+//
+// bi?n luu th ng tin v o database
+static char last_update_field[64] = "";
+static int last_update_value = -1;
 
+////////////////////////////////////////////////////
 void display_table(int serial_port)
 {
-  sleep(1);
-  char key_table = '<';
-  write(serial_port, &key_table, sizeof(key_table));
-  usleep(100000);
-  write(serial_port, &key_enter, sizeof(key_enter));
-  usleep(100000);
-  printf_uart(serial_port);
+    sleep(1);
+    char key_table = '<';
+    write(serial_port, &key_table, sizeof(key_table));
+    usleep(100000);
+    write(serial_port, &key_enter, sizeof(key_enter));
+    usleep(100000);
+    printf_uart(serial_port);
 }
 
 void display_account(int serial_port)
 {
-  char key = '>';
-  write(serial_port, &key, sizeof(key));
-  usleep(100000);
-  write(serial_port, &key_enter, sizeof(key_enter));
-  usleep(100000);
-  printf_uart(serial_port);
+    char key = '>';
+    write(serial_port, &key, sizeof(key));
+    usleep(100000);
+    write(serial_port, &key_enter, sizeof(key_enter));
+    usleep(100000);
+    printf_uart(serial_port);
 }
 
 //
 void change_user_pass(int serial_port)
 {
-  char key_mode = '|';
-  char enter[] = {'\r'};
-  char password[17];
-  int valid_input = 0;
-  while (!valid_input)
-  {
-    printf("\r\n\t\t| New Password: ");
-    scanf("%16s", password);
-    if (strlen(password) > 16)
+    char key_mode = '|';
+    char enter[] = {'\r'};
+    char password[17];
+    int valid_input = 0;
+    while (!valid_input)
     {
-      printf("The account or password exceeds 16 characters. Please re-enter.\n");
+        printf("\r\n\t\t| New Password: ");
+        scanf("%16s", password);
+        if (strlen(password) > 16)
+        {
+            printf("The account or password exceeds 16 characters. Please re-enter.\n");
+        }
+        else
+        {
+            valid_input = 1;
+        }
     }
-    else
-    {
-      valid_input = 1;
-    }
-  }
 
-  write(serial_port, &key_mode, sizeof(key_mode));
-  usleep(100000);
-  write(serial_port, &key_enter, sizeof(key_enter));
-  usleep(200000);
-  int n_password = strlen(password);
-  for (int i = 0; i < n_password; i++)
-  {
-    usleep(50000);
-    char data[2] = {password[i], '\0'};
-    send_data(serial_port, data, sizeof(data) - 1);
-  }
-  sleep(1);
-  write(serial_port, enter, sizeof(enter));
+    write(serial_port, &key_mode, sizeof(key_mode));
+    usleep(100000);
+    write(serial_port, &key_enter, sizeof(key_enter));
+    usleep(200000);
+    int n_password = strlen(password);
+    for (int i = 0; i < n_password; i++)
+    {
+        usleep(50000);
+        char data[2] = {password[i], '\0'};
+        send_data(serial_port, data, sizeof(data) - 1);
+    }
+    sleep(1);
+    write(serial_port, enter, sizeof(enter));
 }
 
 void user_change_info(int serial_port)
 {
-  // char key_mode = '|';
-  // write(serial_port, &key_mode, sizeof(key_mode));
-  // usleep(100000);
-  // write(serial_port, &key_enter, sizeof(key_enter));
-  // usleep(100000);
-  change_user_pass(serial_port);
+    // char key_mode = '|';
+    // write(serial_port, &key_mode, sizeof(key_mode));
+    // usleep(100000);
+    // write(serial_port, &key_enter, sizeof(key_enter));
+    // usleep(100000);
+    change_user_pass(serial_port);
 }
 
 void user_mode(int serial_port)
 {
 start:
-  char key = 0;
-  char enter = '\r';
-  display_table(serial_port);
-  usleep(100000);
-  printf("\r\n\t\t+===========+============================================================================= Session-User =====================================================================================+");
-  printf("\r\n\t\t| DISPLAY   |                                                                                                                                                                                |");
-  printf("\r\n\t\t| Key Enter | Please choose 1 option below:                                                                                                                                                  |");
-  printf("\r\n\t\t+-----------+--------------------------------------------------------------------------------------------------------------------------------------------------------------------------------+");
-  printf("\r\n\t\t|     1.    | Re-configure Anti-DDoS                                                                                                                                                         |");
-  printf("\r\n\t\t+-----------+--------------------------------------------------------------------------------------------------------------------------------------------------------------------------------+");
-  printf("\r\n\t\t|     2.    | Change password                                                                                                                                                                |");
-  printf("\r\n\t\t+-----------+--------------------------------------------------------------------------------------------------------------------------------------------------------------------------------+");
-  printf("\r\n\t\t|     3.    | View log file status and change time counter                                                                                                                                   |");
-  printf("\r\n\t\t+-----------+--------------------------------------------------------------------------------------------------------------------------------------------------------------------------------+");
-  printf("\r\n\t\t|     4.    | Exit                                                                                                                                                                           |");
-  printf("\r\n\t\t+-----------+--------------------------------------------------------------------------------------------------------------------------------------------------------------------------------+");
-  printf("\r\n   SETTING     --> Please choose Mode: ");
+    char key = 0;
+    char enter = '\r';
+    display_table(serial_port);
+    usleep(100000);
+    printf("\r\n\t\t+===========+============================================================================= Session-User =====================================================================================+");
+    printf("\r\n\t\t| DISPLAY   |                                                                                                                                                                                |");
+    printf("\r\n\t\t| Key Enter | Please choose 1 option below:                                                                                                                                                  |");
+    printf("\r\n\t\t+-----------+--------------------------------------------------------------------------------------------------------------------------------------------------------------------------------+");
+    printf("\r\n\t\t|     1.    | Re-configure Anti-DDoS                                                                                                                                                         |");
+    printf("\r\n\t\t+-----------+--------------------------------------------------------------------------------------------------------------------------------------------------------------------------------+");
+    printf("\r\n\t\t|     2.    | Change password                                                                                                                                                                |");
+    printf("\r\n\t\t+-----------+--------------------------------------------------------------------------------------------------------------------------------------------------------------------------------+");
+    printf("\r\n\t\t|     3.    | View log file status and change time counter                                                                                                                                   |");
+    printf("\r\n\t\t+-----------+--------------------------------------------------------------------------------------------------------------------------------------------------------------------------------+");
+    printf("\r\n\t\t|     4.    | Exit                                                                                                                                                                           |");
+    printf("\r\n\t\t+-----------+--------------------------------------------------------------------------------------------------------------------------------------------------------------------------------+");
+    printf("\r\n   SETTING     --> Please choose Mode: ");
 
-  while (1)
-  {
-    scanf("%c", &key);
-
-    if (key == '1' || key == '2' || key == '4' || key == '3')
+    while (1)
     {
-      break;
-    }
-    if (key != '1' || key != '2' || key != '3' || key != '4')
-    {
-      printf("\r     SETTING    | --> Please choose Mode: ");
-    }
-  }
+        scanf("%c", &key);
 
-  if (key == '1')
-  {
-    sleep(1);
-    reconfig(serial_port);
-    system("clear");
-    goto start;
-  }
-  else if (key == '2')
-  {
-    sleep(1);
-    user_change_info(serial_port);
-    system("clear");
-    goto start;
-  }
-  else if (key == '3')
-  {
-    //   sleep(1);
-    Mode_Condition_SDCard_User(serial_port);
-    goto start;
-  }
-  else if (key == '4')
-  {
-  }
+        if (key == '1' || key == '2' || key == '4' || key == '3')
+        {
+            break;
+        }
+        if (key != '1' || key != '2' || key != '3' || key != '4')
+        {
+            printf("\r     SETTING    | --> Please choose Mode: ");
+        }
+    }
+
+    if (key == '1')
+    {
+        sleep(1);
+        reconfig(serial_port);
+        system("clear");
+        goto start;
+    }
+    else if (key == '2')
+    {
+        sleep(1);
+        user_change_info(serial_port);
+        system("clear");
+        goto start;
+    }
+    else if (key == '3')
+    {
+        //   sleep(1);
+        Mode_Condition_SDCard_User(serial_port);
+        goto start;
+    }
+    else if (key == '4')
+    {
+    }
 }
 
 void admin_mode(int serial_port)
 {
 start:
-  char key = 0;
-  char enter = '\r';
-  display_table(serial_port);
-  usleep(100000);
-  printf("\r\n\t\t+===========+============================================================================= Session-Admin ====================================================================================+");
-  printf("\r\n\t\t| DISPLAY   |                                                                                                                                                                                |");
-  printf("\r\n\t\t| Key Enter | Please choose 1 option below:                                                                                                                                                  |");
-  printf("\r\n\t\t+-----------+--------------------------------------------------------------------------------------------------------------------------------------------------------------------------------+");
-  printf("\r\n\t\t|     1.    | Re-configure Anti-DDoS                                                                                                                                                         |");
-  printf("\r\n\t\t+-----------+--------------------------------------------------------------------------------------------------------------------------------------------------------------------------------+");
-  printf("\r\n\t\t|     2.    | Change account information                                                                                                                                                     |");
-  printf("\r\n\t\t+-----------+--------------------------------------------------------------------------------------------------------------------------------------------------------------------------------+");
-  printf("\r\n\t\t|     3.    | Setting SD card and change time counter                                                                                                                                        |");
-  printf("\r\n\t\t+-----------+--------------------------------------------------------------------------------------------------------------------------------------------------------------------------------+");
-  printf("\r\n\t\t|     4.    | Exit                                                                                                                                                                           |");
-  printf("\r\n\t\t+-----------+--------------------------------------------------------------------------------------------------------------------------------------------------------------------------------+");
-  printf("\r\n   SETTING    | --> Please choose Mode: ");
+    char key = 0;
+    char enter = '\r';
+    display_table(serial_port);
+    usleep(100000);
+    printf("\r\n\t\t+===========+============================================================================= Session-Admin ====================================================================================+");
+    printf("\r\n\t\t| DISPLAY   |                                                                                                                                                                                |");
+    printf("\r\n\t\t| Key Enter | Please choose 1 option below:                                                                                                                                                  |");
+    printf("\r\n\t\t+-----------+--------------------------------------------------------------------------------------------------------------------------------------------------------------------------------+");
+    printf("\r\n\t\t|     1.    | Re-configure Anti-DDoS                                                                                                                                                         |");
+    printf("\r\n\t\t+-----------+--------------------------------------------------------------------------------------------------------------------------------------------------------------------------------+");
+    printf("\r\n\t\t|     2.    | Change account information                                                                                                                                                     |");
+    printf("\r\n\t\t+-----------+--------------------------------------------------------------------------------------------------------------------------------------------------------------------------------+");
+    printf("\r\n\t\t|     3.    | Setting SD card and change time counter                                                                                                                                        |");
+    printf("\r\n\t\t+-----------+--------------------------------------------------------------------------------------------------------------------------------------------------------------------------------+");
+    printf("\r\n\t\t|     4.    | Exit                                                                                                                                                                           |");
+    printf("\r\n\t\t+-----------+--------------------------------------------------------------------------------------------------------------------------------------------------------------------------------+");
+    printf("\r\n   SETTING    | --> Please choose Mode: ");
 
-  while (1)
-  {
-    scanf("%c", &key);
-    if (key == '1' || key == '2' || key == '4' || key == '3')
+    while (1)
     {
-      break;
+        scanf("%c", &key);
+        if (key == '1' || key == '2' || key == '4' || key == '3')
+        {
+            break;
+        }
+        if (key != '1' || key != '2' || key != '3' || key != '4')
+        {
+            printf("\r     SETTING    | --> Please choose Mode: ");
+        }
     }
-    if (key != '1' || key != '2' || key != '3' || key != '4')
-    {
-      printf("\r     SETTING    | --> Please choose Mode: ");
-    }
-  }
 
-  if (key == '1')
-  {
-    sleep(1);
-    reconfig(serial_port);
-    system("clear");
-    goto start;
-  }
-  else if (key == '2')
-  {
-    sleep(1);
-    change_info_acc_admin_mode(serial_port);
-    system("clear");
-    goto start;
-  }
-  else if (key == '3')
-  {
-    // sleep(1);
-    Mode_Condition_SDCard_Admin(serial_port);
-    goto start;
-  }
-  else if (key == '4')
-  {
-    // system("clear");
-    // ModeStart(serial_port);
-  }
+    if (key == '1')
+    {
+        sleep(1);
+        // reconfig(serial_port);
+        reconfig(serial_port);
+        system("clear");
+        goto start;
+    }
+    else if (key == '2')
+    {
+        sleep(1);
+        change_info_acc_admin_mode(serial_port);
+        system("clear");
+        goto start;
+    }
+    else if (key == '3')
+    {
+        // sleep(1);
+        Mode_Condition_SDCard_Admin(serial_port);
+        goto start;
+    }
+    else if (key == '4')
+    {
+        // system("clear");
+        // ModeStart(serial_port);
+    }
 }
 
 // void display_logo1()
@@ -500,3378 +725,6755 @@ start:
 
 void display_logo1()
 {
-  printf("\r\n *************************************************************************************************************************************************************************************************************");
-  printf("\r\n **                                                                                                                                                                                                         **");
-  printf("\r\n **                                                                   _    ____ ____    ____                       _             ____        __                                                             **");
-  printf("\r\n **                                                                  / \\  / ___/ ___|  / ___| _   _ ___ _ __   ___| |_          |  _ \\  ___ / _|                                                            **");
-  printf("\r\n **                                                                 / _ \\| |   \\___ \\  \\___ \\| | | / __| '_ \\ / _ \\ __|  _____  | | | |/ _ \\ |_                                                             **");
-  printf("\r\n **                                                                / ___ \\ |___ ___) |  ___) | |_| \\__ \\ | | |  __/ |_  |_____| | |_| |  __/  _|                                                            **");
-  printf("\r\n **                                                               /_/   \\_\\____|____/  |____/ \\__, |___/_| |_|\\___|\\__|         |____/ \\___|_|                                                              **");
-  printf("\r\n **                                                                                           |___/                                                                                                         **");
-  printf("\r\n **                                                                                                                                                                                                         **");
-  printf("\r\n *************************************************************************************************************************************************************************************************************");
-  printf("\r\n                                                                                                                                                                ***** DDoS Defender by Acronics Solutions ****");
+    printf("\r\n *************************************************************************************************************************************************************************************************************");
+    printf("\r\n **                                                                                                                                                                                                         **");
+    printf("\r\n **                                                                   _    ____ ____    ____                       _             ____        __                                                             **");
+    printf("\r\n **                                                                  / \\  / ___/ ___|  / ___| _   _ ___ _ __   ___| |_          |  _ \\  ___ / _|                                                            **");
+    printf("\r\n **                                                                 / _ \\| |   \\___ \\  \\___ \\| | | / __| '_ \\ / _ \\ __|  _____  | | | |/ _ \\ |_                                                             **");
+    printf("\r\n **                                                                / ___ \\ |___ ___) |  ___) | |_| \\__ \\ | | |  __/ |_  |_____| | |_| |  __/  _|                                                            **");
+    printf("\r\n **                                                               /_/   \\_\\____|____/  |____/ \\__, |___/_| |_|\\___|\\__|         |____/ \\___|_|                                                              **");
+    printf("\r\n **                                                                                           |___/                                                                                                         **");
+    printf("\r\n **                                                                                                                                                                                                         **");
+    printf("\r\n *************************************************************************************************************************************************************************************************************");
+    printf("\r\n                                                                                                                                                                ***** DDoS Defender by Acronics Solutions ****");
 }
 
 void ModeStart_cnt(int serial_port)
 {
-  char key1;
-  char key2 = '1';
-  bool check = false;
-  char key;
-  char enter = '\r';
-  for (int i = Threshold_time_counter; i >= 0; i--)
-  {
+    char key1;
+    char key2 = '1';
+    bool check = false;
+    char key;
+    char enter = '\r';
+    for (int i = Threshold_time_counter; i >= 0; i--)
+    {
+        system("clear");
+        display_logo1();
+        printf("\r\n                                                                                                                                                                                                             |");
+        printf("\r\n ================+===========+===============================================================================================================================================================================+");
+        printf("\r\n     DISPLAY     |           |                                                                                                                                                                               |");
+        printf("\r\n\t\t | Key Enter |                  Mode                                                                                                                                                         |");
+        printf("\r\n\t\t +-----------+-------------------------------------------------------------------------------------------------------------------------------------------------------------------------------+");
+        printf("\r\n\t\t |     1:    | Show flow information or display it automatically after %d  s                                                                                                                 |", i);
+        printf("\r\n\t\t +-----------+-------------------------------------------------------------------------------------------------------------------------------------------------------------------------------+");
+        printf("\r\n\t\t |     2:    | View current configurations                                                                                                                                                   |");
+        printf("\r\n\t\t +-----------+-------------------------------------------------------------------------------------------------------------------------------------------------------------------------------+");
+        printf("\r\n\t\t |     3:    | Config Setting                                                                                                                                                                |");
+        printf("\r\n\t\t +-----------+-------------------------------------------------------------------------------------------------------------------------------------------------------------------------------+");
+        printf("\r\n ================+===========================================================================================================================================================================================+\n");
+        printf("\r    SETTING     | --> Please choose Mode: ");
+        sleep(1);
+
+        if (kbhit())
+        {
+            key = getchar();
+            if (key == '1' || key == '2' || key == '3')
+            {
+                break;
+            }
+        }
+        key = '1';
+    }
+    // if (detect_attack)
+    // {
+    //   printf("\033[10B"); // Xu?ng 10 d ng
+    //   printf("\033[10D"); // Qua tr i 10 c?t
+    //   printf("\033[1;36m \n The attack has been detected!!!\033[0m");
+    //   printf("\033[1;36m \n Return to the monitoring page? \033[0m");
+    //   while (1)
+    //   {
+    //     scanf("%c", &key1);
+
+    //     if (key == 'y' || key == 'Y' || key == 'n' || key == 'N')
+    //     {
+    //       break;
+    //     }
+    //     if (key != 'y' || key != 'Y' || key != 'n' || key != 'N')
+    //     {
+    //       printf("\r    --> Please choose : ");
+    //     }
+    //   }
+
+    //   if (key == 'y' || key == 'Y')
+    //   {
+    //     printf_uart1(serial_port);
+    //   }
+    // }
+    if (key == '2')
+    {
+        system("clear");
+        display_logo1();
+        mode_select_login(serial_port);
+        ModeStart(serial_port);
+    }
+    else if (key == '3')
+    {
+        system("clear");
+        display_logo1();
+        // write(serial_port, &key_check_account, sizeof(key_check_account));
+        // usleep(100000);
+        // write(serial_port, &key_enter, sizeof(key_enter));
+        // usleep(100000);
+        check_account(serial_port);
+        ModeStart(serial_port);
+    }
+    else if (key == '1')
+    {
+        system("clear");
+        // display_logo1();
+        printf_uart1(serial_port);
+        ModeStart(serial_port);
+    }
+}
+
+void ModeStart(int serial_port)
+{
+start:
     system("clear");
     display_logo1();
+    char key;
+    char enter = '\r';
     printf("\r\n                                                                                                                                                                                                             |");
     printf("\r\n ================+===========+===============================================================================================================================================================================+");
     printf("\r\n     DISPLAY     |           |                                                                                                                                                                               |");
     printf("\r\n\t\t | Key Enter |                  Mode                                                                                                                                                         |");
     printf("\r\n\t\t +-----------+-------------------------------------------------------------------------------------------------------------------------------------------------------------------------------+");
-    printf("\r\n\t\t |     1:    | Show flow information or display it automatically after %d  s                                                                                                                 |", i);
+    printf("\r\n\t\t |     1:    | Show flow information                                                                                                                                                         |");
     printf("\r\n\t\t +-----------+-------------------------------------------------------------------------------------------------------------------------------------------------------------------------------+");
     printf("\r\n\t\t |     2:    | View current configurations                                                                                                                                                   |");
     printf("\r\n\t\t +-----------+-------------------------------------------------------------------------------------------------------------------------------------------------------------------------------+");
     printf("\r\n\t\t |     3:    | Config Setting                                                                                                                                                                |");
     printf("\r\n\t\t +-----------+-------------------------------------------------------------------------------------------------------------------------------------------------------------------------------+");
     printf("\r\n ================+===========================================================================================================================================================================================+\n");
-    printf("\r    SETTING     | --> Please choose Mode: ");
-    sleep(1);
 
-    if (kbhit())
+    while (1)
     {
-      key = getchar();
-      if (key == '1' || key == '2' || key == '3')
-      {
-        break;
-      }
+        scanf("%c", &key);
+        if (key == '1' || key == '2' || key == '3')
+        {
+            break;
+        }
+        if (key != '1' || key != '2' || key != '3')
+        {
+            printf("\r     SETTING     | --> Please choose Mode: ");
+        }
     }
-    key = '1';
-  }
-  // if (detect_attack)
-  // {
-  //   printf("\033[10B"); // Xuá»‘ng 10 dÃ²ng
-  //   printf("\033[10D"); // Qua trÃ¡i 10 cá»™t
-  //   printf("\033[1;36m \n The attack has been detected!!!\033[0m");
-  //   printf("\033[1;36m \n Return to the monitoring page? \033[0m");
-  //   while (1)
-  //   {
-  //     scanf("%c", &key1);
 
-  //     if (key == 'y' || key == 'Y' || key == 'n' || key == 'N')
-  //     {
-  //       break;
-  //     }
-  //     if (key != 'y' || key != 'Y' || key != 'n' || key != 'N')
-  //     {
-  //       printf("\r    --> Please choose : ");
-  //     }
-  //   }
-
-  //   if (key == 'y' || key == 'Y')
-  //   {
-  //     printf_uart1(serial_port);
-  //   }
-  // }
-  if (key == '2')
-  {
-    system("clear");
-    display_logo1();
-    mode_select_login(serial_port);
-    ModeStart(serial_port);
-  }
-  else if (key == '3')
-  {
-    system("clear");
-    display_logo1();
-    // write(serial_port, &key_check_account, sizeof(key_check_account));
-    // usleep(100000);
-    // write(serial_port, &key_enter, sizeof(key_enter));
-    // usleep(100000);
-    check_account(serial_port);
-    ModeStart(serial_port);
-  }
-  else if (key == '1')
-  {
-    system("clear");
-    // display_logo1();
-    printf_uart1(serial_port);
-    ModeStart(serial_port);
-  }
-}
-
-void ModeStart(int serial_port)
-{
-start:
-  system("clear");
-  display_logo1();
-  char key;
-  char enter = '\r';
-  printf("\r\n                                                                                                                                                                                                             |");
-  printf("\r\n ================+===========+===============================================================================================================================================================================+");
-  printf("\r\n     DISPLAY     |           |                                                                                                                                                                               |");
-  printf("\r\n\t\t | Key Enter |                  Mode                                                                                                                                                         |");
-  printf("\r\n\t\t +-----------+-------------------------------------------------------------------------------------------------------------------------------------------------------------------------------+");
-  printf("\r\n\t\t |     1:    | Show flow information                                                                                                                                                         |");
-  printf("\r\n\t\t +-----------+-------------------------------------------------------------------------------------------------------------------------------------------------------------------------------+");
-  printf("\r\n\t\t |     2:    | View current configurations                                                                                                                                                   |");
-  printf("\r\n\t\t +-----------+-------------------------------------------------------------------------------------------------------------------------------------------------------------------------------+");
-  printf("\r\n\t\t |     3:    | Config Setting                                                                                                                                                                |");
-  printf("\r\n\t\t +-----------+-------------------------------------------------------------------------------------------------------------------------------------------------------------------------------+");
-  printf("\r\n ================+===========================================================================================================================================================================================+\n");
-
-  while (1)
-  {
-    scanf("%c", &key);
-    if (key == '1' || key == '2' || key == '3')
+    if (key == '2')
     {
-      break;
+        system("clear");
+        display_logo1();
+        mode_select_login(serial_port);
+        goto start;
     }
-    if (key != '1' || key != '2' || key != '3')
+    else if (key == '3')
     {
-      printf("\r     SETTING     | --> Please choose Mode: ");
+        system("clear");
+        display_logo1();
+        // write(serial_port, &key_check_account, sizeof(key_check_account));
+        // usleep(100000);
+        // write(serial_port, &key_enter, sizeof(key_enter));
+        // usleep(100000);
+        check_account(serial_port);
+        goto start;
     }
-  }
-
-  if (key == '2')
-  {
-    system("clear");
-    display_logo1();
-    mode_select_login(serial_port);
-    goto start;
-  }
-  else if (key == '3')
-  {
-    system("clear");
-    display_logo1();
-    // write(serial_port, &key_check_account, sizeof(key_check_account));
-    // usleep(100000);
-    // write(serial_port, &key_enter, sizeof(key_enter));
-    // usleep(100000);
-    check_account(serial_port);
-    goto start;
-  }
-  else if (key == '1')
-  {
-    system("clear");
-    // display_logo1();
-    printf_uart1(serial_port);
-    goto start;
-  }
+    else if (key == '1')
+    {
+        system("clear");
+        // display_logo1();
+        for (int i = 0; i < 5; i++)
+        {
+            // G?i h m sinh g i tin m?u, ho?c g?i process_packet v?i d? li?u m?u
+        }
+        printf_uart1(serial_port);
+        goto start;
+    }
 }
 
 void options_mode1(int serial_port)
 {
-  // system("clear");
-  display_logo1();
-start:
-  char key;
-  char enter = '\r';
-  printf("\r\n                                                                                                                                                                                                             |");
-  printf("\r\n ================+===========+===============================================================================================================================================================================+");
-  printf("\r\n     DISPLAY     |           |                                                                                                                                                                               |");
-  printf("\r\n\t\t +-----------+-------------------------------------------------------------------------------------------------------------------------------------------------------------------------------+");
-  printf("\r\n\t\t | Key Enter |                  Mode                                                                                                                                                         |");
-  printf("\r\n\t\t +-----------+-------------------------------------------------------------------------------------------------------------------------------------------------------------------------------+");
-  printf("\r\n\t\t |     1:    | Return mode start                                                                                                                                                             |");
-  printf("\r\n\t\t +-----------+-------------------------------------------------------------------------------------------------------------------------------------------------------------------------------+");
-  printf("\r\n\t\t |     2:    | Continue to show flow information                                                                                                                                             |");
-  printf("\r\n\t\t +-----------+-------------------------------------------------------------------------------------------------------------------------------------------------------------------------------+");
-  printf("\r\n\t\t |     3:    | Show current configuration                                                                                                                                                    |");
-  printf("\r\n\t\t +-----------+-------------------------------------------------------------------------------------------------------------------------------------------------------------------------------+");
-  printf("\r\n\t\t |     4:    | Monitor SD card status                                                                                                                                                        |");
-  printf("\r\n\t\t +-----------+-------------------------------------------------------------------------------------------------------------------------------------------------------------------------------+");
-  printf("\r\n ----------------+-------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------+");
-  printf("\r\n ================+===========================================================================================================================================================================================+\n");
-  printf("\r\n     SETTING     | --> Please choose Mode: ");
-
-  while (1)
-  {
-    scanf("%c", &key);
-    if (key == '4')
-    {
-      system("clear");
-      display_logo1();
-      Mode_Condition_SDCard(serial_port);
-      break;
-    }
-    else if (key == '1' || key == '2' || key == '3')
-    {
-      break;
-    }
-    if (key != '1' || key != '2' || key != '3' || key != '4')
-    {
-      printf("\r     SETTING     | --> Please choose Mode: ");
-    }
-  }
-
-  if (key == '1')
-  {
-    ModeStart(serial_port);
-  }
-  else if (key == '2')
-  {
-    system("clear");
-    // display_logo1();
-    printf_uart1(serial_port);
-  }
-  else if (key == '3')
-  {
-    system("clear");
+    // system("clear");
     display_logo1();
-    mode_select_login(serial_port);
-    goto start;
-  }
+start:
+    char key;
+    char enter = '\r';
+    printf("\r\n                                                                                                                                                                                                             |");
+    printf("\r\n ================+===========+===============================================================================================================================================================================+");
+    printf("\r\n     DISPLAY     |           |                                                                                                                                                                               |");
+    printf("\r\n\t\t +-----------+-------------------------------------------------------------------------------------------------------------------------------------------------------------------------------+");
+    printf("\r\n\t\t | Key Enter |                  Mode                                                                                                                                                         |");
+    printf("\r\n\t\t +-----------+-------------------------------------------------------------------------------------------------------------------------------------------------------------------------------+");
+    printf("\r\n\t\t |     1:    | Return mode start                                                                                                                                                             |");
+    printf("\r\n\t\t +-----------+-------------------------------------------------------------------------------------------------------------------------------------------------------------------------------+");
+    printf("\r\n\t\t |     2:    | Continue to show flow information                                                                                                                                             |");
+    printf("\r\n\t\t +-----------+-------------------------------------------------------------------------------------------------------------------------------------------------------------------------------+");
+    printf("\r\n\t\t |     3:    | Show current configuration                                                                                                                                                    |");
+    printf("\r\n\t\t +-----------+-------------------------------------------------------------------------------------------------------------------------------------------------------------------------------+");
+    printf("\r\n\t\t |     4:    | Monitor SD card status                                                                                                                                                        |");
+    printf("\r\n\t\t +-----------+-------------------------------------------------------------------------------------------------------------------------------------------------------------------------------+");
+    printf("\r\n ----------------+-------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------+");
+    printf("\r\n ================+===========================================================================================================================================================================================+\n");
+    printf("\r\n     SETTING     | --> Please choose Mode: ");
+
+    while (1)
+    {
+        scanf("%c", &key);
+        if (key == '4')
+        {
+            system("clear");
+            display_logo1();
+            Mode_Condition_SDCard(serial_port);
+            break;
+        }
+        else if (key == '1' || key == '2' || key == '3')
+        {
+            break;
+        }
+        if (CONFIG_IPV6_BLOCK != '1' || key != '2' || key != '3' || key != '4')
+        {
+            printf("\r     SETTING     | --> Please choose Mode: ");
+        }
+    }
+
+    if (key == '1')
+    {
+        ModeStart(serial_port);
+    }
+    else if (key == '2')
+    {
+        system("clear");
+        // display_logo1();
+        printf_uart1(serial_port);
+    }
+    else if (key == '3')
+    {
+        system("clear");
+        display_logo1();
+        mode_select_login(serial_port);
+        goto start;
+    }
 }
 void mode_select_login(int serial_port)
 {
-  display_table(serial_port);
-  // sleep(1);
-  char key;
-  char enter = '\r';
-  printf("\r\n");
-  printf("\r\n================+============================================================================================================================================================================================+\n");
-  printf("\r\nSetting     | Do you want login to configure? (Y/N) ?: ");
-  while (1)
-  {
-    scanf("%c", &key);
-    if (key == 'y' || key == 'Y' || key == 'n' || key == 'N')
+    display_table(serial_port);
+    // sleep(1);
+    char key;
+    char enter = '\r';
+    printf("\r\n");
+    printf("\r\n================+============================================================================================================================================================================================+\n");
+    printf("\r\nSetting     | Do you want login to configure? (Y/N) ?: ");
+    while (1)
     {
-      break;
+        scanf("%c", &key);
+        if (key == 'y' || key == 'Y' || key == 'n' || key == 'N')
+        {
+            break;
+        }
+        else if (key != 'y' || key != 'Y' || key != 'n' || key != 'N')
+        {
+            printf("\rSetting     | Do you want login to configure? (Y/N) ?: ");
+        }
     }
-    else if (key != 'y' || key != 'Y' || key != 'n' || key != 'N')
-    {
-      printf("\rSetting     | Do you want login to configure? (Y/N) ?: ");
-    }
-  }
 
-  if (key == 'y' || key == 'Y')
-  {
-    system("clear");
-    display_logo1();
-    // write(serial_port, &key_check_account, sizeof(key_check_account));
-    // usleep(100000);
-    // write(serial_port, &key_enter, sizeof(key_enter));
-    // usleep(100000);
-    check_account(serial_port);
-    sleep(1.5);
-  }
-  else if (key == 'n' || key == 'N')
-  {
-    system("clear");
-    display_logo1();
-  }
+    if (key == 'y' || key == 'Y')
+    {
+        system("clear");
+        display_logo1();
+        // write(serial_port, &key_check_account, sizeof(key_check_account));
+        // usleep(100000);
+        // write(serial_port, &key_enter, sizeof(key_enter));
+        // usleep(100000);
+        check_account(serial_port);
+        sleep(1.5);
+    }
+    else if (key == 'n' || key == 'N')
+    {
+        system("clear");
+        display_logo1();
+    }
 }
 
+// void inject_fake_packet(int type) {
+//     unsigned char packet[90];
+//     if (type == 1) memcpy(packet, attack_packet, 90);
+//     else memcpy(packet, normal_packet, 90);
+//     enqueue_packet(packet, 90); //  ?y v o queue th?t
+// }
 void check_account(int serial_port)
 {
 start:
-  input_and_send_account(serial_port);
-  char *data = receive_data(serial_port);
-  if (data == NULL)
-  {
-    printf("Error receiving data\n");
-    return;
-  }
+    // input_and_send_account(serial_port);
 
-  if ((strchr(data, 'F') != NULL) || (strchr(data, 'f') != NULL))
-  {
-    printf("\r\n\t\t=============================================================================================================================================================================================+");
-    printf("\r\n\t\t| Warning: Incorrect password/username. Retry!                                                                           ");
+    // gi? l?p d? li?u nh?n du?c t? UART l  "A"
+    const char *data = "A";
     usleep(10000);
-    goto start;
-  }
-  else if ((strchr(data, 'Y') != NULL) || (strchr(data, 'y') != NULL))
-  {
-    printf("\r\n\t\t=============================================================================================================================================================================================+");
-    printf("\r\n\t\t| Wrong password 3 times.                                                                                                |");
-    printf("\r\n\t\t|                                                                                                                        |");
-    printf("\r\n\t\t+------------------------------------------------------------------------------------------------------------------------+");
-    usleep(500000);
-    // system("clear");
-  }
-  else if ((strchr(data, 'U') != NULL))
-  {
-    printf("\r\n\t\t=============================================================================================================================================================================================+");
-    printf("\r\n\t\t| User login successfully !!!                         ");
-    printf("\r\n----------------+--------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------+");
-    sleep(1);
-    system("clear");
-    display_logo1();
-    user_mode(serial_port);
-  }
-  else if ((strchr(data, 'A') != NULL))
-  {
-    printf("\r\n\t\t=============================================================================================================================================================================================+");
-    printf("\r\n\t\t| Admin login successfully !!!                                                                                           ");
-    printf("\r\n----------------+--------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------+");
-    sleep(1);
-    system("clear");
-    display_logo1();
-    admin_mode(serial_port);
-  }
+
+    if (data == NULL)
+    {
+        printf("Error receiving data\n");
+        return;
+    }
+
+    if ((strchr(data, 'F') != NULL) || (strchr(data, 'f') != NULL))
+    {
+        printf("\r\n\t\t=============================================================================================================================================================================================+");
+        printf("\r\n\t\t| Warning: Incorrect password/username. Retry!                                                                           ");
+        usleep(10000);
+        goto start;
+    }
+    else if ((strchr(data, 'Y') != NULL) || (strchr(data, 'y') != NULL))
+    {
+        printf("\r\n\t\t=============================================================================================================================================================================================+");
+        printf("\r\n\t\t| Wrong password 3 times.                                                                                                |");
+        printf("\r\n\t\t|                                                                                                                        |");
+        printf("\r\n\t\t+------------------------------------------------------------------------------------------------------------------------+");
+        usleep(500000);
+        // system("clear");
+    }
+    else if ((strchr(data, 'U') != NULL))
+    {
+        printf("\r\n\t\t=============================================================================================================================================================================================+");
+        printf("\r\n\t\t| User login successfully !!!                         ");
+        printf("\r\n----------------+--------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------+");
+        sleep(1);
+        system("clear");
+        display_logo1();
+        user_mode(serial_port);
+    }
+    else if ((strchr(data, 'A') != NULL))
+    {
+        printf("\r\n\t\t=============================================================================================================================================================================================+");
+        printf("\r\n\t\t| Admin login successfully !!!                                                                                           ");
+        printf("\r\n----------------+--------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------+");
+        sleep(1);
+        system("clear");
+        display_logo1();
+        admin_mode(serial_port);
+    }
 }
+
 void check_username_change_pass(int serial_port)
 {
-  // char key_mode = '(';
-  // write(serial_port, &key_mode, sizeof(key_mode));
-  // usleep(100000);
-  // write(serial_port, &key_enter, sizeof(key_enter));
-  // usleep(100000);
-  input_and_send_account2(serial_port);
+    // char key_mode = '(';
+    // write(serial_port, &key_mode, sizeof(key_mode));
+    // usleep(100000);
+    // write(serial_port, &key_enter, sizeof(key_enter));
+    // usleep(100000);
+    input_and_send_account2(serial_port);
 
-  char *data = receive_data(serial_port);
+    char *data = receive_data(serial_port);
 
-  if (data == NULL)
-  {
-    printf("Error receiving data\n");
-    return;
-  }
-  else if ((strchr(data, 'Y') != NULL))
-  {
-    system("clear");
-    display_logo1();
-    display_account(serial_port);
-    printf("\r\n\t\t\t\t\t\t Change Successfully !!!                                                                                            ");
-  }
-  else if ((strchr(data, 'X') != NULL))
-  {
-    system("clear");
-    display_logo1();
-    display_account(serial_port);
-    printf("\r\n\t\t\t\t\t\t Change Error !!!                                                                                            ");
-  }
-  ReturnMode3();
+    if (data == NULL)
+    {
+        printf("Error receiving data\n");
+        return;
+    }
+    else if ((strchr(data, 'Y') != NULL))
+    {
+        system("clear");
+        display_logo1();
+        display_account(serial_port);
+        printf("\r\n\t\t\t\t\t\t Change Successfully !!!                                                                                            ");
+    }
+    else if ((strchr(data, 'X') != NULL))
+    {
+        system("clear");
+        display_logo1();
+        display_account(serial_port);
+        printf("\r\n\t\t\t\t\t\t Change Error !!!                                                                                            ");
+    }
+    ReturnMode3();
 }
 
 void reconfig(int serial_port)
 {
 start:
-  // system("clear");
-  display_logo1();
-  char key = 0;
-  char enter = '\r';
-  printf("\r\n *************************************************************************************************************************************************************************************************************");
-  printf("\r\n");
-  printf("\r\n ============================================================================================================================================================================================================+");
-  printf("\r\n ==> Mode 2 is selected                                                                                                                                                                                      |");
-  printf("\r\n");
-  printf(" ===============+===========+================================================================================================================================================================================+\r\n");
-  printf("    DISPLAY     |           |                                                                                                                                                                                |\r\n");
-  printf("\t\t| Key Enter | Please choose 1 option below:                                                                                                                                                  |\r\n");
-  printf("\t\t+-----------+--------------------------------------------------------------------------------------------------------------------------------------------------------------------------------+\r\n");
-  printf("\t\t|     1.    | Setting RTC.                                                                                                                                                                   |\r\n");
-  printf("\t\t+-----------+--------------------------------------------------------------------------------------------------------------------------------------------------------------------------------+\r\n");
-  printf("\t\t|     2.    | Setting Anti by Port mode(*).                                                                                                                                                  |\r\n");
-  printf("\t\t|           | 	->(Info: When Port protection mode(*) is enabled, IP protected mode (**) is disabled and vice versa).                                                                        |\r\n");
-  printf("\t\t|     3.    | Setting interface Port is protect.                                                                                                                                             |\r\n");
-  printf("\t\t|           | 	->(Info: Protected default Port interface is 1).                                                                                                                             |\r\n");
-  printf("\t\t+-----------+--------------------------------------------------------------------------------------------------------------------------------------------------------------------------------+\r\n");
-  printf("\t\t|     4.    | Setting IPv4 Server to protect(**).                                                                                                                                            |\r\n");
-  printf("\t\t+-----------+--------------------------------------------------------------------------------------------------------------------------------------------------------------------------------+\r\n");
-  printf("\t\t|     R.    | Setting IPv6 Server to protect(**).                                                                                                                                            |\r\n");
-  printf("\t\t+-----------+--------------------------------------------------------------------------------------------------------------------------------------------------------------------------------+\r\n");
-  printf("\t\t|     5.    | Setting attack detection time.                                                                                                                                                 |\r\n");
-  printf("\t\t|           | 	->(Info: The default value is: 1 second).                                                                                                                                    |\r\n");
-  printf("\t\t+-----------+--------------------------------------------------------------------------------------------------------------------------------------------------------------------------------+\r\n");
-  printf("\t\t|     6.    | Setting Anti-SYN flood.                                                                                                                                                        |\r\n");
-  printf("\t\t|     7.    | Setting SYN flood attack detection threshold.                                                                                                                                  |\r\n");
-  printf("\t\t|           | 	->(Info: The default value is: 1000 PPS).                                                                                                                                    |\r\n");
-  printf("\t\t+-----------+--------------------------------------------------------------------------------------------------------------------------------------------------------------------------------+\r\n");
-  printf("\t\t|     8.    | Setting ACK flood attack detection threshold.                                                                                                                                  |\r\n");
-  printf("\t\t|           | 	->(Info: The default value is: 1000 PPS).                                                                                                                                    |\r\n");
-  printf("\t\t+-----------+--------------------------------------------------------------------------------------------------------------------------------------------------------------------------------+\r\n");
-  printf("\t\t|     9.    | Setting the time to automatically delete the connection session information in the white list.                                                                                 |\r\n");
-  printf("\t\t|           | 	->(Info: The default value is: 30 second).                                                                                                                                   |\r\n");
-  printf("\t\t+-----------+--------------------------------------------------------------------------------------------------------------------------------------------------------------------------------+\r\n");
-  printf("\t\t|     A.    | Setting Anti-LAND Attack.                                                                                                                                                      |\r\n");
-  printf("\t\t+-----------+--------------------------------------------------------------------------------------------------------------------------------------------------------------------------------+\r\n");
-  printf("\t\t|     B.    | Setting Anti-UDP flood.                                                                                                                                                        |\r\n");
-  printf("\t\t|     C.    | Setting UDP flood attack detection threshold.                                                                                                                                  |\r\n");
-  printf("\t\t|           | 	->(Info: The default value is: 1000 PPS).                                                                                                                                    |\r\n");
-  printf("\t\t|     D.    | Setting threshold of valid UDP packer per second allowed.                                                                                                                      |\r\n");
-  printf("\t\t|           | 	->(Info: The default value is: 1000 PPS).                                                                                                                                    |\r\n");
-  printf("\t\t+-----------+--------------------------------------------------------------------------------------------------------------------------------------------------------------------------------+\r\n");
-  printf("\t\t|     E.    | Setting Anti-DNS Amplification attack.                                                                                                                                         |\r\n");
-  printf("\t\t|     F.    | Setting DNS Amplification attack detection threshold.                                                                                                                          |\r\n");
-  printf("\t\t|           | 	->(Info: The default value is: 1000 PPS).                                                                                                                                    |\r\n");
-  printf("\t\t+-----------+--------------------------------------------------------------------------------------------------------------------------------------------------------------------------------+\r\n");
-  printf("\t\t|     G.    | Setting Anti-ICMP flood.                                                                                                                                                       |\r\n");
-  printf("\t\t|     H.    | Setting ICMP flood attack detection threshold.                                                                                                                                 |\r\n");
-  printf("\t\t|           | 	->(Info: The default value is: 1000 PPS).                                                                                                                                    |\r\n");
-  printf("\t\t|     I.    | Setting threshold of valid ICMP packer per second allowed.                                                                                                                     |\r\n");
-  printf("\t\t|           | 	->(Info: The default value is: 1000 PPS).                                                                                                                                    |\r\n");
-  printf("\t\t+-----------+--------------------------------------------------------------------------------------------------------------------------------------------------------------------------------+\r\n");
-  printf("\t\t|     J.    | Setting Anti-IPSec IKE flood.                                                                                                                                                  |\r\n");
-  printf("\t\t|     K.    | Setting IPSEC IKE flood attack detection threshold.                                                                                                                            |\r\n");
-  printf("\t\t|           | 	->(Info: The default value is: 1000 PPS).                                                                                                                                    |\r\n");
-  printf("\t\t+-----------+--------------------------------------------------------------------------------------------------------------------------------------------------------------------------------+\r\n");
-  printf("\t\t|     L.    | Add VPN server name or address to legitimate VPN list.                                                                                                                         |\r\n");
-  printf("\t\t|     M.    | Remove the VPN server name or address from the legal VPN list.                                                                                                                 |\r\n");
-  printf("\t\t|     S.    | Add VPN server name or address IPv6 to legitimate VPN list.                                                                                                                    |\r\n");
-  printf("\t\t|     T.    | Remove the VPN server name or address IPv6 from the legal VPN list.                                                                                                            |\r\n");
-  printf("\t\t+-----------+--------------------------------------------------------------------------------------------------------------------------------------------------------------------------------+\r\n");
-  printf("\t\t|     N.    | Setting Anti-TCP fragmentation flood.                                                                                                                                          |\r\n");
-  printf("\t\t+-----------+--------------------------------------------------------------------------------------------------------------------------------------------------------------------------------+\r\n");
-  printf("\t\t|     O.    | Setting Anti-UDP fragmentation flood.                                                                                                                                          |\r\n");
-  printf("\t\t+-----------+--------------------------------------------------------------------------------------------------------------------------------------------------------------------------------+\r\n");
-  printf("\t\t|     P.    | Setting HTTP GET flood.                                                                                                                                                        |\r\n");
-  printf("\t\t|     Q.    | Setting Attacker's IP Table.                                                                                                                                                   |\r\n");
-  printf("\t\t+-----------+--------------------------------------------------------------------------------------------------------------------------------------------------------------------------------+\r\n");
-  printf("\t\t|     X.    | Setting HTTPS GET flood.                                                                                                                                                        |\r\n");
-  printf("\t\t+-----------+--------------------------------------------------------------------------------------------------------------------------------------------------------------------------------+\r\n");
-  printf("\t\t|     Z.    | => Exit.                                                                                                                                                                       |\r\n");
-  printf("----------------+-----------+--------------------------------------------------------------------------------------------------------------------------------------------------------------------------------+\r\n");
-  printf("    SETTING    | --> Your choice: ");
-
-  while (1)
-  {
-    scanf("%c", &key);
-    if (key == '1' || key == '2' || key == '3' || key == '4' || key == '5' || key == '6' || key == '7' || key == '8' || key == '9' || key == 'A' || key == 'a' || key == 'B' || key == 'b' || key == 'C' || key == 'c' || key == 'D' || key == 'd' || key == 'E' || key == 'e' || key == 'F' || key == 'f' || key == 'G' || key == 'g' || key == 'H' || key == 'h' || key == 'I' || key == 'i' || key == 'J' || key == 'j' || key == 'K' || key == 'k' || key == 'L' || key == 'l' || key == 'M' || key == 'm' || key == 'N' || key == 'n' || key == 'O' || key == 'o' || key == 'Z' || key == 'z' || key == 'P' || key == 'p' || key == 'Q' || key == 'q' || key == 'r' || key == 'R' || key == 's' || key == 'S' || key == 't' || key == 'T' || key == 'X')
-    {
-      break;
-    }
-    if (key != '1' || key != '2' || key != '3' || key != '4' || key != '5' || key != '6' || key != '7' || key != '8' || key != '9' || key != 'A' || key != 'a' || key != 'B' || key != 'b' || key != 'C' || key != 'c' || key != 'D' || key != 'd' || key != 'E' || key == 'e' || key == 'F' || key == 'f' || key == 'G' || key == 'g' || key == 'H' || key == 'h' || key == 'I' || key == 'i' || key != 'J' || key != 'j' || key != 'K' || key != 'k' || key != 'L' || key != 'l' || key != 'M' || key != 'm' || key != 'N' || key != 'n' || key != 'O' || key != 'o' || key != 'P' || key != 'p' || key != 'Q' || key != 'q' || key != 'Z' || key != 'z' || key != 'r' || key != 'R' || key != 'S' || key != 's' || key != 't' || key != 'T' || key == 'X')
-    {
-      printf("\r     SETTING    | --> Your choice: ");
-    }
-  }
-
-  usleep(500000);
-  if (key == '1')
-  {
     system("clear");
     display_logo1();
-    SetDateTime(serial_port);
-    goto start;
-  }
-  else if (key == '2')
-  {
-    system("clear");
-    display_logo1();
-    display_table(serial_port);
-    SetDefenderPort(serial_port);
-    goto start;
-  }
-  else if (key == '3')
-  {
-    system("clear");
-    display_logo1();
-    display_table(serial_port);
-    SetPortDefender(serial_port);
-    goto start;
-  }
-  else if (key == '4')
-  {
-    system("clear");
-    display_logo1();
-    display_table(serial_port);
-    // Check_Table_IPv4();
-    SetIPv4Target(serial_port);
-    goto start;
-  }
-  else if (key == 'r' || key == 'R')
-  {
-    system("clear");
-    display_logo1();
-    display_table(serial_port);
-    SetIPv6Target(serial_port);
-    goto start;
-  }
-  else if (key == '5')
-  {
-    system("clear");
-    display_logo1();
-    display_table(serial_port);
-    SetTimeflood(serial_port);
-    goto start;
-  }
-
-  else if (key == '6')
-  {
-    system("clear");
-    display_logo1();
-    display_table(serial_port);
-    SetSynDefender(serial_port);
-    goto start;
-  }
-  else if (key == '7')
-  {
-    system("clear");
-    display_logo1();
-    display_table(serial_port);
-    SetSynThresh(serial_port);
-    goto start;
-  }
-  else if (key == '8')
-  {
-    system("clear");
-    display_logo1();
-    display_table(serial_port);
-    SetAckThresh(serial_port);
-    goto start;
-  }
-  else if (key == '9')
-  {
-    system("clear");
-    display_logo1();
-    display_table(serial_port);
-    SetTimeDelete(serial_port);
-    goto start;
-  }
-  else if (key == 'A' || key == 'a')
-  {
-    system("clear");
-    display_logo1();
-    display_table(serial_port);
-    SetSynonymousDefender(serial_port);
-    goto start;
-  }
-  else if (key == 'B' || key == 'b')
-  {
-    system("clear");
-    display_logo1();
-    display_table(serial_port);
-    SetUDPDefender(serial_port);
-    goto start;
-  }
-  else if (key == 'C' || key == 'c')
-  {
-    system("clear");
-    display_logo1();
-    display_table(serial_port);
-    SetUDPThresh(serial_port);
-    goto start;
-  }
-  else if (key == 'd' || key == 'D')
-  {
-    system("clear");
-    display_logo1();
-    display_table(serial_port);
-    SetUDPThresh1s(serial_port);
-    goto start;
-  }
-  else if (key == 'e' || key == 'E')
-  {
-    system("clear");
-    display_logo1();
-    display_table(serial_port);
-    SetDNSDefender(serial_port);
-    goto start;
-  }
-  else if (key == 'F' || key == 'f')
-  {
-    system("clear");
-    display_logo1();
-    display_table(serial_port);
-    SetDNSThresh(serial_port);
-    goto start;
-  }
-  else if (key == 'G' || key == 'g')
-  {
-    system("clear");
-    display_logo1();
-    display_table(serial_port);
-    SetICMPDefender(serial_port);
-    goto start;
-  }
-  else if (key == 'H' || key == 'h')
-  {
-    system("clear");
-    display_logo1();
-    display_table(serial_port);
-    SetICMPThresh(serial_port);
-    goto start;
-  }
-  else if (key == 'I' || key == 'i')
-  {
-    system("clear");
-    display_logo1();
-    display_table(serial_port);
-    SetICMPThresh1s(serial_port);
-    goto start;
-  }
-  else if (key == 'J' || key == 'j')
-  {
-    system("clear");
-    display_logo1();
-    display_table(serial_port);
-    SetIPSecDefender(serial_port);
-    goto start;
-  }
-  else if (key == 'K' || key == 'k')
-  {
-    system("clear");
-    display_logo1();
-    display_table(serial_port);
-    SetIPSecThresh(serial_port);
-    goto start;
-  }
-  else if (key == 'L' || key == 'l')
-  {
-    system("clear");
-    display_logo1();
-    display_table(serial_port);
-    AddIPv4VPN(serial_port);
-    goto start;
-  }
-  else if (key == 'M' || key == 'm')
-  {
-    system("clear");
-    display_logo1();
-    display_table(serial_port);
-    RemoveIPv4VPN(serial_port);
-    goto start;
-  }
-  else if (key == 'S' || key == 's')
-  {
-    system("clear");
-    display_logo1();
-    display_table(serial_port);
-    AddIPv6VPN(serial_port);
-    goto start;
-  }
-  else if (key == 'T' || key == 't')
-  {
-    system("clear");
-    display_logo1();
-    display_table(serial_port);
-    RemoveIPv6VPN(serial_port);
-    goto start;
-  }
-  else if (key == 'N' || key == 'n')
-  {
-    system("clear");
-    display_logo1();
-    display_table(serial_port);
-    SetTCPFragDefender(serial_port);
-    goto start;
-  }
-  else if (key == 'O' || key == 'o')
-  {
-    system("clear");
-    display_logo1();
-    display_table(serial_port);
-    SetUDPFragDefender(serial_port);
-    goto start;
-  }
-  else if (key == 'P' || key == 'p')
-  {
-    system("clear");
-    display_logo1();
-    display_table(serial_port);
-    SetHTTPDefender(serial_port);
-    goto start;
-  }
-  else if (key == 'Q' || key == 'q')
-  {
-    system("clear");
-    display_logo1();
-    display_table(serial_port);
-    set_HTTP_IP_Table(serial_port);
-    goto start;
-  }
-  else if (key == 'x' || key == 'X')
-  {
-    system("clear");
-    display_logo1();
-    display_table(serial_port);
-    SetHTTPSDefender(serial_port);
-    goto start;
-  }
-  else if (key == 'Z' || key == 'z')
-  {
-    // printf("Received messag");
-    system("clear");
-    display_logo1();
-    ////printf("Received message: %s\n", data);
-    display_table(serial_port);
-
-    char key;
+    char key = 0;
     char enter = '\r';
-    // printf("\r\n");
-    // clear_screen();
+    printf("\r\n *************************************************************************************************************************************************************************************************************");
+    printf("\r\n");
+    printf("\r\n ============================================================================================================================================================================================================+");
+    printf("\r\n ==> Mode 2 is selected                                                                                                                                                                                      |");
+    printf("\r\n");
+    printf(" ===============+===========+================================================================================================================================================================================+\r\n");
+    printf("    DISPLAY     |           |                                                                                                                                                                                |\r\n");
+    printf("\t\t| Key Enter | Please choose 1 option below:                                                                                                                                                  |\r\n");
+    printf("\t\t+-----------+--------------------------------------------------------------------------------------------------------------------------------------------------------------------------------+\r\n");
+    printf("\t\t|     1.    | Setting Anti by Port mode(*).                                                                                                                                                  |\r\n");
+    printf("\t\t|           | 	->(Info: When Port protection mode(*) is enabled, IP protected mode (**) is disabled and vice versa).                                                                        |\r\n");
+    printf("\t\t+-----------+--------------------------------------------------------------------------------------------------------------------------------------------------------------------------------+\r\n");
+    printf("\t\t|     2.    | Setting IPv4 Server to protect(**).                                                                                                                                            |\r\n");
+    printf("\t\t+-----------+--------------------------------------------------------------------------------------------------------------------------------------------------------------------------------+\r\n");
+    printf("\t\t|     3.    | Setting IPv6 Server to protect(**).                                                                                                                                            |\r\n");
+    printf("\t\t+-----------+--------------------------------------------------------------------------------------------------------------------------------------------------------------------------------+\r\n");
+    printf("\t\t|     4.    | Setting IPv4 server Block(**).                                                                                                                                            |\r\n");
+    printf("\t\t+-----------+--------------------------------------------------------------------------------------------------------------------------------------------------------------------------------+\r\n");
+    printf("\t\t|     5.    | Setting IPv6 server Block(**).                                                                                                                                         |\r\n");
+    printf("\t\t+-----------+--------------------------------------------------------------------------------------------------------------------------------------------------------------------------------+\r\n");
+    printf("\t\t|     6.    | Setting Anti-SYN flood.                                                                                                                                                        |\r\n");
+    printf("\t\t|     7.    | Setting SYN flood attack detection threshold.                                                                                                                                  |\r\n");
+    printf("\t\t|           | 	->(Info: The default value is: 1000 PPS).                                                                                                                                    |\r\n");
+    printf("\t\t+-----------+--------------------------------------------------------------------------------------------------------------------------------------------------------------------------------+\r\n");
+    printf("\t\t|     8.    | Setting ACK flood attack detection threshold.                                                                                                                                  |\r\n");
+    printf("\t\t|           | 	->(Info: The default value is: 1000 PPS).                                                                                                                                    |\r\n");
+    printf("\t\t+-----------+--------------------------------------------------------------------------------------------------------------------------------------------------------------------------------+\r\n");
+    printf("\t\t|     9.    | Setting the time to automatically delete the connection session information in the white list.                                                                                 |\r\n");
+    printf("\t\t|           | 	->(Info: The default value is: 30 second).                                                                                                                                   |\r\n");
+    printf("\t\t+-----------+--------------------------------------------------------------------------------------------------------------------------------------------------------------------------------+\r\n");
+    printf("\t\t|     A.    | Setting Anti-LAND Attack.                                                                                                                                                      |\r\n");
+    printf("\t\t+-----------+--------------------------------------------------------------------------------------------------------------------------------------------------------------------------------+\r\n");
+    printf("\t\t|     B.    | Setting Anti-UDP flood.                                                                                                                                                        |\r\n");
+    printf("\t\t|     C.    | Setting UDP flood attack detection threshold.                                                                                                                                  |\r\n");
+    printf("\t\t|           | 	->(Info: The default value is: 1000 PPS).                                                                                                                                    |\r\n");
+    printf("\t\t|     D.    | Setting threshold of valid UDP packer per second allowed.                                                                                                                      |\r\n");
+    printf("\t\t|           | 	->(Info: The default value is: 1000 PPS).                                                                                                                                    |\r\n");
+    printf("\t\t+-----------+--------------------------------------------------------------------------------------------------------------------------------------------------------------------------------+\r\n");
+    printf("\t\t|     E.    | Setting Anti-DNS Amplification attack.                                                                                                                                         |\r\n");
+    printf("\t\t|     F.    | Setting DNS Amplification attack detection threshold.                                                                                                                          |\r\n");
+    printf("\t\t|           | 	->(Info: The default value is: 1000 PPS).                                                                                                                                    |\r\n");
+    printf("\t\t+-----------+--------------------------------------------------------------------------------------------------------------------------------------------------------------------------------+\r\n");
+    printf("\t\t|     G.    | Setting Anti-ICMP flood.                                                                                                                                                       |\r\n");
+    printf("\t\t|     H.    | Setting ICMP flood attack detection threshold.                                                                                                                                 |\r\n");
+    printf("\t\t|           | 	->(Info: The default value is: 1000 PPS).                                                                                                                                    |\r\n");
+    printf("\t\t|     I.    | Setting threshold of valid ICMP packer per second allowed.                                                                                                                     |\r\n");
+    printf("\t\t|           | 	->(Info: The default value is: 1000 PPS).                                                                                                                                    |\r\n");
+    printf("\t\t+-----------+--------------------------------------------------------------------------------------------------------------------------------------------------------------------------------+\r\n");
+    printf("\t\t|     J.    | Setting Anti-IPSec IKE flood.                                                                                                                                                  |\r\n");
+    printf("\t\t|     K.    | Setting IPSEC IKE flood attack detection threshold.                                                                                                                            |\r\n");
+    printf("\t\t|           | 	->(Info: The default value is: 1000 PPS).                                                                                                                                    |\r\n");
+    printf("\t\t+-----------+--------------------------------------------------------------------------------------------------------------------------------------------------------------------------------+\r\n");
+    printf("\t\t+-----------+--------------------------------------------------------------------------------------------------------------------------------------------------------------------------------+\r\n");
+    printf("\t\t|     L.    | Setting Anti-TCP fragmentation flood.                                                                                                                                          |\r\n");
+    printf("\t\t+-----------+--------------------------------------------------------------------------------------------------------------------------------------------------------------------------------+\r\n");
+    printf("\t\t|     M.    | Setting Anti-UDP fragmentation flood.                                                                                                                                          |\r\n");
+    printf("\t\t+-----------+--------------------------------------------------------------------------------------------------------------------------------------------------------------------------------+\r\n");
+    printf("\t\t|     N.    | Setting HTTP GET flood.                                                                                                                                                        |\r\n");
+    printf("\t\t|     O.    | Setting HTTP/HTTPs IP Table.                                                                                                                                                   |\r\n");
+    printf("\t\t+-----------+--------------------------------------------------------------------------------------------------------------------------------------------------------------------------------+\r\n");
+    printf("\t\t|     Q.    | Setting HTTPS GET flood.                                                                                                                                                       |\r\n");
+    printf("\t\t+-----------+--------------------------------------------------------------------------------------------------------------------------------------------------------------------------------+\r\n");
+    printf("\t\t|     Z.    | => Exit.                                                                                                                                                                       |\r\n");
+    printf("----------------+-----------+--------------------------------------------------------------------------------------------------------------------------------------------------------------------------------+\r\n");
+    printf("    SETTING    | --> Your choice: ");
 
-    // DisplayTable();
-    printf("\r\n================+============================================================================================================================================================================================+\n");
-    printf("\r\n    SETTING     | Do you want to save your setting changes? (Y/N) ?: ");
+    // Updated valid keys (removed '1', '5', 'L', 'M', 'S', 'T')
     while (1)
     {
-      scanf("%c", &key);
-      if (key == 'y' || key == 'Y' || key == 'n' || key == 'N')
-      {
-        break;
-      }
-      if (key != 'y' || key != 'Y' || key != 'n' || key != 'N')
-      {
-        printf("\r    SETTING     | Do you want to save your setting changes? (Y/N) : ");
-      }
+        scanf("%c", &key);
+        if (key == '1' || key == '2' || key == '3' ||
+            key == '4' || key == '5' || key == '6' || key == '7' ||
+            key == '8' || key == '9' || key == 'A' || key == 'a' ||
+            key == 'B' || key == 'b' || key == 'C' || key == 'c' ||
+            key == 'D' || key == 'd' || key == 'E' || key == 'e' ||
+            key == 'F' || key == 'f' || key == 'G' || key == 'g' ||
+            key == 'H' || key == 'h' || key == 'I' || key == 'i' ||
+            key == 'J' || key == 'j' || key == 'K' || key == 'k' ||
+            key == 'L' || key == 'l' || key == 'M' || key == 'm' ||
+            key == 'N' || key == 'n' || key == 'O' || key == 'o' ||
+            key == 'Z' || key == 'z' || key == 'Q' || key == 'q' || key == 'X' || key == 'x')
+
+        {
+            break;
+        }
+        // Also update the invalid key check accordingly.
+        if (key != '1' && key != '2' && key != '3' &&
+            key != '4' && key != '5' && key != '6' && key != '7' &&
+            key != '8' && key != '9' && key != 'A' && key != 'a' &&
+            key != 'B' && key != 'b' && key != 'C' && key != 'c' &&
+            key != 'D' && key != 'd' && key != 'E' && key != 'e' &&
+            key != 'F' && key != 'f' && key != 'G' && key != 'g' &&
+            key != 'H' && key != 'h' && key != 'I' && key != 'i' &&
+            key != 'J' && key != 'j' && key != 'K' && key != 'k' &&
+            key != 'L' && key != 'l' && key != 'M' && key != 'm' &&
+            key != 'N' && key != 'n' && key != 'O' && key != 'o' &&
+            key != 'Z' && key != 'z' && key != 'Q' && key != 'q' && key != 'X' && key != 'x')
+        {
+            printf("\r     SETTING    | --> Your choice: ");
+        }
     }
-    if (key == 'y' || key == 'Y')
+
+    usleep(500000);
+    /* Removed branch for key '1'
+    if (key == '1')
     {
-      system("clear");
-      display_logo1();
-      // sleep(2);
-      // user_mode(serial_port);
-      //  options_mode1(serial_port);
+    system("clear");
+    display_logo1();
+    display_table(serial_port);
+    SetDateTime(serial_port);
+    goto start;
     }
-    else if (key == 'n' || key == 'N')
+    */
+    if (key == '1')
     {
-      system("clear");
-      display_logo1();
-      // sleep(1);
-      // user_mode(serial_port);
-      // options_mode1(serial_port);
+        system("clear");
+        display_logo1();
+        Display_table_2(current_port);
+        SetDefenderPort(serial_port);
+        goto start;
     }
-  }
+    else if (key == '2')
+    {
+        system("clear");
+        display_logo1();
+        Display_IPv4_Protected_Table();
+        SetIPv4Target(serial_port);
+        goto start;
+    }
+
+    else if (key == '3')
+    {
+        system("clear");
+        display_logo1();
+        // display_table(serial_port);
+        // Display_table_2(current_port);
+        Display_IPv6_Protected_Table();
+        SetIPv6Target(serial_port);
+        goto start;
+    }
+    else if (key == '4')
+    {
+        system("clear");
+        display_logo1();
+        Display_IPv4_block_table();
+        SetIPv4Block(serial_port);
+        goto start;
+    }
+    else if (key == '5')
+    {
+        system("clear");
+        display_logo1();
+        Display_IPv6_block_table();
+        SetIPv6Block(serial_port);
+        goto start;
+    }
+    else if (key == '6')
+    {
+        system("clear");
+        display_logo1();
+        // display_table(serial_port);
+        Display_table_2(current_port);
+        SetSynDefender(serial_port);
+        goto start;
+    }
+    else if (key == '7')
+    {
+        system("clear");
+        display_logo1();
+        // display_table(serial_port);
+        Display_table_2(current_port);
+        SetSynThresh(serial_port);
+        goto start;
+    }
+    else if (key == '8')
+    {
+        system("clear");
+        display_logo1();
+        // display_table(serial_port);
+        Display_table_2(current_port);
+        SetAckThresh(serial_port);
+        goto start;
+    }
+    else if (key == '9')
+    {
+        system("clear");
+        display_logo1();
+        // display_table(serial_port);
+        Display_table_2(current_port);
+        SetTimeDelete(serial_port);
+        goto start;
+    }
+    else if (key == 'A' || key == 'a')
+    {
+        system("clear");
+        display_logo1();
+        // display_table(serial_port);
+        Display_table_2(current_port);
+        SetSynonymousDefender(serial_port);
+        goto start;
+    }
+    else if (key == 'B' || key == 'b')
+    {
+        system("clear");
+        display_logo1();
+        // display_table(serial_port);
+        Display_table_2(current_port);
+        SetUDPDefender(serial_port);
+        goto start;
+    }
+    else if (key == 'C' || key == 'c')
+    {
+        system("clear");
+        display_logo1();
+        // display_table(serial_port);
+        Display_table_2(current_port);
+        SetUDPThresh(serial_port);
+        goto start;
+    }
+    else if (key == 'D' || key == 'd')
+    {
+        system("clear");
+        display_logo1();
+        // display_table(serial_port);n
+        Display_table_2(current_port);
+        SetUDPThresh1s(serial_port);
+        goto start;
+    }
+    else if (key == 'E' || key == 'e')
+    {
+        system("clear");
+        display_logo1();
+        // display_table(serial_port);
+        Display_table_2(current_port);
+        SetDNSDefender(serial_port);
+        goto start;
+    }
+    else if (key == 'F' || key == 'f')
+    {
+        system("clear");
+        display_logo1();
+        // display_table(serial_port);
+        Display_table_2(current_port);
+        SetDNSThresh(serial_port);
+        goto start;
+    }
+    else if (key == 'G' || key == 'g')
+    {
+        system("clear");
+        display_logo1();
+        // display_table(serial_port);
+        Display_table_2(current_port);
+        SetICMPDefender(serial_port);
+        goto start;
+    }
+    else if (key == 'H' || key == 'h')
+    {
+        system("clear");
+        display_logo1();
+        // display_table(serial_port);
+        Display_table_2(current_port);
+        SetICMPThresh(serial_port);
+        goto start;
+    }
+    else if (key == 'I' || key == 'i')
+    {
+        system("clear");
+        display_logo1();
+        // display_table(serial_port);
+        Display_table_2(current_port);
+        SetICMPThresh1s(serial_port);
+        goto start;
+    }
+    else if (key == 'J' || key == 'j')
+    {
+        system("clear");
+        display_logo1();
+        // display_table(serial_port);
+        Display_table_2(current_port);
+        SetIPSecDefender(serial_port);
+        goto start;
+    }
+    else if (key == 'K' || key == 'k')
+    {
+        system("clear");
+        display_logo1();
+        // display_table(serial_port);
+        Display_table_2(current_port);
+        SetIPSecThresh(serial_port);
+        goto start;
+    }
+    else if (key == 'L' || key == 'l')
+    {
+        system("clear");
+        display_logo1();
+        // display_table(serial_port);
+        Display_table_2(current_port);
+        SetTCPFragDefender(serial_port);
+        goto start;
+    }
+    else if (key == 'M' || key == 'm')
+    {
+        system("clear");
+        display_logo1();
+        // display_table(serial_port);
+        Display_table_2(current_port);
+        SetUDPFragDefender(serial_port);
+        goto start;
+    }
+    else if (key == 'N' || key == 'n')
+    {
+        system("clear");
+        display_logo1();
+        // display_table(serial_port);
+        Display_table_2(current_port);
+        SetHTTPDefender(serial_port);
+        goto start;
+    }
+    else if (key == 'O' || key == 'o')
+    {
+        system("clear");
+        display_logo1();
+        // display_table(serial_port);
+        // Display_table_2(current_port);
+        set_HTTP_IP_Table(serial_port);
+        goto start;
+    }
+    else if (key == 'Q' || key == 'q')
+    {
+        system("clear");
+        display_logo1();
+        // display_table(serial_port);
+        Display_table_2(current_port);
+        SetHTTPSDefender(serial_port);
+        goto start;
+    }
+    else if (key == 'Z' || key == 'z')
+    {
+        system("clear");
+        display_logo1();
+        new_menu(serial_port);
+    }
+
+    else
+    {
+        system("clear");
+        display_logo1();
+        // new_menu(serial_port);
+        reconfig(serial_port);
+    }
 }
 
 void SetDateTime(int serial_port)
 {
-  char key_mode = '1';
-  display_table(serial_port);
-  write(serial_port, &key_mode, sizeof(key_mode));
-  usleep(100000);
-  write(serial_port, &key_enter, sizeof(key_enter));
-  usleep(100000);
-  printf("\r\n\t\t");
-  printf("\r\n\t\t");
-  printf("\r\n================+============================================================================================================================================================================================+\n");
-  printf("\r\n   Time - Date  |               Setting Time-Date for System Anti-DDoS                                                                                                                                       |");
-  printf("\r\n\t\t+============================================================================================================================================================================================+");
-  printf("\r\n\t\t| Enter the time in the format (YYYY-MM-DD HH:MM:SS) ");
-  send_user_time(serial_port);
-  ReturnMode2(serial_port);
+    char key_mode = '1';
+    display_table(serial_port);
+    write(serial_port, &key_mode, sizeof(key_mode));
+    usleep(100000);
+    write(serial_port, &key_enter, sizeof(key_enter));
+    usleep(100000);
+    printf("\r\n\t\t");
+    printf("\r\n\t\t");
+    printf("\r\n================+============================================================================================================================================================================================+\n");
+    printf("\r\n   Time - Date  |               Setting Time-Date for System Anti-DDoS                                                                                                                                       |");
+    printf("\r\n\t\t+============================================================================================================================================================================================+");
+    printf("\r\n\t\t| Enter the time in the format (YYYY-MM-DD HH:MM:SS) ");
+    send_user_time(serial_port);
+    ReturnMode2(serial_port);
 }
 void SaveEEPROM(int serial_port)
 {
 
-  char key;
-  char enter = '\r';
-  printf("\r\n");
-  printf("\r\n================+============================================================================================================================================================================================+\n");
-  printf("\r\n SETTING     | Do you want to finish configuring now (Y/N)?: ");
-  while (1)
-  {
-    scanf("%c", &key);
-    if (key == 'y' || key == 'Y' || key == 'n' || key == 'N')
+    char key;
+    char enter = '\r';
+    printf("\r\n");
+    printf("\r\n================+============================================================================================================================================================================================+\n");
+    printf("\r\n SETTING     | Do you want to finish configuring now (Y/N)?: ");
+    while (1)
     {
-      write(serial_port, &key, sizeof(key));
-      usleep(100000);
-      write(serial_port, &enter, sizeof(enter));
-      usleep(1000000);
-      break;
+        scanf("%c", &key);
+        if (key == 'y' || key == 'Y' || key == 'n' || key == 'N')
+        {
+            write(serial_port, &key, sizeof(key));
+            usleep(100000);
+            write(serial_port, &enter, sizeof(enter));
+            usleep(1000000);
+            break;
+        }
+        if (key != 'y' || key != 'Y' || key != 'n' || key != 'N')
+        {
+            printf("\r   SETTING     | Do you want to finish configuring now (Y/N)?: ");
+        }
     }
-    if (key != 'y' || key != 'Y' || key != 'n' || key != 'N')
+    char *data = receive_data(serial_port);
+    if (data == NULL)
     {
-      printf("\r   SETTING     | Do you want to finish configuring now (Y/N)?: ");
+        printf("Error receiving data\n");
+        return;
     }
-  }
-  char *data = receive_data(serial_port);
-  if (data == NULL)
-  {
-    printf("Error receiving data\n");
-    return;
-  }
-  // ////printf("Received message: %s\n", data);
-  if ((strchr(data, 'y') != NULL) || (strchr(data, 'Y') != NULL))
-  {
-    printf_uart1(serial_port);
-  }
-  else if ((strchr(data, 'n') != NULL) || (strchr(data, 'N') != NULL))
-  {
-    ModeStart(serial_port);
-  }
+    // ////printf("Received message: %s\n", data);
+    if ((strchr(data, 'y') != NULL) || (strchr(data, 'Y') != NULL))
+    {
+        printf_uart1(serial_port);
+    }
+    else if ((strchr(data, 'n') != NULL) || (strchr(data, 'N') != NULL))
+    {
+        ModeStart(serial_port);
+    }
 }
 
 void SetDefenderPort(int serial_port)
 {
-  char key_mode = '2';
-  write(serial_port, &key_mode, sizeof(key_mode));
-  usleep(100000);
-  write(serial_port, &key_enter, sizeof(key_enter));
-  usleep(100000);
-  // receive_and_print_uart( serial_port);
-  //		sleep(1);
-
-  char key;
-  char enter = '\r';
-  printf("\r\n");
-  printf("\r\n================+============================================================================================================================================================================================+\n");
-  printf("\r\n    SETTING       | Do you want to enable protect by interface port now (Y/N)? ");
-  while (1)
-  {
-    scanf("%c", &key);
-    if (key == 'y' || key == 'Y' || key == 'n' || key == 'N')
+    current_config_type = CONFIG_PORT_DEFENDER;
+    char key;
+    int enable_value = -1;
+    printf("\r\n");
+    printf("\r\n================+====================================================================================================================================+\n");
+    printf("\r\n    SETTING     | Do you want to enable protect by interface port %d now (Y/N)? ", current_port);
+    while (1)
     {
-      write(serial_port, &key, sizeof(key));
-      usleep(100000);
-      write(serial_port, &enter, sizeof(enter));
-      usleep(1000000);
-      break;
-    }
-    if (key != 'y' || key != 'Y' || key != 'n' || key != 'N')
-    {
-      printf("\r  SETTING       | Do you want to enable protect by interface port now (Y/N)?: ");
-    }
-  }
+        scanf(" %c", &key);
 
-  if (key == 'y' || key == 'Y' || key == 'n' || key == 'N')
-  {
-    ReturnMode2(serial_port);
-  }
+        if (key == 'y' || key == 'Y')
+        {
+            last_update_value = 1;
+            break;
+        }
+        else if (key == 'n' || key == 'N')
+        {
+            last_update_value = 0;
+            break;
+        }
+        else
+        {
+            printf("\r  SETTING       | Invalid input. Please enter Y or N: ");
+        }
+    }
+
+    ConfirmAndSaveConfig(serial_port);
 }
+
 void SetPortDefender(int serial_port)
 {
-  char key_mode = '3';
-  char key;
-  char key1 = '1';
-  char key0 = '0';
-  char enter = '\r';
-  write(serial_port, &key_mode, sizeof(key_mode));
-  usleep(100000);
-  write(serial_port, &key_enter, sizeof(key_enter));
-  usleep(100000);
-  printf("\r\n");
-  printf("\r\n================+============================================================================================================================================================================================+\n");
-  printf("\r   SETTING   | Enter port number for clinet side (Internet side) (1/2):  ");
-  while (1)
-  {
-    scanf("%c", &key);
-    if (key == '1')
+    char key_mode = '3';
+    char key;
+    char key1 = '1';
+    char key0 = '0';
+    char enter = '\r';
+    write(serial_port, &key_mode, sizeof(key_mode));
+    usleep(100000);
+    write(serial_port, &key_enter, sizeof(key_enter));
+    usleep(100000);
+    printf("\r\n");
+    printf("\r\n================+============================================================================================================================================================================================+\n");
+    printf("\r   SETTING   | Enter port number for client side (Internet side) for Port %d (1/2):  ", current_port);
+    while (1)
     {
-      write(serial_port, &key0, sizeof(key0));
-      usleep(100000);
-      write(serial_port, &enter, sizeof(enter));
-      usleep(1000000);
-      break;
+        scanf("%c", &key);
+        if (key == '1')
+        {
+            write(serial_port, &key0, sizeof(key0));
+            usleep(100000);
+            write(serial_port, &enter, sizeof(enter));
+            usleep(1000000);
+            break;
+        }
+        else if (key == '2')
+        {
+            write(serial_port, &key1, sizeof(key1));
+            usleep(100000);
+            write(serial_port, &enter, sizeof(enter));
+            usleep(1000000);
+            break;
+        }
+        if (key != '1' || key != '2')
+        {
+            printf("\r   SETTING   | Enter port number for client side (Internet side) for Port %d (1/2):  ", current_port);
+        }
     }
-    else if (key == '2')
-    {
-      write(serial_port, &key1, sizeof(key1));
-      usleep(100000);
-      write(serial_port, &enter, sizeof(enter));
-      usleep(1000000);
-      break;
-    }
-    if (key != '1' || key != '2')
-    {
-      printf("\r   SETTING   | Enter port number for clinet side (Internet side) (1/2):  ");
-    }
-  }
 
-  if (key == '1' || key == '2')
-  {
-    ReturnMode2(serial_port);
-  }
+    if (key == '1' || key == '2')
+    {
+        ReturnMode2(serial_port);
+    }
 }
 void SetTimeflood(int serial_port)
 {
-  char key_mode = '5';
-  write(serial_port, &key_mode, sizeof(key_mode));
-  usleep(100000);
-  write(serial_port, &key_enter, sizeof(key_enter));
-  printf("\r\n");
-  printf("\r\n================+============================================================================================================================================================================================+\n");
-  printf("\r\n    SETTING     | Enter attack detection time (s): ");
-  send_array(serial_port);
-  ReturnMode2(serial_port);
+    char key_mode = '5';
+    write(serial_port, &key_mode, sizeof(key_mode));
+    usleep(100000);
+    write(serial_port, &key_enter, sizeof(key_enter));
+    printf("\r\n");
+    printf("\r\n================+============================================================================================================================================================================================+\n");
+    printf("\r\n    SETTING     | Enter attack detection time (s): ");
+    send_array(serial_port);
+    ReturnMode2(serial_port);
 }
 
 void SetSynDefender(int serial_port)
 {
-  char key;
-  char enter = '\r';
-  char key_mode = '6';
-  write(serial_port, &key_mode, sizeof(key_mode));
-  usleep(100000);
-  write(serial_port, &key_enter, sizeof(key_enter));
-  printf("\r\n");
-  printf("\r\n================+============================================================================================================================================================================================+\n");
-  printf("\r\n    SETTING       | Do you want to enable SYN flood protect now (Y/N)?:  ");
-  while (1)
-  {
-    scanf("%c", &key);
-    if (key == 'y' || key == 'Y' || key == 'n' || key == 'N')
+    current_config_type = CONFIG_SYN_DEFENDER;
+    char key;
+    int enable_value = -1;
+    printf("\r\n");
+    printf("\r\n================+============================================================================================================================================================================================+\n");
+    printf("\r\n    SETTING       | Do you want to enable SYN flood protect for port %d now (Y/N)?:  ", current_port);
+    while (1)
     {
-      write(serial_port, &key, sizeof(key));
-      usleep(100000);
-      write(serial_port, &enter, sizeof(enter));
-      usleep(1000000);
-      break;
+        scanf(" %c", &key);
+        if (key == 'y' || key == 'Y')
+        {
+            enable_value = 1;
+            break;
+        }
+        else if (key == 'n' || key == 'N')
+        {
+            enable_value = 0;
+            break;
+        }
+        else
+        {
+            printf("\r  SETTING       | Please enter Y or N: ");
+        }
     }
-    if (key != 'y' || key != 'Y' || key != 'n' || key != 'N')
+    // Luu gi  tr? t?m d? g?i sau
+    last_update_value = enable_value;
+    strcpy(last_update_field, "SYNFloodEnable");
+    ConfirmAndSaveConfig(serial_port);
+}
+
+void send_Threshold_value(int serial_port, int value, const char *label,
+                          char *ID, char *Value, char *buffer)
+{
+    char enter = '\r';
+    char array[10];
+    snprintf(array, sizeof(array), "%d", value);
+    int n = strlen(array);
+    for (int i = 0; i < n; i++)
     {
-      printf("\r  SETTING       | Do you want to enable SYN flood protect now (Y/N)?:   ");
+        write(serial_port, &array[i], sizeof(char));
+        printf("%c", array[i]);
+        usleep(100000);
     }
-  }
-  ReturnMode2(serial_port);
+    write(serial_port, &enter, sizeof(enter));
+    usleep(1000000);
+    int t = 0;
+    while (1)
+    {
+        char *resp = receive_data(serial_port);
+        printf("\nReceived message: %s\n", resp);
+        if ((strchr(resp, 'Y') != NULL))
+        {
+            strcat(buffer, ID);
+            strcat(buffer, "$");
+            strcat(buffer, Value);
+            strcat(buffer, "$OK$");
+            // printf("\nSYN_EN_DIS done\n");
+            break;
+        }
+        else if ((strchr(resp, 'N') != NULL) || (t == 10))
+        {
+            strcat(buffer, ID);
+            strcat(buffer, "$");
+            strcat(buffer, Value);
+            strcat(buffer, "$ERROR$");
+            // printf("\nSYN_EN_DIS error\n");
+            break;
+        }
+        t++;
+        usleep(500000);
+    }
+    // char *resp = receive_data(serial_port);
+    // printf("\nDEBUG: resp = %s\n", resp);
+    // if (resp && (strchr(resp, 'Y') || strstr(resp, "OK")))
+    //     printf("%s Threshold OK\n", label);
+    // else
+    //     printf("%s Threshold ERROR\n", label);
+}
+
+void Send_enable_value(int serial_port, int enable, const char *label, char *ID, char *Value, char *buffer)
+{
+    char yn_char = (enable == 1) ? 'Y' : 'N';
+    char enter = '\r';
+    int t = 0;
+
+    write(serial_port, &yn_char, sizeof(yn_char));
+    usleep(1000000);
+    write(serial_port, &enter, sizeof(enter));
+    usleep(1000000);
+    // char *resp = receive_data(serial_port);
+    // printf("\nReceived message: %s\n", resp);
+
+    while (1)
+    {
+        char *resp = receive_data(serial_port);
+        printf("\nReceived message: %s\n", resp);
+        if ((strchr(resp, 'Y') != NULL))
+        {
+            strcat(buffer, ID);
+            strcat(buffer, "$");
+            strcat(buffer, Value);
+            strcat(buffer, "$OK$");
+            // printf("\nSYN_EN_DIS done\n");
+            break;
+        }
+        else if ((strchr(resp, 'N') != NULL) || (t == 10))
+        {
+            strcat(buffer, ID);
+            strcat(buffer, "$");
+            strcat(buffer, Value);
+            strcat(buffer, "$ERROR$");
+            // printf("\nSYN_EN_DIS error\n");
+            break;
+        }
+        t++;
+        usleep(2000000); // chờ 0.2s trước lần đọc tiếp
+    }
+}
+
+void ConfirmAndSaveConfig(int serial_port)
+{
+    // system("clear");
+    // display_logo1();
+    char key;
+    char enter = '\r';
+    printf("\r\n================+============================================================================================================================================================================================+\n");
+    printf("\r\n    SETTING     | Do you want to save this configuration? (Y/N): ");
+    while (1)
+    {
+        char buffer[256] = "";
+        char ID[32] = "";
+        char Value[64] = "";
+        scanf(" %c", &key);
+
+        if (key == 'y' || key == 'Y')
+        {
+            char port_char = '1' + (current_port - 1);
+            char *resp;
+            // SYN Threshold
+            if (current_config_type == CONFIG_SYN_THRESHOLD)
+            {
+                char key_mode = '7';
+                write(serial_port, &key_mode, sizeof(key_mode));
+                usleep(100000);
+                write(serial_port, &enter, sizeof(enter));
+                usleep(100000);
+                write(serial_port, &port_char, sizeof(port_char));
+                usleep(100000);
+                send_Threshold_value(serial_port, last_update_value, "SYN", ID, Value, buffer);
+                usleep(500000);
+            }
+            // ACK Threshold
+            else if (current_config_type == CONFIG_ACK_THRESHOLD)
+            {
+                char key_mode = '8';
+                write(serial_port, &key_mode, sizeof(key_mode));
+                usleep(100000);
+                write(serial_port, &enter, sizeof(enter));
+                usleep(100000);
+                write(serial_port, &port_char, sizeof(port_char));
+                usleep(100000);
+                send_Threshold_value(serial_port, last_update_value, "ACK", ID, Value, buffer);
+                usleep(500000);
+            }
+            // UDP Threshold
+            else if (current_config_type == CONFIG_UDP_THRESHOLD)
+            {
+                char key_mode = 'C';
+                write(serial_port, &key_mode, sizeof(key_mode));
+                usleep(100000);
+                write(serial_port, &enter, sizeof(enter));
+                usleep(100000);
+                write(serial_port, &port_char, sizeof(port_char));
+                usleep(100000);
+                send_Threshold_value(serial_port, last_update_value, "UDP", ID, Value, buffer);
+                usleep(500000);
+            }
+            // UDP 1S Threshold
+            else if (current_config_type == CONFIG_UDP_1S_THRESHOLD)
+            {
+                char key_mode = 'D';
+                write(serial_port, &key_mode, sizeof(key_mode));
+                usleep(100000);
+                write(serial_port, &enter, sizeof(enter));
+                usleep(100000);
+                write(serial_port, &port_char, sizeof(port_char));
+                usleep(100000);
+                send_Threshold_value(serial_port, last_update_value, "UDP1S", ID, Value, buffer);
+                usleep(500000);
+            }
+            // DNS Threshold
+            else if (current_config_type == CONFIG_DNS_THRESHOLD)
+            {
+                char key_mode = 'F';
+                write(serial_port, &key_mode, sizeof(key_mode));
+                usleep(100000);
+                write(serial_port, &enter, sizeof(enter));
+                usleep(100000);
+                write(serial_port, &port_char, sizeof(port_char));
+                usleep(100000);
+                send_Threshold_value(serial_port, last_update_value, "DNS", ID, Value, buffer);
+                usleep(100000);
+            }
+            // ICMP Threshold
+            else if (current_config_type == CONFIG_ICMP_THRESHOLD)
+            {
+                char key_mode = 'H';
+                write(serial_port, &key_mode, sizeof(key_mode));
+                usleep(100000);
+                write(serial_port, &enter, sizeof(enter));
+                usleep(100000);
+                write(serial_port, &port_char, sizeof(port_char));
+                usleep(100000);
+                send_Threshold_value(serial_port, last_update_value, "ICMP", ID, Value, buffer);
+                usleep(100000);
+            }
+            // ICMP1S Threshold
+            else if (current_config_type == CONFIG_ICMP_1S_THRESHOLD)
+            {
+                char key_mode = 'I';
+                write(serial_port, &key_mode, sizeof(key_mode));
+                usleep(100000);
+                write(serial_port, &enter, sizeof(enter));
+                usleep(100000);
+                write(serial_port, &port_char, sizeof(port_char));
+                usleep(100000);
+                send_Threshold_value(serial_port, last_update_value, "ICMP1S", ID, Value, buffer);
+                usleep(100000);
+            }
+            // IPSEC_IKE Threshold
+            else if (current_config_type == CONFIG_IPSEC_IKE_THRESHOLD)
+            {
+                char key_mode = 'K';
+                write(serial_port, &key_mode, sizeof(key_mode));
+                usleep(100000);
+                write(serial_port, &enter, sizeof(enter));
+                usleep(100000);
+                write(serial_port, &port_char, sizeof(port_char));
+                usleep(100000);
+                send_Threshold_value(serial_port, last_update_value, "IPSEC_IKE", ID, Value, buffer);
+                usleep(100000);
+            }
+            /////////////////////////////////////////////////////////////////////////////////EN/DIS//////////////////////////////////////////////////////////////
+            // SYN DEFENDER
+            else if (current_config_type == CONFIG_SYN_DEFENDER)
+            {
+                char key_mode = '6';
+                write(serial_port, &key_mode, sizeof(key_mode));
+                usleep(100000);
+                write(serial_port, &enter, sizeof(enter));
+                usleep(100000);
+                write(serial_port, &port_char, sizeof(port_char));
+                usleep(100000);
+                Send_enable_value(serial_port, last_update_value, "SYN Attack Protect", ID, Value, buffer);
+                usleep(100000);
+            }
+            // LAND DEFENDER
+            else if (current_config_type == CONFIG_LAND_DEFENDER)
+            {
+                char key_mode = 'A';
+                write(serial_port, &key_mode, sizeof(key_mode));
+                usleep(100000);
+                write(serial_port, &enter, sizeof(enter));
+                usleep(100000);
+                write(serial_port, &port_char, sizeof(port_char));
+                usleep(100000);
+                Send_enable_value(serial_port, last_update_value, "LAND Defender Protect", ID, Value, buffer);
+                usleep(100000);
+            }
+            // UDP DEFENDER
+            else if (current_config_type == CONFIG_UDP_DEFENDER)
+            {
+                char key_mode = 'B';
+                write(serial_port, &key_mode, sizeof(key_mode));
+                usleep(100000);
+                write(serial_port, &enter, sizeof(enter));
+                usleep(100000);
+                write(serial_port, &port_char, sizeof(port_char));
+                usleep(100000);
+
+                Send_enable_value(serial_port, last_update_value, "UDP Defender Protect", ID, Value, buffer);
+                usleep(100000);
+            }
+            // DNS DEFENDER
+            else if (current_config_type == CONFIG_DNS_DEFENDER)
+            {
+                char key_mode = 'E';
+                write(serial_port, &key_mode, sizeof(key_mode));
+                usleep(100000);
+                write(serial_port, &enter, sizeof(enter));
+                usleep(100000);
+                write(serial_port, &port_char, sizeof(port_char));
+                usleep(100000);
+
+                Send_enable_value(serial_port, last_update_value, "DNS Defender Protect", ID, Value, buffer);
+                usleep(100000);
+            }
+            // ICMP DEFENDER
+            else if (current_config_type == CONFIG_ICMP_DEFENDER)
+            {
+                char key_mode = 'G';
+                write(serial_port, &key_mode, sizeof(key_mode));
+                usleep(100000);
+                write(serial_port, &enter, sizeof(enter));
+                usleep(100000);
+                write(serial_port, &port_char, sizeof(port_char));
+                usleep(100000);
+                Send_enable_value(serial_port, last_update_value, "ICMP Defender Protect", ID, Value, buffer);
+                usleep(100000);
+            }
+            // IPSEC IKE DEFENDER
+            else if (current_config_type == CONFIG_IPSEC_IKE_DEFENDER)
+            {
+                char key_mode = 'J';
+                write(serial_port, &key_mode, sizeof(key_mode));
+                usleep(100000);
+                write(serial_port, &enter, sizeof(enter));
+                usleep(100000);
+                write(serial_port, &port_char, sizeof(port_char));
+                usleep(100000);
+
+                Send_enable_value(serial_port, last_update_value, "IPSEC IKE Defender Protect", ID, Value, buffer);
+                usleep(100000);
+            }
+            // TCP FRAGMENT DEFENDER
+            else if (current_config_type == CONFIG_TCP_FRAG_DEFENDER)
+            {
+                char key_mode = 'N';
+                write(serial_port, &key_mode, sizeof(key_mode));
+                usleep(100000);
+                write(serial_port, &enter, sizeof(enter));
+                usleep(100000);
+                write(serial_port, &port_char, sizeof(port_char));
+                usleep(100000);
+                Send_enable_value(serial_port, last_update_value, "TCP Frag Defender Protect", ID, Value, buffer);
+                usleep(100000);
+            }
+            // UDP FRAGMENT DEFENDER
+            else if (current_config_type == CONFIG_UDP_FRAG_DEFENDER)
+            {
+                char key_mode = 'O';
+                write(serial_port, &key_mode, sizeof(key_mode));
+                usleep(100000);
+                write(serial_port, &enter, sizeof(enter));
+                usleep(100000);
+                write(serial_port, &port_char, sizeof(port_char));
+                usleep(100000);
+                Send_enable_value(serial_port, last_update_value, "UDP Frag Defender Protect", ID, Value, buffer);
+                usleep(100000);
+            }
+            // HTTP DEFENDER
+            else if (current_config_type == CONFIG_HTTP_DEFENDER)
+            {
+                char key_mode = 'P';
+                write(serial_port, &key_mode, sizeof(key_mode));
+                usleep(100000);
+                write(serial_port, &enter, sizeof(enter));
+                usleep(100000);
+                write(serial_port, &port_char, sizeof(port_char));
+                usleep(100000);
+                Send_enable_value(serial_port, last_update_value, "HTTP Defender Protect", ID, Value, buffer);
+                usleep(100000);
+            }
+
+            // HTTPS DEFENDER
+            else if (current_config_type == CONFIG_HTTPS_DEFENDER)
+            {
+                char key_mode = 0xFF;
+                write(serial_port, &key_mode, sizeof(key_mode));
+                usleep(100000);
+                write(serial_port, &enter, sizeof(enter));
+                usleep(100000);
+                write(serial_port, &port_char, sizeof(port_char));
+                usleep(100000);
+                Send_enable_value(serial_port, last_update_value, "HTTPS Defender Protect", ID, Value, buffer);
+                usleep(100000);
+            }
+
+            ///////////////////////////////////////////////////////////////////////////////////OTHER//////////////////////////////////////////////////////////////////////////////
+
+            // TIME WHITE LIST
+            else if (current_config_type == SETTING_TIME_WHITE_LIST)
+            {
+                char key_mode = '9';
+                write(serial_port, &key_mode, sizeof(key_mode));
+                usleep(100000);
+                write(serial_port, &enter, sizeof(enter));
+                usleep(100000);
+
+                char array[10];
+                snprintf(array, sizeof(array), "%d", last_update_value);
+                int n = strlen(array);
+                for (int i = 0; i < n; i++)
+                {
+                    write(serial_port, &array[i], sizeof(char));
+                    printf("%c", array[i]);
+                    usleep(100000);
+                }
+                write(serial_port, &enter, sizeof(enter));
+                usleep(1000000);
+                // char *resp = receive_data(serial_port);
+                // if (resp && strchr(resp, 'Y'))
+                // {
+                //     printf("\n TIME_WHITE_LIST OK\n");
+                //     break;
+                // }
+                // else if (resp && strchr(resp, 'N'))
+                // {
+                //     printf("\n TIME_WHITE_LIST ERROR\n");
+                //     break;
+                // }
+                int t = 0;
+                while (1)
+                {
+                    char *resp = receive_data(serial_port);
+                    printf("\nReceived message: %s\n", resp);
+                    if ((strchr(resp, 'Y') != NULL))
+                    {
+                        strcat(buffer, ID);
+                        strcat(buffer, "$");
+                        strcat(buffer, Value);
+                        strcat(buffer, "$OK$");
+                        // printf("\nSYN_EN_DIS done\n");
+                        break;
+                    }
+                    else if ((strchr(resp, 'N') != NULL) || (t == 10))
+                    {
+                        strcat(buffer, ID);
+                        strcat(buffer, "$");
+                        strcat(buffer, Value);
+                        strcat(buffer, "$ERROR$");
+                        // printf("\nSYN_EN_DIS error\n");
+                        break;
+                    }
+                    t++;
+                }
+            }
+
+            // DEFENDER PORT
+            else if (current_config_type == CONFIG_PORT_DEFENDER)
+            {
+                char key_mode = 0x07;
+                printf("DEBUG: Sending key_mode: 0x%02X\n", key_mode);
+                write(serial_port, &key_mode, sizeof(key_mode));
+                usleep(1000000);
+                write(serial_port, &enter, sizeof(enter));
+                usleep(1000000);
+
+                char port_key;
+                switch (current_port)
+                {
+                case 1:
+                    port_key = 'A';
+                    break;
+                case 2:
+                    port_key = 'B';
+                    break;
+                case 3:
+                    port_key = 'C';
+                    break;
+                case 4:
+                    port_key = 'D';
+                    break;
+                case 5:
+                    port_key = 'E';
+                    break;
+                case 6:
+                    port_key = 'F';
+                    break;
+                case 7:
+                    port_key = 'G';
+                    break;
+                case 8:
+                    port_key = 0xFF;
+                    break;
+                default:
+                    port_key = 'A';
+                    break;
+                }
+                printf("DEBUG: Sending port_key: 0x%02X\n", port_key);
+                write(serial_port, &port_key, sizeof(port_key));
+                usleep(100000);
+                write(serial_port, &enter, sizeof(enter));
+                usleep(100000);
+
+                char mode_key = (last_update_value == 1) ? '1' : '0';
+                printf("DEBUG: Sending mode_key: %c\n", mode_key);
+                write(serial_port, &mode_key, sizeof(mode_key));
+                usleep(1000);
+                write(serial_port, &enter, sizeof(enter));
+                usleep(100000);
+
+                // resp = receive_data(serial_port);
+                // printf("\nDEBUG: resp = %s\n", resp);
+                // if (resp && (strchr(resp, 'Y') || strstr(resp, "OK")))
+                //     printf("Defender Port OK\n");
+                // else
+                //     printf("Defender Port ERROR\n");
+                // char *resp = receive_data(serial_port);
+                // printf("\nDEBUG: resp = %s\n", resp);
+                // if (resp && (strchr(resp, 'Y') || strstr(resp, "OK")))
+                //     printf("DEFENDER Port OK\n");
+                // else
+                //     printf("DEFENDER Port ERROR\n");
+                int t = 0;
+                while (1)
+                {
+                    char *resp = receive_data(serial_port);
+                    printf("\nReceived message: %s\n", resp);
+                    if ((strchr(resp, 'Y') != NULL))
+                    {
+                        strcat(buffer, ID);
+                        strcat(buffer, "$");
+                        strcat(buffer, Value);
+                        strcat(buffer, "$OK$");
+                        // printf("\nSYN_EN_DIS done\n");
+                        break;
+                    }
+                    else if ((strchr(resp, 'N') != NULL) || (t == 10))
+                    {
+                        strcat(buffer, ID);
+                        strcat(buffer, "$");
+                        strcat(buffer, Value);
+                        strcat(buffer, "$ERROR$");
+                        // printf("\nSYN_EN_DIS error\n");
+                        break;
+                    }
+                    t++;
+                }
+            }
+
+            // ADD IPv4 Protection
+            else if (current_config_type == CONFIG_IPV4_PROTECT)
+            {
+                char key_07 = 0x07;
+                char enter = '\r';
+                write(serial_port, &key_07, sizeof(key_07));
+                usleep(1000);
+                write(serial_port, &enter, sizeof(enter));
+                usleep(10000);
+
+                char port_key;
+                switch (current_port)
+                {
+                case 1:
+                    port_key = 'H';
+                    break;
+                case 2:
+                    port_key = 'I';
+                    break;
+                case 3:
+                    port_key = 'J';
+                    break;
+                case 4:
+                    port_key = 'K';
+                    break;
+                default:
+                    port_key = 'H';
+                    break;
+                }
+                write(serial_port, &port_key, sizeof(port_key));
+                usleep(100000);
+                write(serial_port, &enter, sizeof(enter));
+                usleep(100000);
+
+                // G?i t?ng k  t? IP t? bi?n to n c?c
+                int n = strlen(temp_ipv4_address);
+                for (int i = 0; i < n; i++)
+                {
+                    char data = temp_ipv4_address[i];
+                    send_data(serial_port, &data, sizeof(data));
+                    usleep(100000);
+                }
+                write(serial_port, &enter, sizeof(enter));
+                usleep(100000);
+                // char *resp = receive_data(serial_port);
+                // printf("\nDEBUG: resp = %s\n", resp);
+                // if (resp && (strchr(resp, 'Y') || strstr(resp, "OK")))
+                //     printf("ADD IPv4 Port OK\n");
+                // else
+                //     printf("ADD IPv4 Port ERROR\n");
+                int t = 0;
+                while (1)
+                {
+                    char *resp = receive_data(serial_port);
+                    printf("\nReceived message: %s\n", resp);
+                    if ((strchr(resp, 'Y') != NULL))
+                    {
+                        strcat(buffer, ID);
+                        strcat(buffer, "$");
+                        strcat(buffer, Value);
+                        strcat(buffer, "$OK$");
+                        // printf("\nSYN_EN_DIS done\n");
+                        break;
+                    }
+                    else if ((strchr(resp, 'N') != NULL) || (t == 10))
+                    {
+                        strcat(buffer, ID);
+                        strcat(buffer, "$");
+                        strcat(buffer, Value);
+                        strcat(buffer, "$ERROR$");
+                        // printf("\nSYN_EN_DIS error\n");
+                        break;
+                    }
+                    t++;
+                }
+            }
+            // REMOVE IPv4 Protection
+            else if (current_config_type == CONFIG_REMOVE_IPV4_PROTECT)
+            {
+                char key_07 = 0x07;
+                char enter = '\r';
+                write(serial_port, &key_07, sizeof(key_07));
+                usleep(1000);
+                write(serial_port, &enter, sizeof(enter));
+                usleep(10000);
+
+                char port_key;
+                switch (current_port)
+                {
+                case 1:
+                    port_key = 'O';
+                    break;
+                case 2:
+                    port_key = 'P';
+                    break;
+                case 3:
+                    port_key = 'Q';
+                    break;
+                case 4:
+                    port_key = 'R';
+                    break;
+                }
+                write(serial_port, &port_key, sizeof(port_key));
+                usleep(100000);
+                write(serial_port, &enter, sizeof(enter));
+                usleep(100000);
+
+                // G?i t?ng k  t? IP t? bi?n to n c?c
+                int n = strlen(temp_ipv4_address);
+                for (int i = 0; i < n; i++)
+                {
+                    char data = temp_ipv4_address[i];
+                    send_data(serial_port, &data, sizeof(data));
+                    usleep(100000);
+                }
+                write(serial_port, &enter, sizeof(enter));
+                usleep(100000);
+                // char *resp = receive_data(serial_port);
+                // printf("\nDEBUG: resp = %s\n", resp);
+                // if (resp && (strchr(resp, 'Y') || strstr(resp, "OK")))
+                //     printf("REMOVE IPv4 Port OK\n");
+                // else
+                //     printf("REMOVE IPv4 Port ERROR\n");
+                int t = 0;
+                while (1)
+                {
+                    char *resp = receive_data(serial_port);
+                    printf("\nReceived message: %s\n", resp);
+                    if ((strchr(resp, 'Y') != NULL))
+                    {
+                        strcat(buffer, ID);
+                        strcat(buffer, "$");
+                        strcat(buffer, Value);
+                        strcat(buffer, "$OK$");
+                        // printf("\nSYN_EN_DIS done\n");
+                        break;
+                    }
+                    else if ((strchr(resp, 'N') != NULL) || (t == 10))
+                    {
+                        strcat(buffer, ID);
+                        strcat(buffer, "$");
+                        strcat(buffer, Value);
+                        strcat(buffer, "$ERROR$");
+                        // printf("\nSYN_EN_DIS error\n");
+                        break;
+                    }
+                    t++;
+                }
+            }
+            // ADD IPv6 Protect
+            else if (current_config_type == CONFIG_IPV6_PROTECT)
+            {
+                char key_07 = 0x07;
+                char enter = '\r';
+                write(serial_port, &key_07, sizeof(key_07));
+                usleep(1000);
+                write(serial_port, &enter, sizeof(enter));
+                usleep(10000);
+
+                char port_key;
+                switch (current_port)
+                {
+                case 1:
+                    port_key = 'V';
+                    break;
+                case 2:
+                    port_key = 'W';
+                    break;
+                case 3:
+                    port_key = 'X';
+                    break;
+                case 4:
+                    port_key = 'Y';
+                    break;
+                }
+                write(serial_port, &port_key, sizeof(port_key));
+                usleep(100000);
+                write(serial_port, &enter, sizeof(enter));
+                usleep(100000);
+                // G?i IP t? bi?n to n c?c
+                int n = strlen(full_ipv6_address);
+                for (int i = 0; i < n; i++)
+                {
+                    char data = full_ipv6_address[i];
+                    send_data(serial_port, &data, sizeof(data));
+                    usleep(100000); // gi? l?i delay n?u c?n thi?t cho UART
+                }
+                write(serial_port, &enter, sizeof(enter));
+                usleep(100000);
+                // char *resp = receive_data(serial_port);
+                // printf("\nDEBUG: resp = %s\n", resp);
+                // if (resp && (strchr(resp, 'Y') || strstr(resp, "OK")))
+                //     printf("ADD IPv6 Port OK\n");
+                // else
+                //     printf("ADD IPv6 Port ERROR\n");
+                int t = 0;
+                while (1)
+                {
+                    char *resp = receive_data(serial_port);
+                    printf("\nReceived message: %s\n", resp);
+                    if ((strchr(resp, 'Y') != NULL))
+                    {
+                        strcat(buffer, ID);
+                        strcat(buffer, "$");
+                        strcat(buffer, Value);
+                        strcat(buffer, "$OK$");
+                        // printf("\nSYN_EN_DIS done\n");
+                        break;
+                    }
+                    else if ((strchr(resp, 'N') != NULL) || (t == 10))
+                    {
+                        strcat(buffer, ID);
+                        strcat(buffer, "$");
+                        strcat(buffer, Value);
+                        strcat(buffer, "$ERROR$");
+                        // printf("\nSYN_EN_DIS error\n");
+                        break;
+                    }
+                    t++;
+                }
+            }
+            // REMOVE IPv6 Protect
+            else if (current_config_type == CONFIG_REMOVE_IPV6_PROTECT)
+            {
+                char key_07 = 0x07;
+                char enter = '\r';
+                write(serial_port, &key_07, sizeof(key_07));
+                usleep(1000);
+                write(serial_port, &enter, sizeof(enter));
+                usleep(10000);
+
+                char port_key;
+                switch (current_port)
+                {
+                case 1:
+                    port_key = '-';
+                    break;
+                case 2:
+                    port_key = 0x02;
+                    break;
+                case 3:
+                    port_key = 0x0D;
+                    break;
+                case 4:
+                    port_key = 0x04;
+                    break;
+                default:
+                    printf("Invalid port!\n");
+                    return;
+                }
+                write(serial_port, &port_key, sizeof(port_key));
+                usleep(100000);
+                write(serial_port, &enter, sizeof(enter));
+                usleep(100000);
+                int n = strlen(temp_ipv6_address);
+                for (int i = 0; i < n; i++)
+                {
+                    char data = temp_ipv6_address[i];
+                    send_data(serial_port, &data, sizeof(data));
+                    usleep(100000);
+                }
+                write(serial_port, &enter, sizeof(enter));
+                usleep(100000);
+                // char *resp = receive_data(serial_port);
+                // printf("\nDEBUG: resp = %s\n", resp);
+                // if (resp && (strchr(resp, 'Y') || strstr(resp, "OK")))
+                //     printf("REMOVE IPV6 Port OK\n");
+                // else
+                //     printf("REMOVE IPV6 Port ERROR\n");
+                int t = 0;
+                while (1)
+                {
+                    char *resp = receive_data(serial_port);
+                    printf("\nReceived message: %s\n", resp);
+                    if ((strchr(resp, 'Y') != NULL))
+                    {
+                        strcat(buffer, ID);
+                        strcat(buffer, "$");
+                        strcat(buffer, Value);
+                        strcat(buffer, "$OK$");
+                        // printf("\nSYN_EN_DIS done\n");
+                        break;
+                    }
+                    else if ((strchr(resp, 'N') != NULL) || (t == 10))
+                    {
+                        strcat(buffer, ID);
+                        strcat(buffer, "$");
+                        strcat(buffer, Value);
+                        strcat(buffer, "$ERROR$");
+                        // printf("\nSYN_EN_DIS error\n");
+                        break;
+                    }
+                    t++;
+                }
+            }
+            // ADD IPv4 BLOCK
+            else if (current_config_type == CONFIG_IPV4_BLOCK)
+            {
+                char key_09 = 0x09;
+                char enter = '\r';
+                char key1 = '1';
+
+                write(serial_port, &key_09, sizeof(key_09));
+                usleep(10000);
+                write(serial_port, &enter, sizeof(enter));
+                usleep(10000);
+                write(serial_port, &key1, sizeof(key1));
+                usleep(100000);
+                char port_key;
+                switch (current_port)
+                {
+                case 1:
+                    port_key = '1';
+                    break;
+                case 2:
+                    port_key = '2';
+                    break;
+                case 3:
+                    port_key = '3';
+                    break;
+                case 4:
+                    port_key = '4';
+                    break;
+                default:
+                    printf("Invalid port!\n");
+                    return;
+                }
+                write(serial_port, &port_key, sizeof(port_key));
+                usleep(100000);
+                // write(serial_port, &enter, sizeof(enter));
+                // usleep(100000);
+
+                int n = strlen(temp_ipv4_address);
+                for (int i = 0; i < n; i++)
+                {
+                    char data = temp_ipv4_address[i];
+                    send_data(serial_port, &data, sizeof(data));
+                    usleep(100000);
+                }
+                write(serial_port, &enter, sizeof(enter));
+                usleep(100000);
+                // char *resp = receive_data(serial_port);
+                // printf("\nDEBUG: resp = %s\n", resp);
+                // if (resp && (strchr(resp, 'Y') || strstr(resp, "OK")))
+                //     printf("ADD IPv4 Port OK\n");
+                // else
+                //     printf("ADD IPv4 Port ERROR\n");
+                int t = 0;
+                while (1)
+                {
+                    char *resp = receive_data(serial_port);
+                    printf("\nReceived message: %s\n", resp);
+                    if ((strchr(resp, 'Y') != NULL))
+                    {
+                        strcat(buffer, ID);
+                        strcat(buffer, "$");
+                        strcat(buffer, Value);
+                        strcat(buffer, "$OK$");
+                        // printf("\nSYN_EN_DIS done\n");
+                        break;
+                    }
+                    else if ((strchr(resp, 'N') != NULL) || (t == 10))
+                    {
+                        strcat(buffer, ID);
+                        strcat(buffer, "$");
+                        strcat(buffer, Value);
+                        strcat(buffer, "$ERROR$");
+                        // printf("\nSYN_EN_DIS error\n");
+                        break;
+                    }
+                    t++;
+                }
+            }
+            // REMOVE IPv4 BLOCK
+            else if (current_config_type == CONFIG_REMOVE_IPV4_BLOCK)
+            {
+                char key_09 = 0x09;
+                char enter = '\r';
+                char key1 = '2';
+
+                write(serial_port, &key_09, sizeof(key_09));
+                usleep(10000);
+                write(serial_port, &enter, sizeof(enter));
+                usleep(10000);
+                write(serial_port, &key1, sizeof(key1));
+                usleep(100000);
+                char port_key;
+                switch (current_port)
+                {
+                case 1:
+                    port_key = '1';
+                    break;
+                case 2:
+                    port_key = '2';
+                    break;
+                case 3:
+                    port_key = '3';
+                    break;
+                case 4:
+                    port_key = '4';
+                    break;
+                default:
+                    printf("Invalid port!\n");
+                    return;
+                }
+                write(serial_port, &port_key, sizeof(port_key));
+                usleep(100000);
+                // write(serial_port, &enter, sizeof(enter));
+                // usleep(100000);
+
+                int n = strlen(temp_ipv4_address);
+                for (int i = 0; i < n; i++)
+                {
+                    char data = temp_ipv4_address[i];
+                    send_data(serial_port, &data, sizeof(data));
+                    usleep(100000);
+                }
+                write(serial_port, &enter, sizeof(enter));
+                usleep(100000);
+
+                int t = 0;
+                while (1)
+                {
+                    char *resp = receive_data(serial_port);
+                    printf("\nReceived message: %s\n", resp);
+                    if ((strchr(resp, 'Y') != NULL))
+                    {
+                        strcat(buffer, ID);
+                        strcat(buffer, "$");
+                        strcat(buffer, Value);
+                        strcat(buffer, "$OK$");
+                        // printf("\nSYN_EN_DIS done\n");
+                        break;
+                    }
+                    else if ((strchr(resp, 'N') != NULL) || (t == 10))
+                    {
+                        strcat(buffer, ID);
+                        strcat(buffer, "$");
+                        strcat(buffer, Value);
+                        strcat(buffer, "$ERROR$");
+                        // printf("\nSYN_EN_DIS error\n");
+                        break;
+                    }
+                    t++;
+                }
+            }
+            // REMOVE IPV6 BLOCK
+            else if (current_config_type == CONFIG_REMOVE_IPV6_BLOCK)
+            {
+                char key_09 = 0x09;
+                char enter = '\r';
+                char key4 = '4';
+
+                write(serial_port, &key_09, sizeof(key_09));
+                usleep(10000);
+                write(serial_port, &enter, sizeof(enter));
+                usleep(10000);
+                write(serial_port, &key4, sizeof(key4));
+                usleep(100000);
+                char port_key;
+                switch (current_port)
+                {
+                case 1:
+                    port_key = '1';
+                    break;
+                case 2:
+                    port_key = '2';
+                    break;
+                case 3:
+                    port_key = '3';
+                    break;
+                case 4:
+                    port_key = '4';
+                    break;
+                default:
+                    printf("Invalid port!\n");
+                    return;
+                }
+                write(serial_port, &port_key, sizeof(port_key));
+                usleep(100000);
+                // write(serial_port, &enter, sizeof(enter));
+                // usleep(100000);
+
+                int n = strlen(temp_ipv6_address);
+                for (int i = 0; i < n; i++)
+                {
+                    char data = temp_ipv6_address[i];
+                    send_data(serial_port, &data, sizeof(data));
+                    usleep(100000);
+                }
+                write(serial_port, &enter, sizeof(enter));
+                usleep(100000);
+
+                // char *resp = receive_data(serial_port);
+                // printf("\nDEBUG: resp = %s\n", resp);
+                // if (resp && (strchr(resp, 'Y') || strstr(resp, "OK")))
+                //     printf("REMOVE_BLOCK_IPv6 Port OK\n");
+                // else
+                //     printf("REMOVE_BLOCK_IPv6 Port ERROR\n");
+                int t = 0;
+                while (1)
+                {
+                    char *resp = receive_data(serial_port);
+                    printf("\nReceived message: %s\n", resp);
+                    if ((strchr(resp, 'Y') != NULL))
+                    {
+                        strcat(buffer, ID);
+                        strcat(buffer, "$");
+                        strcat(buffer, Value);
+                        strcat(buffer, "$OK$");
+                        // printf("\nSYN_EN_DIS done\n");
+                        break;
+                    }
+                    else if ((strchr(resp, 'N') != NULL) || (t == 10))
+                    {
+                        strcat(buffer, ID);
+                        strcat(buffer, "$");
+                        strcat(buffer, Value);
+                        strcat(buffer, "$ERROR$");
+                        // printf("\nSYN_EN_DIS error\n");
+                        break;
+                    }
+                    t++;
+                }
+            }
+            // ADD IPv6 BLOCK
+            else if (current_config_type == CONFIG_IPV6_BLOCK)
+            {
+                char key_09 = 0x09;
+                char enter = '\r';
+                char key3 = '3';
+
+                write(serial_port, &key_09, sizeof(key_09));
+                usleep(10000);
+                write(serial_port, &enter, sizeof(enter));
+                usleep(10000);
+                write(serial_port, &key3, sizeof(key3));
+                usleep(100000);
+                char port_key;
+                switch (current_port)
+                {
+                case 1:
+                    port_key = '1';
+                    break;
+                case 2:
+                    port_key = '2';
+                    break;
+                case 3:
+                    port_key = '3';
+                    break;
+                case 4:
+                    port_key = '4';
+                    break;
+                default:
+                    printf("Invalid port!\n");
+                    return;
+                }
+                write(serial_port, &port_key, sizeof(port_key));
+                usleep(100000);
+                // write(serial_port, &enter, sizeof(enter));
+                // usleep(100000);
+
+                int n = strlen(temp_ipv6_address);
+                for (int i = 0; i < n; i++)
+                {
+                    char data = temp_ipv6_address[i];
+                    send_data(serial_port, &data, sizeof(data));
+                    usleep(100000);
+                }
+                write(serial_port, &enter, sizeof(enter));
+                usleep(100000);
+
+                // char *resp = receive_data(serial_port);
+                // printf("\nDEBUG: resp = %s\n", resp);
+                // if (resp && (strchr(resp, 'Y') || strstr(resp, "OK")))
+                //     printf("ADD IPv6 Port OK\n");
+                // else
+                //     printf("ADD IPv6 Port ERROR\n");
+                int t = 0;
+                while (1)
+                {
+                    char *resp = receive_data(serial_port);
+                    printf("\nReceived message: %s\n", resp);
+                    if ((strchr(resp, 'Y') != NULL))
+                    {
+                        strcat(buffer, ID);
+                        strcat(buffer, "$");
+                        strcat(buffer, Value);
+                        strcat(buffer, "$OK$");
+                        // printf("\nSYN_EN_DIS done\n");
+                        break;
+                    }
+                    else if ((strchr(resp, 'N') != NULL) || (t == 10))
+                    {
+                        strcat(buffer, ID);
+                        strcat(buffer, "$");
+                        strcat(buffer, Value);
+                        strcat(buffer, "$ERROR$");
+                        // printf("\nSYN_EN_DIS error\n");
+                        break;
+                    }
+                    t++;
+                }
+            }
+            // HTTP
+            // ADD IPv4 HTTP
+            else if (current_config_type == CONFIG_IPV4_HTTP)
+            {
+                char key_mode = 'T';
+                char key_enter = '\r';
+                write(serial_port, &key_mode, sizeof(key_mode));
+                usleep(1000000);
+                write(serial_port, &key_enter, sizeof(key_enter));
+                usleep(1000000);
+                send_ipv4_address_http_add(serial_port, temp_ipv4_address);
+            }
+            // REMOVE IPv4 HTTP
+            else if (current_config_type == CONFIG_REMOVE_IPV4_HTTP)
+            {
+                char key_mode = 'U';
+                char key_enter = '\r';
+                write(serial_port, &key_mode, sizeof(key_mode));
+                usleep(100000);
+                write(serial_port, &key_enter, sizeof(key_enter));
+                usleep(100000);
+                send_ipv4_address_http_remove(serial_port, temp_ipv4_address);
+            }
+            // ADD IPv6 HTTP
+            else if (current_config_type == CONFIG_IPV6_HTTP)
+            {
+                char key_mode = '{';
+                char key_enter = '\r';
+                write(serial_port, &key_mode, sizeof(key_mode));
+                usleep(100000);
+                write(serial_port, &key_enter, sizeof(key_enter));
+                usleep(100000);
+                send_ipv6_address_http_add(serial_port, temp_ipv6_address);
+            }
+            // REMOVE IPV6 HTTP
+            else if (current_config_type == CONFIG_REMOVE_IPV6_HTTP)
+            {
+                char key_mode = '}';
+                char key_enter = '\r';
+                write(serial_port, &key_mode, sizeof(key_mode));
+                usleep(100000);
+                write(serial_port, &key_enter, sizeof(key_enter));
+                usleep(100000);
+                send_ipv6_address_http_remove(serial_port, temp_ipv6_address);
+            }
+            // VPN
+            // ADD IPV4 VPN
+            else if (current_config_type == CONFIG_IPV4_VPN)
+            {
+                char key_mode = 'L';
+                char key_enter = '\r';
+                write(serial_port, &key_mode, sizeof(key_mode));
+                usleep(100000);
+                write(serial_port, &key_enter, sizeof(key_enter));
+                usleep(100000);
+                send_ipv4_address(serial_port, temp_ipv4_address);
+            }
+            else if (current_config_type == CONFIG_REMOVE_IPV4_VPN)
+            {
+                char key_mode = 'M';
+                char key_enter = '\r';
+                write(serial_port, &key_mode, sizeof(key_mode));
+                usleep(100000);
+                write(serial_port, &key_enter, sizeof(key_enter));
+                usleep(100000);
+                send_ipv4_address(serial_port, temp_ipv4_address);
+            }
+            else if (current_config_type == CONFIG_IPV6_VPN)
+            {
+                char key_mode = '#';
+                char key_enter = '\r';
+                write(serial_port, &key_mode, sizeof(key_mode));
+                usleep(100000);
+                write(serial_port, &key_enter, sizeof(key_enter));
+                usleep(100000);
+                send_ipv6_address(serial_port, temp_ipv6_address);
+            }
+            else if (current_config_type == CONFIG_REMOVE_IPV6_VPN)
+            {
+                char key_mode = '^';
+                char key_enter = '\r';
+                write(serial_port, &key_mode, sizeof(key_mode));
+                usleep(100000);
+                write(serial_port, &key_enter, sizeof(key_enter));
+                usleep(100000);
+                send_ipv6_address(serial_port, temp_ipv6_address);
+            }
+            //////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
+            // C?p nh?t database
+            if (last_update_field[0] && last_update_value != -1)
+            {
+                UpdateDefenseProfileField(current_port, last_update_field, last_update_value);
+                last_update_field[0] = '\0';
+                last_update_value = -1;
+            }
+            break;
+        }
+        else if (key == 'n' || key == 'N')
+        {
+            printf("\r\n    SETTING     | Configuration not saved.\n");
+            last_update_field[0] = '\0';
+            last_update_value = -1;
+            break;
+        }
+        else
+        {
+            printf("\r    SETTING     | Please enter Y or N: ");
+        }
+    }
+
+    if (current_config_type == CONFIG_IPV4_PROTECT || current_config_type == CONFIG_REMOVE_IPV4_PROTECT)
+    {
+        system("clear");
+        display_logo1();
+        Display_IPv4_Protected_Table();
+    }
+    else if (current_config_type == CONFIG_IPV6_PROTECT || current_config_type == CONFIG_REMOVE_IPV6_PROTECT)
+    {
+        system("clear");
+        display_logo1();
+        Display_IPv6_Protected_Table();
+    }
+    else if (current_config_type == CONFIG_IPV4_HTTP || current_config_type == CONFIG_REMOVE_IPV4_HTTP)
+    {
+        system("clear");
+        display_logo1();
+        set_HTTP_IP_Table(serial_port);
+    }
+    else if (current_config_type == CONFIG_IPV6_HTTP || current_config_type == CONFIG_REMOVE_IPV6_HTTP)
+    {
+        system("clear");
+        display_logo1();
+        set_HTTP_IP_Table(serial_port);
+    }
+    else if (current_config_type == CONFIG_IPV4_BLOCK || current_config_type == CONFIG_REMOVE_IPV6_BLOCK)
+    {
+        system("clear");
+        display_logo1();
+        Display_IPv4_block_table();
+    }
+    else if (current_config_type == CONFIG_IPV6_BLOCK || current_config_type == CONFIG_REMOVE_IPV6_BLOCK)
+    {
+        system("clear");
+        display_logo1();
+        Display_IPv6_block_table();
+    }
+    else if (current_config_type == CONFIG_IPV4_VPN || current_config_type == CONFIG_REMOVE_IPV4_VPN)
+    {
+        system("clear");
+        display_logo1();
+        Display_IPv4_vpn_table();
+    }
+    else if (current_config_type == CONFIG_IPV6_VPN || current_config_type == CONFIG_REMOVE_IPV6_VPN)
+    {
+        system("clear");
+        display_logo1();
+        Display_IPv6_vpn_table();
+    }
+    else if (current_config_type == CONFIG_IPV4_HTTP || current_config_type == CONFIG_REMOVE_IPV4_HTTP)
+    {
+        system("clear");
+        display_logo1();
+        set_HTTP_IP_Table(serial_port);
+    }
+    else if (current_config_type == CONFIG_IPV6_HTTP || current_config_type == CONFIG_REMOVE_IPV6_HTTP)
+    {
+        system("clear");
+        display_logo1();
+        set_HTTP_IP_Table(serial_port);
+    }
+    else
+    {
+        // system("clear");
+        // display_logo1();
+        Display_table_2(current_port);
+    }
+    current_config_type = CONFIG_NONE;
+    ReturnMode2(serial_port);
 }
 
 void SetSynThresh(int serial_port)
 {
-  char key_mode = '7';
-  write(serial_port, &key_mode, sizeof(key_mode));
-  usleep(100000);
-  write(serial_port, &key_enter, sizeof(key_enter));
-  printf("\r\n");
-  printf("\r\n================+============================================================================================================================================================================================+\n");
-  printf("\r\n    SETTING     | Enter the value of incoming SYN packet threshold (PPS): ");
-  send_array(serial_port);
-  ReturnMode2(serial_port);
+    current_config_type = CONFIG_SYN_THRESHOLD;
+
+    printf("\r\n================+====================================================+\n");
+    printf("\r\n    SETTING     | Enter the value of incoming SYN packet threshold (PPS) : ");
+    last_update_value = send_array(serial_port);
+    strcpy(last_update_field, "SYNFloodSYNThreshold");
+    ConfirmAndSaveConfig(serial_port);
 }
 
 void SetAckThresh(int serial_port)
 {
-  char key_mode = '8';
-  write(serial_port, &key_mode, sizeof(key_mode));
-  usleep(100000);
-  write(serial_port, &key_enter, sizeof(key_enter));
-  printf("\r\n");
-  printf("\r\n================+============================================================================================================================================================================================+\n");
-  printf("\r\n    SETTING     | Enter the value of incoming ACK packet threshold (PPS): ");
-  send_array(serial_port);
-  ReturnMode2(serial_port);
+    current_config_type = CONFIG_ACK_THRESHOLD;
+    printf("\r\n================+====================================================+\n");
+    printf("\r\n    SETTING     | Enter the value of incoming ACK packet threshold (PPS) : ");
+    last_update_value = send_array(serial_port);
+    strcpy(last_update_field, "SYNFloodACKThreshold");
+    ConfirmAndSaveConfig(serial_port);
 }
 
 void SetDurationTime(int serial_port)
 {
-  // char key_mode = '%';
-  // write(serial_port, &key_mode, sizeof(key_mode));
-  // usleep(100000);
-  // write(serial_port, &key_enter, sizeof(key_enter));
-  printf("\r\n");
-  printf("\r\n================+============================================================================================================================================================================================+\n");
-  printf("\r\n    SETTING     | Enter the value of duration time export");
-  send_duration_time(serial_port);
-  ReturnMode2(serial_port);
+    // char key_mode = '%';
+    // write(serial_port, &key_mode, sizeof(key_mode));
+    // usleep(100000);
+    // write(serial_port, &key_enter, sizeof(key_enter));
+    printf("\r\n");
+    printf("\r\n================+============================================================================================================================================================================================+\n");
+    printf("\r\n    SETTING     | Enter the value of duration time export");
+    send_duration_time(serial_port);
+    ReturnMode2(serial_port);
 }
 void SetTimeDelete(int serial_port)
 {
-  char key_mode = '9';
-  write(serial_port, &key_mode, sizeof(key_mode));
-  usleep(100000);
-  write(serial_port, &key_enter, sizeof(key_enter));
-  printf("\r\n");
-  printf("\r\n================+============================================================================================================================================================================================+\n");
-  printf("\r\n    SETTING     | Enter the time to delete the whitelist's information (s): ");
-  send_array(serial_port);
-  ReturnMode2(serial_port);
+    current_config_type = SETTING_TIME_WHITE_LIST;
+    printf("\r\n");
+    printf("\r\n================+============================================================================================================================================================================================+\n");
+    printf("\r\n    SETTING     | Enter the time to delete the whitelist's information (s): ");
+    last_update_value = send_array(serial_port);
+    strcpy(last_update_field, "SYNFloodWhiteListTimeOut");
+    ConfirmAndSaveConfig(serial_port);
 }
+
 void SetSynonymousDefender(int serial_port)
 {
-  char key;
-  char enter = '\r';
-  char key_mode = 'A';
-  write(serial_port, &key_mode, sizeof(key_mode));
-  usleep(100000);
-  write(serial_port, &key_enter, sizeof(key_enter));
-  printf("\r\n");
-  printf("\r\n================+============================================================================================================================================================================================+\n");
-  printf("\r\n    SETTING       | Do you want to enable LAND Attack protect now (Y/N)?:   ");
-  while (1)
-  {
-    scanf("%c", &key);
-    if (key == 'y' || key == 'Y' || key == 'n' || key == 'N')
+    current_config_type = CONFIG_LAND_DEFENDER;
+    printf("\r\n");
+    printf("\r\n================+============================================================================================================================================================================================+\n");
+    printf("\r\n    SETTING     | Do you want to enable LAND Attack protect for port %d now (Y/N)?: ", current_port);
+    char key;
+    int enable_value = -1;
+    while (1)
     {
-      write(serial_port, &key, sizeof(key));
-      usleep(100000);
-      write(serial_port, &enter, sizeof(enter));
-      usleep(1000000);
-      break;
+        scanf(" %c", &key);
+        if (key == 'y' || key == 'Y')
+        {
+            enable_value = 1;
+            break;
+        }
+        else if (key == 'n' || key == 'N')
+        {
+            enable_value = 0;
+            break;
+        }
+        else
+        {
+            printf("    SETTING     | Invalid input. Please enter Y or N: ");
+        }
     }
-    if (key != 'y' || key != 'Y' || key != 'n' || key != 'N')
-    {
-      printf("\r  SETTING       | Do you want to enable LAND Attack protect now (Y/N)?:   ");
-    }
-  }
-  ReturnMode2(serial_port);
+    // gui cau hinh va update tru?ng database
+    last_update_value = enable_value;
+    strcpy(last_update_field, "LANDAttackEnable");
+
+    usleep(100000);
+    ConfirmAndSaveConfig(serial_port); // X c nh?n v  g?i UART
 }
 
 void SetUDPDefender(int serial_port)
 {
-  char key;
-  char enter = '\r';
-  char key_mode = 'b';
-  write(serial_port, &key_mode, sizeof(key_mode));
-  usleep(100000);
-  write(serial_port, &key_enter, sizeof(key_enter));
-  printf("\r\n");
-  printf("\r\n================+============================================================================================================================================================================================+\n");
-  printf("\r\n    SETTING       | Do you want to enable UDP flood protect now (Y/N)?:   ");
-  while (1)
-  {
-    scanf("%c", &key);
-    if (key == 'y' || key == 'Y' || key == 'n' || key == 'N')
+    current_config_type = CONFIG_UDP_DEFENDER;
+    char key;
+    int enable_value = -1;
+    printf("\r\n");
+    printf("\r\n================+============================================================================================================================================================================================+\n");
+    printf("\r\n    SETTING     | Do you want to enable UDP flood protect for port %d now (Y/N)?: ", current_port);
+
+    while (1)
     {
-      write(serial_port, &key, sizeof(key));
-      usleep(100000);
-      write(serial_port, &enter, sizeof(enter));
-      usleep(1000000);
-      break;
+        scanf(" %c", &key);
+        if (key == 'y' || key == 'Y')
+        {
+            enable_value = 1;
+            break;
+        }
+        else if (key == 'n' || key == 'N')
+        {
+            enable_value = 0;
+            break;
+        }
+        else
+        {
+            printf("    SETTING     | Invalid input. Please enter Y or N: ");
+        }
     }
-    if (key != 'y' || key != 'Y' || key != 'n' || key != 'N')
-    {
-      printf("\r  SETTING       | Do you want to enable UDP flood protect now (Y/N)?:  ");
-    }
-  }
-  ReturnMode2(serial_port);
+
+    // G n gi  tr? c?u h nh v  tru?ng tuong ?ng
+    last_update_value = enable_value;
+    strcpy(last_update_field, "UDPFloodEnable");
+    usleep(100000);
+    ConfirmAndSaveConfig(serial_port);
 }
 
 void SetUDPThresh(int serial_port)
 {
-  char key_mode = 'c';
-  write(serial_port, &key_mode, sizeof(key_mode));
-  usleep(100000);
-  write(serial_port, &key_enter, sizeof(key_enter));
-  printf("\r\n");
-  printf("\r\n================+============================================================================================================================================================================================+\n");
-  printf("\r\n    SETTING     | Enter the value of incoming UDP packet threshold (PPS): ");
-  send_array(serial_port);
-  ReturnMode2(serial_port);
+    current_config_type = CONFIG_UDP_THRESHOLD;
+
+    printf("\r\n================+====================================================+\n");
+    printf("\r\n    SETTING     | Enter the value of incoming SYN packet threshold (PPS) : ");
+    last_update_value = send_array(serial_port);
+    strcpy(last_update_field, "UDPFloodThreshold");
+
+    ConfirmAndSaveConfig(serial_port);
 }
+
 void SetUDPThresh1s(int serial_port)
 {
-  char key_mode = 'd';
-  write(serial_port, &key_mode, sizeof(key_mode));
-  usleep(100000);
-  write(serial_port, &key_enter, sizeof(key_enter));
-  printf("\r\n");
-  printf("\r\n================+============================================================================================================================================================================================+\n");
-  printf("\r\n    SETTING     | Enter the limit of incoming UDP packet per second (PPS): ");
-  send_array(serial_port);
-  ReturnMode2(serial_port);
+    current_config_type = CONFIG_UDP_1S_THRESHOLD;
+
+    printf("\r\n================+====================================================+\n");
+    printf("\r\n    SETTING     | Enter the value of incoming SYN packet threshold (PPS) : ");
+    last_update_value = send_array(serial_port); // NH?P, CHUA G?I UART
+    strcpy(last_update_field, "UDPFloodRate");
+
+    ConfirmAndSaveConfig(serial_port);
 }
+
 void SetDNSDefender(int serial_port)
 {
-  char key_mode = 'e';
-  char key;
-  char enter = '\r';
-  write(serial_port, &key_mode, sizeof(key_mode));
-  usleep(100000);
-  write(serial_port, &key_enter, sizeof(key_enter));
-  printf("\r\n");
-  printf("\r\n================+============================================================================================================================================================================================+\n");
-  printf("\r\n       SETTING    | Do you want to enable DNS flood protect now (Y/N)?:  ");
-  while (1)
-  {
-    scanf("%c", &key);
-    if (key == 'y' || key == 'Y' || key == 'n' || key == 'N')
+    current_config_type = CONFIG_DNS_DEFENDER;
+
+    printf("\r\n");
+    printf("\r\n================+============================================================================================================================================================================================+\n");
+    printf("\r\n    SETTING     | Do you want to enable DNS flood protect for port %d now (Y/N)?: ", current_port);
+    char key;
+    int enable_value = -1;
+
+    while (1)
     {
-      write(serial_port, &key, sizeof(key));
-      usleep(100000);
-      write(serial_port, &enter, sizeof(enter));
-      usleep(1000000);
-      break;
+        scanf(" %c", &key);
+        if (key == 'y' || key == 'Y')
+        {
+            enable_value = 1;
+            break;
+        }
+        else if (key == 'n' || key == 'N')
+        {
+            enable_value = 0;
+            break;
+        }
+        else
+        {
+            printf("    SETTING     | Invalid input. Please enter Y or N: ");
+        }
     }
-    if (key != 'y' || key != 'Y' || key != 'n' || key != 'N')
-    {
-      printf("\r     SETTING    | Do you want to enable DNS flood protect now (Y/N)?: ");
-    }
-  }
-  ReturnMode2(serial_port);
+
+    // G n gi  tr? c?u h nh v  tru?ng tuong ?ng
+    last_update_value = enable_value;
+    strcpy(last_update_field, "DNSFloodEnable");
+
+    usleep(100000);
+    ConfirmAndSaveConfig(serial_port); // X c nh?n v  g?i UART
 }
 
 void SetDNSThresh(int serial_port)
 {
-  char key_mode = 'f';
-  write(serial_port, &key_mode, sizeof(key_mode));
-  usleep(100000);
-  write(serial_port, &key_enter, sizeof(key_enter));
-  printf("\r\n");
-  printf("\r\n================+============================================================================================================================================================================================+\n");
-  printf("\r\n    SETTING     | Enter the value of incoming DNS request threshold (PPS): ");
-  send_array(serial_port);
-  ReturnMode2(serial_port);
+    current_config_type = CONFIG_DNS_THRESHOLD;
+
+    printf("\r\n================+====================================================+\n");
+    printf("\r\n    SETTING     | Enter the value of incoming SYN packet threshold (PPS) : ");
+    last_update_value = send_array(serial_port); // NH?P, CHUA G?I UART
+    strcpy(last_update_field, "DNSFloodThreshold");
+
+    ConfirmAndSaveConfig(serial_port);
 }
 
 void SetICMPDefender(int serial_port)
 {
-  char key;
-  char enter = '\r';
-  char key_mode = 'g';
-  write(serial_port, &key_mode, sizeof(key_mode));
-  usleep(100000);
-  write(serial_port, &key_enter, sizeof(key_enter));
-  printf("\r\n");
-  printf("\r\n================+============================================================================================================================================================================================+\n");
-  printf("\r\n    SETTING       | Do you want to enable ICMP Attack protect now (Y/N)?:   ");
-  while (1)
-  {
-    scanf("%c", &key);
-    if (key == 'y' || key == 'Y' || key == 'n' || key == 'N')
+    current_config_type = CONFIG_ICMP_DEFENDER;
+
+    printf("\r\n");
+    printf("\r\n================+============================================================================================================================================================================================+\n");
+    printf("\r\n    SETTING     | Do you want to enable ICMP Attack protect for port %d now (Y/N)?: ", current_port);
+    char key;
+    int enable_value = -1;
+
+    while (1)
     {
-      write(serial_port, &key, sizeof(key));
-      usleep(100000);
-      write(serial_port, &enter, sizeof(enter));
-      usleep(1000000);
-      break;
+        scanf(" %c", &key);
+        if (key == 'y' || key == 'Y')
+        {
+            enable_value = 1;
+            break;
+        }
+        else if (key == 'n' || key == 'N')
+        {
+            enable_value = 0;
+            break;
+        }
+        else
+        {
+            printf("    SETTING     | Invalid input. Please enter Y or N: ");
+        }
     }
-    if (key != 'y' || key != 'Y' || key != 'n' || key != 'N')
-    {
-      printf("\r  SETTING       | Do you want to enable ICMP Attack protect now (Y/N)?:   ");
-    }
-  }
-  ReturnMode2(serial_port);
+
+    // G n gi  tr? c?u h nh v  tru?ng tuong ?ng
+    last_update_value = enable_value;
+    strcpy(last_update_field, "ICMPFloodEnable");
+
+    usleep(100000);
+    ConfirmAndSaveConfig(serial_port); // X c nh?n v  g?i UART
 }
 
 void SetICMPThresh(int serial_port)
 {
-  char key_mode = 'h';
-  write(serial_port, &key_mode, sizeof(key_mode));
-  usleep(100000);
-  write(serial_port, &key_enter, sizeof(key_enter));
-  printf("\r\n");
-  printf("\r\n================+============================================================================================================================================================================================+\n");
-  printf("\r\n    SETTING     | Enter the value of incoming ICMP request packet threshold (PPS): ");
-  send_array(serial_port);
-  ReturnMode2(serial_port);
+    current_config_type = CONFIG_ICMP_THRESHOLD;
+
+    printf("\r\n================+====================================================+\n");
+    printf("\r\n    SETTING     | Enter the value of incoming SYN packet threshold (PPS) : ");
+    last_update_value = send_array(serial_port); // NH?P, CHUA G?I UART
+    strcpy(last_update_field, "ICMPFloodThreshold");
+
+    ConfirmAndSaveConfig(serial_port);
 }
 void SetICMPThresh1s(int serial_port)
 {
-  char key_mode = 'i';
-  write(serial_port, &key_mode, sizeof(key_mode));
-  usleep(100000);
-  write(serial_port, &key_enter, sizeof(key_enter));
-  printf("\r\n");
-  printf("\r\n================+============================================================================================================================================================================================+\n");
-  printf("\r\n    SETTING     | Enter the limit of incoming ICMP packet per second (PPS): ");
-  send_array(serial_port);
-  ReturnMode2(serial_port);
+    current_config_type = CONFIG_ICMP_1S_THRESHOLD;
+
+    printf("\r\n================+====================================================+\n");
+    printf("\r\n    SETTING     | Enter the value of incoming SYN packet threshold (PPS) : ");
+    last_update_value = send_array(serial_port); // NH?P, CHUA G?I UART
+    strcpy(last_update_field, "ICMPFloodRate");
+
+    ConfirmAndSaveConfig(serial_port);
 }
 
 void SetIPSecDefender(int serial_port)
 {
-  char key;
-  char enter = '\r';
-  char key_mode = 'j';
-  write(serial_port, &key_mode, sizeof(key_mode));
-  usleep(100000);
-  write(serial_port, &key_enter, sizeof(key_enter));
-  printf("\r\n");
-  printf("\r\n================+============================================================================================================================================================================================+\n");
-  printf("\r\n    SETTING       | Do you want to enable IPSec Attack protect now (Y/N)?:   ");
-  while (1)
-  {
-    scanf("%c", &key);
-    if (key == 'y' || key == 'Y' || key == 'n' || key == 'N')
+    current_config_type = CONFIG_IPSEC_IKE_DEFENDER;
+
+    printf("\r\n");
+    printf("\r\n================+============================================================================================================================================================================================+\n");
+    printf("\r\n    SETTING     | Do you want to enable IPSec IKE Attack protect for port %d now (Y/N)?: ", current_port);
+    char key;
+    int enable_value = -1;
+
+    while (1)
     {
-      write(serial_port, &key, sizeof(key));
-      usleep(100000);
-      write(serial_port, &enter, sizeof(enter));
-      usleep(1000000);
-      break;
+        scanf(" %c", &key);
+        if (key == 'y' || key == 'Y')
+        {
+            enable_value = 1;
+            break;
+        }
+        else if (key == 'n' || key == 'N')
+        {
+            enable_value = 0;
+            break;
+        }
+        else
+        {
+            printf("    SETTING     | Invalid input. Please enter Y or N: ");
+        }
     }
-    if (key != 'y' || key != 'Y' || key != 'n' || key != 'N')
-    {
-      printf("\r  SETTING       | Do you want to enable IPSec Attack protect now (Y/N)?:   ");
-    }
-  }
-  ReturnMode2(serial_port);
+
+    // G n gi  tr? c?u h nh v  tru?ng tuong ?ng
+    last_update_value = enable_value;
+    strcpy(last_update_field, "IPSecIKEEnable");
+
+    usleep(100000);
+    ConfirmAndSaveConfig(serial_port); // X c nh?n v  g?i UART
 }
 
 void SetIPSecThresh(int serial_port)
 {
-  char key_mode = 'k';
-  write(serial_port, &key_mode, sizeof(key_mode));
-  usleep(100000);
-  write(serial_port, &key_enter, sizeof(key_enter));
-  printf("\r\n================+============================================================================================================================================================================================+\n");
-  printf("\n    SETTING     | Enter the value of incoming IPSec IKE packet threshold (PPS): ");
-  send_array(serial_port);
-  ReturnMode2(serial_port);
+    current_config_type = CONFIG_IPSEC_IKE_THRESHOLD;
+
+    printf("\r\n================+====================================================+\n");
+    printf("\r\n    SETTING     | Enter the value of incoming SYN packet threshold (PPS) : ");
+    last_update_value = send_array(serial_port);
+    strcpy(last_update_field, "IPSecIKEThreshold");
+
+    ConfirmAndSaveConfig(serial_port);
 }
+/////////////////////////////////////////////////VPN///////////////////////////////////////////////
+// void AddIPv4VPN(int serial_port)
+// {
+
+//     char key_mode = 'l';
+//     write(serial_port, &key_mode, sizeof(key_mode));
+//     usleep(100000);
+//     write(serial_port, &key_enter, sizeof(key_enter));
+//     printf("\r\n");
+//     printf("\r\n================+============================================================================================================================================================================================+\n");
+//     printf("\r\n    SETTING     | Enter Server IPv4 VPN address want to add: ");
+//     scanf("%s", temp_ipv4_address);
+//     // update_vpn_ipv4(temp_ipv4_address);
+//     // send_ipv4_address(serial_port);
+//     update_vpn_ipv4(temp_ipv4_address);
+//     ReturnMode2(serial_port);
+// }
 
 void AddIPv4VPN(int serial_port)
 {
-  char key_mode = 'l';
-  write(serial_port, &key_mode, sizeof(key_mode));
-  usleep(100000);
-  write(serial_port, &key_enter, sizeof(key_enter));
-  printf("\r\n");
-  printf("\r\n================+============================================================================================================================================================================================+\n");
-  printf("\r\n    SETTING     | Enter Server IPv4 VPN address want to add: ");
-  send_ipv4_address(serial_port);
-  ReturnMode2b(serial_port);
+    // char key_mode = 'L';
+    // char key_enter = '\r';
+    // write(serial_port, &key_mode, sizeof(key_mode));
+    // usleep(100000);
+    current_config_type = CONFIG_IPV4_VPN;
+    printf("\r\n");
+    printf("\r\n ============================================================================================================================================================================================================+");
+    printf("\r\n    SETTING     | Enter Server IPv4 address want to block : ");
+    while (1)
+    {
+        scanf("%15s", temp_ipv4_address);
+        if (validate_ip_address(temp_ipv4_address))
+        {
+            update_vpn_ipv4(temp_ipv4_address); // C?p nh?t v o database (n?u c )
+            break;
+        }
+        else
+        {
+            printf(" Invalid! Please input again: ");
+        }
+    }
+    process_ip(LOGFILE_HTTP_IPv4, temp_ipv4_address); // ghi log n?u c?n
+    ConfirmAndSaveConfig(serial_port);                // g?i h m x c nh?n
 }
+
+// void RemoveIPv4VPN(int serial_port)
+// {
+//     char key_mode = 'm';
+//     write(serial_port, &key_mode, sizeof(key_mode));
+//     usleep(100000);
+//     write(serial_port, &key_enter, sizeof(key_enter));
+//     printf("\r\n");
+//     printf("\r\n================+============================================================================================================================================================================================+\n");
+//     printf("\r\n    SETTING     | Enter Server IPv4 address want to remove: ");
+//     scanf("%s", temp_ipv4_address);
+//     // delete_vpn_ipv4(temp_ipv4_address);
+//     // send_ipv4_address(serial_port);
+//     delete_vpn_ipv4(temp_ipv4_address);
+//     ReturnMode2(serial_port);
+// }
 void RemoveIPv4VPN(int serial_port)
 {
-  char key_mode = 'm';
-  write(serial_port, &key_mode, sizeof(key_mode));
-  usleep(100000);
-  write(serial_port, &key_enter, sizeof(key_enter));
-  printf("\r\n");
-  printf("\r\n================+============================================================================================================================================================================================+\n");
-  printf("\r\n    SETTING     | Enter Server IPv4 address want to remove: ");
-  send_ipv4_address(serial_port);
-  ReturnMode2b(serial_port);
+    // char key_mode = 'M';
+    // char key_enter = '\r';
+    // write(serial_port, &key_mode, sizeof(key_mode));
+    // usleep(100000);
+    // write(serial_port, &key_enter, sizeof(key_enter));
+    current_config_type = CONFIG_REMOVE_IPV4_VPN;
+    printf("\r\n");
+    printf("\r\n================+============================================================================================================================================================================================+\n");
+    printf("\r\n    SETTING     | Enter Server IPv4 VPN address want to add: ");
+
+    scanf("%s", temp_ipv4_address);
+
+    if (validate_ip_address(temp_ipv4_address))
+    {
+        delete_vpn_ipv4(temp_ipv4_address);                // C?p nh?t v o database (n?u c )
+        send_ipv4_address(serial_port, temp_ipv4_address); // G?i xu?ng board
+    }
+    else
+    {
+        printf("Invalid IP format, please try again!\n");
+    }
+
+    // ReturnMode2(serial_port);
+    ConfirmAndSaveConfig(serial_port); // g?i h m x?c nh?n
 }
 
 void AddIPv6VPN(int serial_port)
 {
-  char key_mode = '#';
-  write(serial_port, &key_mode, sizeof(key_mode));
-  usleep(100000);
-  write(serial_port, &key_enter, sizeof(key_enter));
-  printf("\r\n");
-  printf("\r\n================+============================================================================================================================================================================================+\n");
-  printf("\r\n    SETTING     | Enter Server IPv6 VPN address want to add: ");
-  send_ipv6_address(serial_port);
-  ReturnMode2b(serial_port);
-}
-void RemoveIPv6VPN(int serial_port)
-{
-  char key_mode = '^';
-  write(serial_port, &key_mode, sizeof(key_mode));
-  usleep(100000);
-  write(serial_port, &key_enter, sizeof(key_enter));
-  printf("\r\n");
-  printf("\r\n================+============================================================================================================================================================================================+\n");
-  printf("\r\n    SETTING     | Enter Server IPv6 address want to remove: ");
-  send_ipv6_address(serial_port);
-  ReturnMode2b(serial_port);
+    //     char key_mode = '#';
+    //     char key_enter = '\r';
+    //     write(serial_port, &key_mode, sizeof(key_mode));
+    //     usleep(100000);
+    //     write(serial_port, &key_enter, sizeof(key_enter));
+    current_config_type = CONFIG_IPV6_VPN;
+    printf("\r\n");
+    printf("================+============================================================================================================================================================================================+\n");
+    printf("    SETTING     | Enter Server IPv6 VPN address to add: ");
+
+    scanf("%s", temp_ipv6_address);
+
+    if (validate_ip_address(temp_ipv6_address))
+    {
+        update_vpn_ipv6(temp_ipv6_address);                // C?p nh?t v o database (n?u c )
+        send_ipv6_address(serial_port, temp_ipv6_address); // G?i xu?ng board
+    }
+    else
+    {
+        printf("Invalid IP format, please try again!\n");
+    }
+
+    // ReturnMode2(serial_port);
+    ConfirmAndSaveConfig(serial_port); // g?i h m x?c nh?n
 }
 
+// void RemoveIPv6VPN(int serial_port)
+// {
+//     char key_mode = '^';
+//     write(serial_port, &key_mode, sizeof(key_mode));
+//     usleep(100000);
+//     write(serial_port, &key_enter, sizeof(key_enter));
+//     printf("\r\n");
+//     printf("\r\n================+============================================================================================================================================================================================+\n");
+//     printf("\r\n    SETTING     | Enter Server IPv6 address want to remove: ");
+//     scanf("%s", temp_ipv6_address);
+//     delete_vpn_ipv6(temp_ipv6_address);
+//     // send_ipv6_address(serial_port);
+//     ReturnMode2(serial_port);
+// }
+
+void RemoveIPv6VPN(int serial_port)
+{
+    // char key_mode = '^';
+    // char key_enter = '\r';
+    // write(serial_port, &key_mode, sizeof(key_mode));
+    // usleep(100000);
+    // write(serial_port, &key_enter, sizeof(key_enter));
+    current_config_type = CONFIG_REMOVE_IPV6_VPN;
+    printf("\r\n");
+    printf("================+============================================================================================================================================================================================+\n");
+    printf("    SETTING     | Enter Server IPv6 VPN address to add: ");
+
+    scanf("%s", temp_ipv6_address);
+
+    if (validate_ip_address(temp_ipv6_address))
+    {
+        delete_vpn_ipv6(temp_ipv6_address);                // C?p nh?t v o database (n?u c )
+        send_ipv6_address(serial_port, temp_ipv6_address); // G?i xu?ng board
+    }
+    else
+    {
+        printf("Invalid IP format, please try again!\n");
+    }
+
+    // ReturnMode2(serial_port);
+    ConfirmAndSaveConfig(serial_port);
+}
+
+////////////////////////////////////////////////////////////////////////////////////////////////////
 void SetTCPFragDefender(int serial_port)
 {
-  char key;
-  char enter = '\r';
-  char key_mode = 'n';
-  write(serial_port, &key_mode, sizeof(key_mode));
-  usleep(100000);
-  write(serial_port, &key_enter, sizeof(key_enter));
-  printf("\r\n");
-  printf("\r\n================+============================================================================================================================================================================================+\n");
-  printf("\r\n     SETTING      | Do you want to enable TCP Fragmentation flood protect now (Y/N)?:  ");
-  while (1)
-  {
-    scanf("%c", &key);
-    if (key == 'y' || key == 'Y' || key == 'n' || key == 'N')
+    current_config_type = CONFIG_TCP_FRAG_DEFENDER;
+
+    printf("\r\n");
+    printf("\r\n================+============================================================================================================================================================================================+\n");
+    printf("\r\n    SETTING     | Do you want to enable TCP Fragmentation flood protect for port %d now (Y/N)?: ", current_port);
+    char key;
+    int enable_value = -1;
+
+    while (1)
     {
-      write(serial_port, &key, sizeof(key));
-      usleep(100000);
-      write(serial_port, &enter, sizeof(enter));
-      usleep(1000000);
-      break;
+        scanf(" %c", &key);
+        if (key == 'y' || key == 'Y')
+        {
+            enable_value = 1;
+            break;
+        }
+        else if (key == 'n' || key == 'N')
+        {
+            enable_value = 0;
+            break;
+        }
+        else
+        {
+            printf("    SETTING     | Invalid input. Please enter Y or N: ");
+        }
     }
-    if (key != 'y' || key != 'Y' || key != 'n' || key != 'N')
-    {
-      printf("\r   SETTING      | Do you want to enable TCP Fragmentation flood protect now (Y/N)?:   ");
-    }
-  }
-  ReturnMode2(serial_port);
+
+    // G n gi  tr? c?u h nh v  tru?ng
+    last_update_value = enable_value;
+    strcpy(last_update_field, "TCPFragmentEnable");
+
+    usleep(100000);
+    ConfirmAndSaveConfig(serial_port); // X c nh?n v  g?i UART
 }
 
 void set_HTTP_IP_Table(int serial_port)
 {
 start_http:
-  char key = 0;
-  char enter = '\r';
-  printf("\r\n");
-  printf("\t\t+-----------+------------------------------------------------------------------------------------------------------------+\r\n");
-  printf("\t\t| Key Enter | Please choose 1 option below:                                                                              |\r\n");
-  printf("\t\t+-----------+------------------------------------------------------------------------------------------------------------+\r\n");
-  printf("\t\t|     1.    | Show Attacker's IP Table                                                                                 	 |\r\n");
-  printf("\t\t+-----------+------------------------------------------------------------------------------------------------------------+\r\n");
-  printf("\t\t|     2.    | Add IPv4 in Attacker Table                                                                             	 |\r\n");
-  printf("\t\t+-----------+------------------------------------------------------------------------------------------------------------+\r\n");
-  printf("\t\t|     3.    | Add IPv6 in Attacker Table                                                                             	 |\r\n");
-  printf("\t\t+-----------+------------------------------------------------------------------------------------------------------------+\r\n");
-  printf("\t\t|     4.    | Clear IPv4 in Attacker Table                                                                               |\r\n");
-  printf("\t\t+-----------+------------------------------------------------------------------------------------------------------------+\r\n");
-  printf("\t\t|     5.    | Clear IPv6 in Attacker Table                                                                               |\r\n");
-  printf("\t\t+-----------+------------------------------------------------------------------------------------------------------------+\r\n");
-  printf("\t\t|     6.    | Exit                                                                                                       |\r\n");
-  printf("\t\t+-----------+------------------------------------------------------------------------------------------------------------+\r\n");
-  printf("\t\tPlease choose mode:  ");
+    system("clear");
+    display_logo1();
+    char key = 0;
+    char enter = '\r';
 
-  while (1)
-  {
-    scanf("%c", &key);
+    printf("\r\n");
+    printf("\t\t+-----------+------------------------------------------------------------------------------------------------------------+\r\n");
+    printf("\t\t| Key Enter | Please choose 1 option below:                                                                              |\r\n");
+    printf("\t\t+-----------+------------------------------------------------------------------------------------------------------------+\r\n");
+    printf("\t\t|     1.    | Show Attacker's IP Table                                                                                 	 |\r\n");
+    printf("\t\t+-----------+------------------------------------------------------------------------------------------------------------+\r\n");
+    printf("\t\t|     2.    | Add IPv4 HTTP/HTTPs Table                                                                               	 |\r\n");
+    printf("\t\t+-----------+------------------------------------------------------------------------------------------------------------+\r\n");
+    printf("\t\t|     3.    | Add IPv6 HTTP/HTTPs Table                                                                              	 |\r\n");
+    printf("\t\t+-----------+------------------------------------------------------------------------------------------------------------+\r\n");
+    printf("\t\t|     4.    | Remove IPv4 HTTP/HTTPs Table                                                                               |\r\n");
+    printf("\t\t+-----------+------------------------------------------------------------------------------------------------------------+\r\n");
+    printf("\t\t|     5.    | Remove IPv6 HTTP/HTTPs Table                                                                               |\r\n");
+    printf("\t\t+-----------+------------------------------------------------------------------------------------------------------------+\r\n");
+    printf("\t\t|     6.    | Exit                                                                                                       |\r\n");
+    printf("\t\t+-----------+------------------------------------------------------------------------------------------------------------+\r\n");
+    printf("\t\tPlease choose mode:  ");
+    while (1)
+    {
+        scanf("%c", &key);
 
-    if (key == '1' || key == '2' || key == '3' || key == '4' || key == '5' || key == '6')
-    {
-      break;
+        if (key == '1' || key == '2' || key == '3' || key == '4' || key == '5' || key == '6')
+        {
+            break;
+        }
+        else if (key != '1' || key != '2' || key != '3' || key != '4' || key != '5' || key != '6')
+        {
+            printf("\r     SETTING     | --> Please choose Mode: ");
+        }
     }
-    else if (key != '1' || key != '2' || key != '3' || key != '4' || key != '5' || key != '6')
+    if (key == '1')
     {
-      printf("\r     SETTING     | --> Please choose Mode: ");
+        system("clear");
+        display_logo1();
+        Display_IP_http_table();
+        getchar();
+        // getchar();
+        system("clear");
+        display_logo1();
+        goto start_http;
     }
-  }
-  if (key == '1')
-  {
-  }
-  else if (key == '2')
-  {
-    SetIPv4Block(serial_port);
-    system("clear");
-    display_logo1();
+    else if (key == '2')
+    {
+        system("clear");
+        display_logo1();
+        Display_http_ipv4_table();
+        SetIPv4HTTPBlock(serial_port);
+        system("clear");
+        display_logo1();
+        // SetIPv4Block(serial_port);
+        goto start_http;
+    }
+    else if (key == '3')
+    {
+        system("clear");
+        display_logo1();
+        Display_http_ipv6_table();
+        SetIPv6HTTPBlock(serial_port);
+        // SetIPv6Block(serial_port);
+        system("clear");
+        display_logo1();
+        goto start_http;
+    }
+    else if (key == '4')
+    {
+        system("clear");
+        display_logo1();
+        Display_http_ipv4_table();
+        RemoveIPv4HTTPBlock(serial_port);
+        // RemoveIPv4Block(serial_port);
+        system("clear");
+        display_logo1();
+        goto start_http;
+    }
+    else if (key == '5')
+    {
+        system("clear");
+        display_logo1();
+        Display_http_ipv6_table();
+        RemoveIPv6HTTPBlock(serial_port);
+        // RemoveIPv6Block(serial_port);
+        system("clear");
+        display_logo1();
+        goto start_http;
+    }
+    else if (key == '6')
+    {
+        system("clear");
+        display_logo1();
+        reconfig(serial_port); // Quay l?i menu ch  nh
+    }
+    if (key == '2' || key == '3' || key == '4' || key == '5')
+    {
+        ConfirmAndSaveConfig(serial_port); // h?i x c nh?n tru?c khi g?i
+    }
     goto start_http;
-  }
-  else if (key == '3')
-  {
-    SetIPv6Block(serial_port);
-    system("clear");
-    display_logo1();
-    goto start_http;
-  }
-  else if (key == '4')
-  {
-    RemoveIPv4Block(serial_port);
-    system("clear");
-    display_logo1();
-    goto start_http;
-  }
-  else if (key == '5')
-  {
-    RemoveIPv6Block(serial_port);
-    system("clear");
-    display_logo1();
-    goto start_http;
-  }
-  else if (key == '6')
-  {
-  }
-  ReturnMode2(serial_port);
+    // ReturnMode2(serial_port);
+    // ConfirmAndSaveConfig(serial_port); // h?i x c nh?n tru?c khi g?i
 }
+
+// void SetIPv4HTTPBlock(int serial_port)
+// {
+
+//     current_config_type = CONFIG_IPV4_HTTP;
+//     // char key_mode = 'T';
+//     // char key_enter = '\r';
+//     // write(serial_port, &key_mode, sizeof(key_mode));
+//     // usleep(100000);
+//     // write(serial_port, &key_enter, sizeof(key_enter));
+//     printf("\r\n");
+//     printf("\r\n ============================================================================================================================================================================================================+");
+//     printf("\r\n    SETTING     | Enter Server IPv4 address want to block : ");
+//     send_ipv4_address_http_add(serial_port);
+// }
+
+void SetIPv4HTTPBlock(int serial_port)
+{
+    current_config_type = CONFIG_IPV4_HTTP;
+
+    printf("\r\n");
+    printf("\r\n ============================================================================================================================================================================================================+");
+    printf("\r\n    SETTING     | Enter Server IPv4 address want to block : ");
+    while (1)
+    {
+        scanf("%15s", temp_ipv4_address);
+        if (validate_ip_address(temp_ipv4_address))
+        {
+            update_http_ipv4(temp_ipv4_address); // C?p nh?t v o database (n?u c )
+            break;
+        }
+        else
+        {
+            printf(" Invalid! Please input again: ");
+        }
+    }
+    process_ip(LOGFILE_HTTP_IPv4, temp_ipv4_address); // ghi log n?u c?n
+    ConfirmAndSaveConfig(serial_port);                // g?i h m x c nh?n
+}
+
+void SetIPv6HTTPBlock(int serial_port)
+{
+    current_config_type = CONFIG_IPV6_HTTP;
+
+    printf("\r\n");
+    printf("\r\n ============================================================================================================================================================================================================+");
+    printf("\r\n    SETTING     | Enter Server IPv4 address want to block : ");
+    while (1)
+    {
+        scanf("%15s", temp_ipv6_address);
+        if (validate_ip_address(temp_ipv6_address))
+        {
+            update_http_ipv6(temp_ipv6_address); // C?p nh?t v o database (n?u c )
+            break;
+        }
+        else
+        {
+            printf(" Invalid! Please input again: ");
+        }
+    }
+    process_ip(LOGFILE_HTTP_IPv6, temp_ipv6_address); // ghi log n?u c?n
+    ConfirmAndSaveConfig(serial_port);                // g?i h m x c nh?n
+}
+
+// void RemoveIPv4HTTPBlock(int serial_port)
+// {
+//     char key_mode = 'X';
+//     char key_enter = '\r';
+//     write(serial_port, &key_mode, sizeof(key_mode));
+//     usleep(100000);
+//     write(serial_port, &key_enter, sizeof(key_enter));
+//     printf("\r\n");
+//     printf("\r\n ============================================================================================================================================================================================================+");
+//     printf("\r\n    SETTING     | Enter Server IPv4 address want to remove IP from block table : ");
+//     send_ipv4_address_http_remove(serial_port);
+// }
+
+void RemoveIPv4HTTPBlock(int serial_port)
+{
+    current_config_type = CONFIG_REMOVE_IPV4_HTTP;
+    printf("\r\n ============================================================================================================================================================================================================+");
+    printf("\r\n    SETTING     | Enter Server IPv4 address you want to REMOVE from block list: ");
+
+    while (1)
+    {
+        scanf("%15s", temp_ipv4_address);
+        if (validate_ip_address(temp_ipv4_address))
+        {
+            delete_http_ipv4(temp_ipv4_address); // C?p nh?t v o database (n?u c )
+            break;
+        }
+        else
+        {
+            printf(" Invalid! Please input again: ");
+        }
+    }
+    ConfirmAndSaveConfig(serial_port); // h?i x c nh?n tru?c khi g?i
+}
+
+void RemoveIPv6HTTPBlock(int serial_port)
+{
+    printf("\r\n ============================================================================================================================================================================================================+");
+    printf("\r\n    SETTING     | Enter Server IPv4 address you want to REMOVE from block list: ");
+
+    while (1)
+    {
+        scanf("%15s", temp_ipv6_address);
+        if (validate_ip_address(temp_ipv6_address))
+        {
+
+            delete_http_ipv6(temp_ipv6_address); // C?p nh?t v o database (n?u c )
+            break;
+        }
+        else
+        {
+            printf(" Invalid! Please input again: ");
+        }
+    }
+
+    current_config_type = CONFIG_REMOVE_IPV6_HTTP;
+
+    ConfirmAndSaveConfig(serial_port); // h?i x c nh?n tru?c khi g?i
+}
+// void RemoveIPv6HTTPBlock(int serial_port)
+// {
+//     char key_mode = '}';
+//     char key_enter = '\r';
+//     write(serial_port, &key_mode, sizeof(key_mode));
+//     usleep(100000);
+//     write(serial_port, &key_enter, sizeof(key_enter));
+//     printf("\r\n");
+//     printf("\r\n ============================================================================================================================================================================================================+");
+//     printf("\r\n    SETTING     | Enter Server IPv6 address want to remove IP from block table : ");
+//     send_ipv6_address_http_remove(serial_port);
+// }
+
+// void RemoveIPv4Block(int serial_port)
+// {
+//   char key_mode = 'X';
+//   write(serial_port, &key_mode, sizeof(key_mode));
+//   usleep(100000);
+//   write(serial_port, &key_enter, sizeof(key_enter));
+//   printf("\r\n");
+//   printf("\r\n ============================================================================================================================================================================================================+");
+//   printf("\r\n    SETTING     | Enter Server IPv4 address want to remove IP from block table : ");
+//   send_ipv4_address_http_remove(serial_port);
+// }
 
 void SetHTTPDefender(int serial_port)
 {
-  char key;
-  char enter = '\r';
-  char key_mode = 'p';
-  write(serial_port, &key_mode, sizeof(key_mode));
-  usleep(100000);
-  write(serial_port, &key_enter, sizeof(key_enter));
-  printf("\r\n");
-  printf("\r\n================+============================================================================================================================================================================================+\n");
-  printf("\r\n   SETTING       |  Do you want to enable HTTP GET flood protect now (Y/N)?: ");
-  while (1)
-  {
-    scanf("%c", &key);
-    if (key == 'y' || key == 'Y' || key == 'n' || key == 'N')
+    current_config_type = CONFIG_HTTP_DEFENDER;
+
+    printf("\r\n");
+    printf("\r\n================+============================================================================================================================================================================================+\n");
+    printf("\r\n    SETTING     | Do you want to enable HTTP GET flood protect for port %d now (Y/N)?: ", current_port);
+    char key;
+    int enable_value = -1;
+
+    while (1)
     {
-      write(serial_port, &key, sizeof(key));
-      usleep(100000);
-      write(serial_port, &enter, sizeof(enter));
-      usleep(1000000);
-      break;
+        scanf(" %c", &key);
+        if (key == 'y' || key == 'Y')
+        {
+            enable_value = 1;
+            break;
+        }
+        else if (key == 'n' || key == 'N')
+        {
+            enable_value = 0;
+            break;
+        }
+        else
+        {
+            printf("    SETTING     | Invalid input. Please enter Y or N: ");
+        }
     }
-    if (key != 'y' || key != 'Y' || key != 'n' || key != 'N')
-    {
-      printf("\r  SETTING       |  Do you want to enable HTTP GET flood protect now (Y/N)?:  ");
-    }
-  }
-  ReturnMode2(serial_port);
+
+    // G n gi  tr? c?u h nh v  tru?ng tuong ?ng
+    last_update_value = enable_value;
+    strcpy(last_update_field, "HTTPFloodEnable");
+
+    usleep(100000);
+    ConfirmAndSaveConfig(serial_port); // X c nh?n v  g?i UART
 }
-// Enable/Disnable HTTPS
+
 void SetHTTPSDefender(int serial_port)
 {
-  char key;
-  char enter = '\r';
-  char key_mode = 0xFF;
+    current_config_type = CONFIG_HTTPS_DEFENDER;
 
-  write(serial_port, &key_mode, sizeof(key_mode));
-  usleep(100000);
-  write(serial_port, &key_enter, sizeof(key_enter));
-  printf("\r\n");
-  printf("\r\n================+============================================================================================================================================================================================+\n");
-  printf("\r\n   SETTING       |  Do you want to enable HTTPS GET flood protect now (Y/N)?: ");
-  while (1)
-  {
-    scanf("%c", &key);
-    if (key == 'y' || key == 'Y' || key == 'n' || key == 'N')
+    printf("\r\n");
+    printf("\r\n================+============================================================================================================================================================================================+\n");
+    printf("\r\n    SETTING     | Do you want to enable HTTPS GET flood protect for port %d now (Y/N)?: ", current_port);
+    char key;
+    int enable_value = -1;
+
+    while (1)
     {
-      write(serial_port, &key, sizeof(key));
-      usleep(100000);
-      write(serial_port, &enter, sizeof(enter));
-      usleep(1000000);
-      break;
+        scanf(" %c", &key);
+        if (key == 'y' || key == 'Y')
+        {
+            enable_value = 1;
+            break;
+        }
+        else if (key == 'n' || key == 'N')
+        {
+            enable_value = 0;
+            break;
+        }
+        else
+        {
+            printf("    SETTING     | Invalid input. Please enter Y or N: ");
+        }
     }
-    if (key != 'y' || key != 'Y' || key != 'n' || key != 'N')
-    {
-      printf("\r  SETTING       |  Do you want to enable HTTPS GET flood protect now (Y/N)?:  ");
-    }
-  }
-  ReturnMode2(serial_port);
+
+    // G n gi  tr? c?u h nh v  tru?ng tuong ?ng
+    last_update_value = enable_value;
+    strcpy(last_update_field, "HTTPSFloodEnable");
+
+    usleep(100000);
+    ConfirmAndSaveConfig(serial_port); // X c nh?n v  g?i UART
 }
-// Anti_UDP fragment
+
 void SetUDPFragDefender(int serial_port)
 {
-  char key;
-  char enter = '\r';
-  char key_mode = 'o';
-  write(serial_port, &key_mode, sizeof(key_mode));
-  usleep(100000);
-  write(serial_port, &key_enter, sizeof(key_enter));
-  printf("\r\n");
-  printf("\r\n================+============================================================================================================================================================================================+\n");
-  printf("\r\n   SETTING       |  Do you want to enable UDP Fragmentation flood protect now (Y/N)?: ");
-  while (1)
-  {
-    scanf("%c", &key);
-    if (key == 'y' || key == 'Y' || key == 'n' || key == 'N')
+    current_config_type = CONFIG_UDP_FRAG_DEFENDER;
+
+    printf("\r\n");
+    printf("\r\n================+============================================================================================================================================================================================+\n");
+    printf("\r\n    SETTING     | Do you want to enable UDP Fragmentation flood protect for port %d now (Y/N)?: ", current_port);
+    char key;
+    int enable_value = -1;
+
+    while (1)
     {
-      write(serial_port, &key, sizeof(key));
-      usleep(100000);
-      write(serial_port, &enter, sizeof(enter));
-      usleep(1000000);
-      break;
+        scanf(" %c", &key);
+        if (key == 'y' || key == 'Y')
+        {
+            enable_value = 1;
+            break;
+        }
+        else if (key == 'n' || key == 'N')
+        {
+            enable_value = 0;
+            break;
+        }
+        else
+        {
+            printf("    SETTING     | Invalid input. Please enter Y or N: ");
+        }
     }
-    if (key != 'y' || key != 'Y' || key != 'n' || key != 'N')
-    {
-      printf("\r  SETTING       |  Do you want to enable UDP Fragmentation flood protect now (Y/N)?:  ");
-    }
-  }
-  ReturnMode2(serial_port);
+
+    // G n gi  tr? c?u h nh v  tru?ng
+    last_update_value = enable_value;
+    strcpy(last_update_field, "UDPFragmentEnable");
+
+    usleep(100000);
+    ConfirmAndSaveConfig(serial_port); // X c nh?n v  g?i UART
 }
 
-void send_ipv4_address(int serial_port)
+// void send_ipv4_address(int serial_port)
+// {
+
+//     // system("clear");
+//     char ip_address[16];
+//     char enter[] = {'\r'};
+//     while (1)
+//     {
+//         // printf("Nh?p d?a ch? IP: ");
+//         scanf("%15s", ip_address);
+//         if (validate_ip_address(ip_address))
+//         {
+//             break;
+//         }
+//         else
+//         {
+//             printf(" Invalid! Please input!!!");
+//         }
+//     }
+//     // process_ip(LOGFILE_HTTP_IPv4, ip_address);
+//     int n = strlen(ip_address);
+//     for (int i = 0; i < n; i++)
+//     {
+//         char data[2] = {ip_address[i], '\0'};
+//         send_data(serial_port, data, sizeof(data) - 1);
+//     }
+//     sleep(1);
+//     // write(serial_port, enter, sizeof(enter));
+// }
+void send_ipv4_address(int serial_port, const char *ip_address)
 {
-  // system("clear");
-  char ip_address[16];
-  char enter[] = {'\r'};
-  while (1)
-  {
-    //  printf("Nh?p d?a ch? IP: ");
-    scanf("%15s", ip_address);
-    if (validate_ip_address(ip_address))
+    char enter[] = {'\r'};
+
+    if (!validate_ip_address(ip_address))
     {
-      break;
+        printf("Invalid IP address format!\n");
+        return;
+    }
+
+    int n = strlen(ip_address);
+    for (int i = 0; i < n; i++)
+    {
+        char data[2] = {ip_address[i], '\0'};
+        send_data(serial_port, data, sizeof(data) - 1);
+    }
+
+    sleep(1);
+    write(serial_port, enter, sizeof(enter));
+}
+
+// --- Fix send_ipv4_address_http_add ---
+void send_ipv4_address_http_add(int serial_port, const char *ip_address)
+{
+    char enter[] = {'\r'};
+    if (!validate_ip_address(ip_address))
+    {
+        printf("Invalid IP address format!\n");
+        return;
+    }
+    process_ip(LOGFILE_HTTP_IPv4, ip_address);
+    int n = strlen(ip_address);
+    for (int i = 0; i < n; i++)
+    {
+        char data[2] = {ip_address[i], '\0'};
+        send_data(serial_port, data, sizeof(data) - 1);
+    }
+    sleep(1);
+    write(serial_port, enter, sizeof(enter));
+}
+
+// --- Fix send_ipv6_address_http_add ---
+void send_ipv6_address_http_add(int serial_port, const char *ipv6_address)
+{
+    char full_ipv6_address[40];
+    char enter[] = {'\r'};
+    struct in6_addr addr;
+    unsigned short ipv6_segments[8];
+
+    if (inet_pton(AF_INET6, ipv6_address, &addr) == 1)
+    {
+        for (int i = 0; i < 8; i++)
+        {
+            ipv6_segments[i] = (addr.s6_addr[i * 2] << 8) | addr.s6_addr[i * 2 + 1];
+        }
+        snprintf(full_ipv6_address, sizeof(full_ipv6_address),
+                 "%04x:%04x:%04x:%04x:%04x:%04x:%04x:%04x",
+                 ipv6_segments[0], ipv6_segments[1], ipv6_segments[2], ipv6_segments[3],
+                 ipv6_segments[4], ipv6_segments[5], ipv6_segments[6], ipv6_segments[7]);
     }
     else
     {
-      printf(" Invalid! Please input!!!");
+        printf("Invalid IPv6 address. Please re-enter:\n");
+        return;
     }
-  }
-  // process_ip(LOGFILE_HTTP_IPv4, ip_address);
-  int n = strlen(ip_address);
-  for (int i = 0; i < n; i++)
-  {
-    char data[2] = {ip_address[i], '\0'};
-    send_data(serial_port, data, sizeof(data) - 1);
-  }
-  sleep(1);
-  write(serial_port, enter, sizeof(enter));
+    process_ip(LOGFILE_HTTP_IPv6, full_ipv6_address);
+    int n = strlen(full_ipv6_address);
+    for (int i = 0; i < n; i++)
+    {
+        char data = full_ipv6_address[i];
+        send_data(serial_port, &data, sizeof(data));
+    }
+    sleep(1);
+    write(serial_port, enter, sizeof(enter));
 }
 
-void send_ipv4_address_http_add(int serial_port)
+// --- Fix send_ipv6_address_http_remove ---
+void send_ipv6_address_http_remove(int serial_port, const char *ipv6_address)
 {
-  // system("clear");
-  char ip_address[16];
-  char enter[] = {'\r'};
-  while (1)
-  {
-    //  printf("Nh?p d?a ch? IP: ");
-    scanf("%15s", ip_address);
-    if (validate_ip_address(ip_address))
+    char full_ipv6_address[40];
+    char enter[] = {'\r'};
+    struct in6_addr addr;
+    unsigned short ipv6_segments[8];
+
+    if (inet_pton(AF_INET6, ipv6_address, &addr) == 1)
     {
-      break;
+        for (int i = 0; i < 8; i++)
+        {
+            ipv6_segments[i] = (addr.s6_addr[i * 2] << 8) | addr.s6_addr[i * 2 + 1];
+        }
+        snprintf(full_ipv6_address, sizeof(full_ipv6_address),
+                 "%04x:%04x:%04x:%04x:%04x:%04x:%04x:%04x",
+                 ipv6_segments[0], ipv6_segments[1], ipv6_segments[2], ipv6_segments[3],
+                 ipv6_segments[4], ipv6_segments[5], ipv6_segments[6], ipv6_segments[7]);
     }
     else
     {
-      printf(" Invalid! Please input!!!");
+        printf("Invalid IPv6 address. Please re-enter:\n");
+        return;
     }
-  }
-  process_ip(LOGFILE_HTTP_IPv4, ip_address);
-  int n = strlen(ip_address);
-  for (int i = 0; i < n; i++)
-  {
-    char data[2] = {ip_address[i], '\0'};
-    send_data(serial_port, data, sizeof(data) - 1);
-  }
-  sleep(1);
-  write(serial_port, enter, sizeof(enter));
+    remove_ip_from_file(LOGFILE_HTTP_IPv6, full_ipv6_address);
+    remove_ip_HTTP_from_hash(full_ipv6_address);
+    int n = strlen(full_ipv6_address);
+    for (int i = 0; i < n; i++)
+    {
+        char data = full_ipv6_address[i];
+        send_data(serial_port, &data, sizeof(data));
+    }
+    sleep(1);
+    write(serial_port, enter, sizeof(enter));
+    new_menu(serial_port); // Pass serial_port as argument
 }
 
-void send_ipv4_address_http_remove(int serial_port)
+// --- Remove duplicate handle_signal definition ---
+// Only keep one definition of handle_signal in your file!
+
+// void send_ipv4_address_http_remove(int serial_port)
+// {
+//     // system("clear");
+//     char ip_address[16];
+//     char enter[] = {'\r'};
+//     while (1)
+//     {
+//         //  printf("Nh?p d?a ch? IP: ");
+//         scanf("%15s", ip_address);
+//         if (validate_ip_address(ip_address))
+//         {
+//             break;
+//         }
+//         else
+//         {
+//             printf(" Invalid! Please input!!!");
+//         }
+//     }
+//     remove_ip_from_file(LOGFILE_HTTP_IPv4, ip_address);
+//     remove_ip_HTTP_from_hash(ip_address);
+//     int n = strlen(ip_address);
+//     for (int i = 0; i < n; i++)
+//     {
+//         char data[2] = {ip_address[i], '\0'};
+//         send_data(serial_port, data, sizeof(data) - 1);
+//     }
+//     sleep(1);
+//     write(serial_port, enter, sizeof(enter));
+// }
+void send_ipv4_address_http_remove(int serial_port, const char *ip_address)
 {
-  // system("clear");
-  char ip_address[16];
-  char enter[] = {'\r'};
-  while (1)
-  {
-    //  printf("Nh?p d?a ch? IP: ");
-    scanf("%15s", ip_address);
-    if (validate_ip_address(ip_address))
+    char enter = '\r';
+
+    // G? kh?i file + hash table
+    remove_ip_from_file(LOGFILE_HTTP_IPv4, ip_address);
+    remove_ip_HTTP_from_hash(ip_address);
+
+    // G?i t?ng k  t? c?a IP
+    int n = strlen(ip_address);
+    for (int i = 0; i < n; i++)
     {
-      break;
+        char data = ip_address[i];
+        write(serial_port, &data, 1);
     }
-    else
-    {
-      printf(" Invalid! Please input!!!");
-    }
-  }
-  remove_ip_from_file(LOGFILE_HTTP_IPv4, ip_address);
-  remove_ip_HTTP_from_hash(ip_address);
-  int n = strlen(ip_address);
-  for (int i = 0; i < n; i++)
-  {
-    char data[2] = {ip_address[i], '\0'};
-    send_data(serial_port, data, sizeof(data) - 1);
-  }
-  sleep(1);
-  write(serial_port, enter, sizeof(enter));
+
+    // G?i enter sau IP
+    usleep(100000);
+    write(serial_port, &enter, 1);
 }
+
 int validate_ip_address(const char *ip_address)
 {
-  regex_t regex;
-  int reti;
+    regex_t regex;
+    int reti;
 
-  // Bi?u th?c ch nh quy d? ki?m tra d?nh d?ng IP
-  const char *pattern = "^([0-9]{1,3}\\.){3}[0-9]{1,3}$";
+    // Bi?u th?c ch nh quy d? ki?m tra d?nh d?ng IP
+    const char *pattern = "^([0-9]{1,3}\\.){3}[0-9]{1,3}$";
 
-  // Bi n d?ch bi?u th?c ch nh quy
-  reti = regcomp(&regex, pattern, REG_EXTENDED);
-  if (reti)
-  {
-    printf("Could not compile regex\n");
-    return 0; // Kh ng h?p l? n?u regex kh ng bi n d?ch du?c
-  }
-
-  // So kh?p d?a ch? IP v?i bi?u th?c ch nh quy
-  reti = regexec(&regex, ip_address, 0, NULL, 0);
-
-  // Gi?i ph ng b? nh? du?c s? d?ng b?i bi?u th?c ch nh quy
-  regfree(&regex);
-
-  if (reti)
-  {
-    return 0; // Kh ng h?p l? n?u d?nh d?ng kh ng kh?p
-  }
-
-  // N?u d?nh d?ng h?p l?, ki?m tra gi  tr? c?a t?ng ph?n
-  int octet[4];
-  sscanf(ip_address, "%d.%d.%d.%d", &octet[0], &octet[1], &octet[2], &octet[3]);
-
-  for (int i = 0; i < 4; i++)
-  {
-    if (octet[i] < 0 || octet[i] > 255)
+    // Bi n d?ch bi?u th?c ch nh quy
+    reti = regcomp(&regex, pattern, REG_EXTENDED);
+    if (reti)
     {
-      return 0;
+        printf("Could not compile regex\n");
+        return 0; // Kh ng h?p l? n?u regex kh ng bi n d?ch du?c
     }
-  }
 
-  return 1;
+    // So kh?p d?a ch? IP v?i bi?u th?c ch nh quy
+    reti = regexec(&regex, ip_address, 0, NULL, 0);
+
+    // Gi?i ph ng b? nh? du?c s? d?ng b?i bi?u th?c ch nh quy
+    regfree(&regex);
+
+    if (reti)
+    {
+        return 0; // Kh ng h?p l? n?u d?nh d?ng kh ng kh?p
+    }
+
+    // N?u d?nh d?ng h?p l?, ki?m tra gi  tr? c?a t?ng ph?n
+    int octet[4];
+    sscanf(ip_address, "%d.%d.%d.%d", &octet[0], &octet[1], &octet[2], &octet[3]);
+
+    for (int i = 0; i < 4; i++)
+    {
+        if (octet[i] < 0 || octet[i] > 255)
+        {
+            return 0;
+        }
+    }
+
+    return 1;
 }
 
-void send_ipv6_address(int serial_port)
+int is_valid_mac_address(const char *mac)
 {
-  char ipv6_address[40];
-  char full_ipv6_address[40];
-  char enter[] = {'\r'};
-  struct in6_addr addr;
-  unsigned short ipv6_segments[8];
+    if (strlen(mac) != 17)
+        return 0;
 
-  while (1)
-  {
-    scanf("%39s", ipv6_address);
+    for (int i = 0; i < 17; i++)
+    {
+        if ((i + 1) % 3 == 0)
+        {
+            if (mac[i] != ':' && mac[i] != '-')
+                return 0; // cho ph p c? ":" v  "-"
+        }
+        else
+        {
+            if (!isxdigit(mac[i]))
+                return 0; // ph?i l  k  t? hex: 0-9, a-f, A-F
+        }
+    }
+    return 1;
+}
+
+// void send_ipv6_address(int serial_port)
+// {
+//     char ipv6_address[40];
+//     char full_ipv6_address[40];
+//     char enter[] = {'\r'};
+//     struct in6_addr addr;
+//     unsigned short ipv6_segments[8];
+
+//     while (1)
+//     {
+//         scanf("%39s", ipv6_address);
+//         if (inet_pton(AF_INET6, ipv6_address, &addr) == 1)
+//         {
+//             for (int i = 0; i < 8; i++)
+//             {
+//                 ipv6_segments[i] = (addr.s6_addr[i * 2] << 8) | addr.s6_addr[i * 2 + 1];
+//             }
+//             snprintf(full_ipv6_address, sizeof(full_ipv6_address),
+//                      "%04x:%04x:%04x:%04x:%04x:%04x:%04x:%04x",
+//                      ipv6_segments[0], ipv6_segments[1], ipv6_segments[2], ipv6_segments[3],
+//                      ipv6_segments[4], ipv6_segments[5], ipv6_segments[6], ipv6_segments[7]);
+//             break;
+//         }
+//         else
+//         {
+//             printf("Invalid IPv6 address. Please re-enter:");
+//         }
+//     }
+//     // int n = strlen(full_ipv6_address);
+//     // for (int i = 0; i < n; i++)
+//     // {
+//     //   char data = full_ipv6_address[i];
+//     //   send_data(serial_port, &data, sizeof(data));
+//     // }
+//     // sleep(1);
+//     // write(serial_port, enter, sizeof(enter));
+// }
+
+void send_ipv6_address(int serial_port, const char *ipv6_address)
+{
+    char full_ipv6_address[40];
+    char enter[] = {'\r'};
+    struct in6_addr addr;
+    unsigned short ipv6_segments[8];
+
     if (inet_pton(AF_INET6, ipv6_address, &addr) == 1)
     {
-      for (int i = 0; i < 8; i++)
-      {
-        ipv6_segments[i] = (addr.s6_addr[i * 2] << 8) | addr.s6_addr[i * 2 + 1];
-      }
-      snprintf(full_ipv6_address, sizeof(full_ipv6_address),
-               "%04x:%04x:%04x:%04x:%04x:%04x:%04x:%04x",
-               ipv6_segments[0], ipv6_segments[1], ipv6_segments[2], ipv6_segments[3],
-               ipv6_segments[4], ipv6_segments[5], ipv6_segments[6], ipv6_segments[7]);
-      break;
+        for (int i = 0; i < 8; i++)
+        {
+            ipv6_segments[i] = (addr.s6_addr[i * 2] << 8) | addr.s6_addr[i * 2 + 1];
+        }
+        snprintf(full_ipv6_address, sizeof(full_ipv6_address),
+                 "%04x:%04x:%04x:%04x:%04x:%04x:%04x:%04x",
+                 ipv6_segments[0], ipv6_segments[1], ipv6_segments[2], ipv6_segments[3],
+                 ipv6_segments[4], ipv6_segments[5], ipv6_segments[6], ipv6_segments[7]);
+
+        // G?i t?ng byte c?a d?a ch?
+        for (int i = 0; i < strlen(full_ipv6_address); i++)
+        {
+            char data = full_ipv6_address[i];
+            write(serial_port, &data, sizeof(data));
+        }
+        usleep(100000);
+        write(serial_port, enter, sizeof(enter));
     }
     else
     {
-      printf("Invalid IPv6 address. Please re-enter:");
+        printf("Invalid IPv6 address format.\n");
     }
-  }
-  int n = strlen(full_ipv6_address);
-  for (int i = 0; i < n; i++)
-  {
-    char data = full_ipv6_address[i];
-    send_data(serial_port, &data, sizeof(data));
-  }
-  sleep(1);
-  write(serial_port, enter, sizeof(enter));
 }
-void send_ipv6_address_http_add(int serial_port)
-{
-  char ipv6_address[40];
-  char full_ipv6_address[40];
-  char enter[] = {'\r'};
-  struct in6_addr addr;
-  unsigned short ipv6_segments[8];
-
-  while (1)
-  {
-    scanf("%39s", ipv6_address);
-    if (inet_pton(AF_INET6, ipv6_address, &addr) == 1)
-    {
-      for (int i = 0; i < 8; i++)
-      {
-        ipv6_segments[i] = (addr.s6_addr[i * 2] << 8) | addr.s6_addr[i * 2 + 1];
-      }
-      snprintf(full_ipv6_address, sizeof(full_ipv6_address),
-               "%04x:%04x:%04x:%04x:%04x:%04x:%04x:%04x",
-               ipv6_segments[0], ipv6_segments[1], ipv6_segments[2], ipv6_segments[3],
-               ipv6_segments[4], ipv6_segments[5], ipv6_segments[6], ipv6_segments[7]);
-      break;
-    }
-    else
-    {
-      printf("Invalid IPv6 address. Please re-enter:");
-    }
-  }
-  process_ip(LOGFILE_HTTP_IPv6, full_ipv6_address);
-  int n = strlen(full_ipv6_address);
-  for (int i = 0; i < n; i++)
-  {
-    char data = full_ipv6_address[i];
-    send_data(serial_port, &data, sizeof(data));
-  }
-  sleep(1);
-  write(serial_port, enter, sizeof(enter));
-}
-
-void send_ipv6_address_http_remove(int serial_port)
-{
-  char ipv6_address[40];
-  char full_ipv6_address[40];
-  char enter[] = {'\r'};
-  struct in6_addr addr;
-  unsigned short ipv6_segments[8];
-
-  while (1)
-  {
-    scanf("%39s", ipv6_address);
-    if (inet_pton(AF_INET6, ipv6_address, &addr) == 1)
-    {
-      for (int i = 0; i < 8; i++)
-      {
-        ipv6_segments[i] = (addr.s6_addr[i * 2] << 8) | addr.s6_addr[i * 2 + 1];
-      }
-      snprintf(full_ipv6_address, sizeof(full_ipv6_address),
-               "%04x:%04x:%04x:%04x:%04x:%04x:%04x:%04x",
-               ipv6_segments[0], ipv6_segments[1], ipv6_segments[2], ipv6_segments[3],
-               ipv6_segments[4], ipv6_segments[5], ipv6_segments[6], ipv6_segments[7]);
-      break;
-    }
-    else
-    {
-      printf("Invalid IPv6 address. Please re-enter:");
-    }
-  }
-  remove_ip_from_file(LOGFILE_HTTP_IPv6, full_ipv6_address);
-  remove_ip_HTTP_from_hash(full_ipv6_address);
-  int n = strlen(full_ipv6_address);
-  for (int i = 0; i < n; i++)
-  {
-    char data = full_ipv6_address[i];
-    send_data(serial_port, &data, sizeof(data));
-  }
-  sleep(1);
-  write(serial_port, enter, sizeof(enter));
-}
-
 // Remove IP from file
 void remove_ip_from_file(const char *filename, const char *ip)
 {
-  FILE *file = fopen(filename, "r");
-  if (file == NULL)
-  {
-    perror("Error opening file");
-    return;
-  }
+    FILE *file = fopen(filename, "r");
+    if (file == NULL)
+    {
+        perror("Error opening file");
+        return;
+    }
 
-  char **lines = NULL;
-  size_t count = 0;
-  char buffer[256];
+    char **lines = NULL;
+    size_t count = 0;
+    char buffer[256];
 
-  while (fgets(buffer, sizeof(buffer), file))
-  {
-    lines = realloc(lines, (count + 1) * sizeof(char *));
-    lines[count] = strdup(buffer);
-    count++;
-  }
-  fclose(file);
+    while (fgets(buffer, sizeof(buffer), file))
+    {
+        lines = realloc(lines, (count + 1) * sizeof(char *));
+        lines[count] = strdup(buffer);
+        count++;
+    }
+    fclose(file);
 
-  file = fopen(filename, "w");
-  if (file == NULL)
-  {
-    perror("Error opening file for writing");
+    file = fopen(filename, "w");
+    if (file == NULL)
+    {
+        perror("Error opening file for writing");
+        for (size_t i = 0; i < count; i++)
+        {
+            free(lines[i]);
+        }
+        free(lines);
+        return;
+    }
+
     for (size_t i = 0; i < count; i++)
     {
-      free(lines[i]);
+        if (strstr(lines[i], ip) == NULL)
+        {
+            fputs(lines[i], file);
+        }
+        free(lines[i]);
     }
     free(lines);
-    return;
-  }
 
-  for (size_t i = 0; i < count; i++)
-  {
-    if (strstr(lines[i], ip) == NULL)
-    {
-      fputs(lines[i], file);
-    }
-    free(lines[i]);
-  }
-  free(lines);
-
-  fclose(file);
+    fclose(file);
 }
 
 // Remove IP HTTP from hash
 void remove_ip_HTTP_from_hash(const char *ip)
 {
-  if (g_hash_table_size(ip_table) == 0)
-  {
-    return;
-  }
-  // remove  ip hash
-  g_hash_table_remove(ip_table, ip);
+    if (g_hash_table_size(ip_table) == 0)
+    {
+        return;
+    }
+    // remove  ip hash
+    g_hash_table_remove(ip_table, ip);
+}
+//// VPN Tables
+// void Display_IPv4_vpn_table();//ok
+// void Display_IPv6_vpn_table();//ok
+//
+//// HTTP Tables
+// void Display_http_ipv4_table();//ok
+// void Display_http_ipv6_table();//ok
+//
+//// Blocked Tables
+// void Display_IPv4_block_table();//ok
+// void Display_IPv6_block_table();//ok
+//
+//// Protected Tables
+// void Display_IPv4_Protected_Table();//ok
+// void Display_IPv6_Protected_Table();//ok
+//// VPN
+// void update_vpn_ipv4(const char *ip);//ok
+// void update_vpn_ipv6(const char *ip);//ok
+//
+//// HTTP
+// void update_http_ipv4(const char *ip);//ok
+// void update_http_ipv6(const char *ip);//ok
+//
+//// Blocked
+// void update_blocked_ipv4(const char *ip, const char *port);//ok
+// void update_blocked_ipv6(const char *ip, const char *port);//ok
+//// Protected
+// void update_protected_ipv4_port(const char *ip, const char *new_port);//ok
+// void update_protected_ipv6_port(const char *ip, const char *new_port);//ok
+//
+//// VPN
+// void delete_vpn_ipv4(const char *ip);//ok
+// void delete_vpn_ipv6(const char *ip);//ok
+//
+//// HTTP
+// void delete_http_ipv4(const char *ip);//ok
+// void delete_http_ipv6(const char *ip);//ok
+//
+//// Blocked
+// void delete_blocked_ipv4(const char *ip);
+// void delete_blocked_ipv6(const char *ip);
+//
+//// Protected
+// void delete_protected_ipv4(const char *ip);//ok
+// void delete_protected_ipv6(const char *ip);//ok
+
+// VPN
+// Display IPv4 VPN
+void Display_IPv4_vpn_table()
+{
+    sqlite3 *db;
+    const char *db_path = DB_PATH; // d  d?nh nghia ? d?u file
+    if (sqlite3_open(db_path, &db) != SQLITE_OK)
+    {
+        printf("Cannot open database: %s\n", sqlite3_errmsg(db));
+        return;
+    }
+
+    sqlite3_stmt *stmt;
+    const char *sql =
+        "SELECT AddressId, InterfaceId, Address, AddressVersion, AddressType, AddressAddedDate, Port "
+        "FROM NetworkAddresses "
+        "WHERE AddressType = 'vpn_white' AND AddressVersion = 'IPv4' AND Port IS NULL";
+
+    if (sqlite3_prepare_v2(db, sql, -1, &stmt, 0) != SQLITE_OK)
+    {
+        printf("Failed to prepare statement: %s\n", sqlite3_errmsg(db));
+        sqlite3_close(db);
+        return;
+    }
+
+    // In b?ng
+    printf("\n+----+------------+-----------------+---------+-----------+---------------------+--------+\n");
+    printf("| ID | Interface  |    Address      | Version |   Type    |    Added Date       |   Port |\n");
+    printf("+----+------------+-----------------+---------+-----------+---------------------+--------+\n");
+    int stt = 1;
+    while (sqlite3_step(stmt) == SQLITE_ROW)
+    {
+        int id = sqlite3_column_int(stmt, 0);
+        int interface_id = sqlite3_column_int(stmt, 1);
+        const unsigned char *addr = sqlite3_column_text(stmt, 2);
+        const unsigned char *version = sqlite3_column_text(stmt, 3);
+        const unsigned char *type = sqlite3_column_text(stmt, 4);
+        const unsigned char *date = sqlite3_column_text(stmt, 5);
+        const unsigned char *port = sqlite3_column_text(stmt, 6);
+
+        printf("| %-2d | %-10d | %-15s | %-7s | %-9s | %-19s | %-4s |\n",
+               stt++,
+               interface_id,
+               addr ? (const char *)addr : "",
+               version ? (const char *)version : "",
+               type ? (const char *)type : "",
+               date ? (const char *)date : "",
+               port ? (const char *)port : "(NULL)");
+    }
+    printf("+----+------------+-----------------+---------+-----------+---------------------+--------+\n");
+
+    sqlite3_finalize(stmt);
+    sqlite3_close(db);
 }
 
-// void Check_Table_IPv4()
-// {
+// Display IPv6 VPN
+void Display_IPv6_vpn_table()
+{
+    sqlite3 *db;
+    const char *db_path = DB_PATH;
+    if (sqlite3_open(db_path, &db) != SQLITE_OK)
+    {
+        printf("Cannot open database: %s\n", sqlite3_errmsg(db));
+        return;
+    }
 
-//   if (ipV4_1 != NULL && ipV4_2 != NULL && ipV4_3 != NULL && ipV4_4 != NULL)
-//   {
-//     printf("\n\n The ipv4 protection table is full!!!");
-//   }
-//   else
-//   {
-//   }
+    sqlite3_stmt *stmt;
+    const char *sql =
+        "SELECT AddressId, InterfaceId, Address, AddressVersion, AddressType, AddressAddedDate, Port "
+        "FROM NetworkAddresses "
+        "WHERE AddressType = 'vpn_white' AND AddressVersion = 'IPv6' AND Port IS NULL";
+
+    if (sqlite3_prepare_v2(db, sql, -1, &stmt, 0) != SQLITE_OK)
+    {
+        printf("Failed to prepare statement: %s\n", sqlite3_errmsg(db));
+        sqlite3_close(db);
+        return;
+    }
+
+    // In b?ng
+    printf("\n+----+------------+-----------------+---------+-----------+---------------------+--------+\n");
+    printf("| ID | Interface  |    Address      | Version |   Type    |    Added Date       |   Port |\n");
+    printf("+----+------------+-----------------+---------+-----------+---------------------+--------+\n");
+    int stt = 1;
+    while (sqlite3_step(stmt) == SQLITE_ROW)
+    {
+        int id = sqlite3_column_int(stmt, 0);
+        int interface_id = sqlite3_column_int(stmt, 1);
+        const unsigned char *addr = sqlite3_column_text(stmt, 2);
+        const unsigned char *version = sqlite3_column_text(stmt, 3);
+        const unsigned char *type = sqlite3_column_text(stmt, 4);
+        const unsigned char *date = sqlite3_column_text(stmt, 5);
+        const unsigned char *port = sqlite3_column_text(stmt, 6);
+
+        printf("| %-2d | %-10d | %-15s | %-7s | %-9s | %-19s | %-4s |\n",
+               stt++,
+               interface_id,
+               addr ? (const char *)addr : "",
+               version ? (const char *)version : "",
+               type ? (const char *)type : "",
+               date ? (const char *)date : "",
+               port ? (const char *)port : "(NULL)");
+    }
+    printf("+----+------------+-----------------+---------+-----------+---------------------+--------+\n");
+
+    sqlite3_finalize(stmt);
+    sqlite3_close(db);
+}
+
+// HTTP
+
+// HTTP display
+void Display_IP_http_table()
+{
+    sqlite3 *db;
+    const char *db_path = DB_PATH;
+
+    if (sqlite3_open(db_path, &db) != SQLITE_OK)
+    {
+        printf("Cannot open database: %s\n", sqlite3_errmsg(db));
+        return;
+    }
+
+    sqlite3_stmt *stmt;
+    const char *sql = "SELECT Address, AddressVersion, AddressType, AddressAddedDate, AddressTimeOut, Port "
+                      "FROM NetworkAddresses "
+                      "WHERE AddressType = 'http_black'";
+
+    if (sqlite3_prepare_v2(db, sql, -1, &stmt, 0) != SQLITE_OK)
+    {
+        printf("Failed to prepare statement: %s\n", sqlite3_errmsg(db));
+        sqlite3_close(db);
+        return;
+    }
+
+    // In b?ng ti u d?
+    printf("\n+------+---------------------------------------------+---------+-----------+---------------------+---------------------+--------+\n");
+    printf("|  #   |                   Address                    | Version |   Type    |   Added Date        |    Time Out         |  Port  |\n");
+    printf("+------+---------------------------------------------+---------+-----------+---------------------+---------------------+--------+\n");
+
+    int stt = 1;
+    int found = 0;
+    while (sqlite3_step(stmt) == SQLITE_ROW)
+    {
+        found = 1;
+        const unsigned char *addr = sqlite3_column_text(stmt, 0);
+        const unsigned char *version = sqlite3_column_text(stmt, 1);
+        const unsigned char *type = sqlite3_column_text(stmt, 2);
+        const unsigned char *date = sqlite3_column_text(stmt, 3);
+        const unsigned char *timeout = sqlite3_column_text(stmt, 4);
+        const unsigned char *port = sqlite3_column_text(stmt, 5);
+
+        printf("| %-4d | %-43s | %-7s | %-9s | %-19s | %-19s | %-6s |\n",
+               stt++,
+               addr ? (const char *)addr : "",
+               version ? (const char *)version : "",
+               type ? (const char *)type : "",
+               date ? (const char *)date : "",
+               timeout ? (const char *)timeout : "",
+               port ? (const char *)port : "(NULL)");
+    }
+
+    if (!found)
+    {
+        printf("| %-80s |\n", "No HTTP blocked addresses found.");
+    }
+
+    printf("+------+-----------------------------------------------+---------+-----------+---------------------+---------------------+--------+\n");
+    printf("\n Press any key to continue...\n");
+    getchar(); //  ?i ngu?i d ng nh?n ph m
+    sqlite3_finalize(stmt);
+    sqlite3_close(db);
+}
+
+//  Display IPv4 HTTP
+void Display_http_ipv4_table()
+{
+    sqlite3 *db;
+    const char *db_path = DB_PATH;
+
+    if (sqlite3_open(db_path, &db) != SQLITE_OK)
+    {
+        printf("Cannot open database: %s\n", sqlite3_errmsg(db));
+        return;
+    }
+
+    sqlite3_stmt *stmt;
+    const char *sql =
+        "SELECT AddressId, InterfaceId, Address, AddressVersion, AddressType, AddressAddedDate, Port "
+        "FROM NetworkAddresses "
+        "WHERE AddressType = 'http_black' AND AddressVersion = 'IPV4'";
+
+    if (sqlite3_prepare_v2(db, sql, -1, &stmt, 0) != SQLITE_OK)
+    {
+        printf("Failed to prepare statement: %s\n", sqlite3_errmsg(db));
+        sqlite3_close(db);
+        return;
+    }
+    // In ti u d? b?ng
+    printf("\n+----+-----------------+---------+-------------+---------------------+--------+\n");
+    printf("| #  |     Address     | Version |    Type     |   Added Date        |  Port  |\n");
+    printf("+----+-----------------+---------+-------------+---------------------+--------+\n");
+    // printf("\n+----+---------------------------------------------+---------+-----------+---------------------+---------------------+--------+\n");
+    // printf("| #  |                   Address                    | Version |   Type    |   Added Date        |    Time Out         |  Port  |\n");
+    // printf("+----+---------------------------------------------+---------+-----------+---------------------+---------------------+--------+\n");
+    int stt = 1;
+    int found = 0;
+    while (sqlite3_step(stmt) == SQLITE_ROW)
+    {
+        found = 1;
+        const unsigned char *addr = sqlite3_column_text(stmt, 2);
+        const unsigned char *version = sqlite3_column_text(stmt, 3);
+        const unsigned char *type = sqlite3_column_text(stmt, 4);
+        const unsigned char *date = sqlite3_column_text(stmt, 5);
+        const unsigned char *port = sqlite3_column_text(stmt, 6);
+        printf("| %-2d | %-15s | %-7s | %-9s | %-19s | %-6s |\n",
+               stt++,
+               addr ? (const char *)addr : "",
+               version ? (const char *)version : "",
+               type ? (const char *)type : "",
+               date ? (const char *)date : "",
+               port ? (const char *)port : "(NULL)");
+    }
+    if (!found)
+    {
+        printf("| %-76s |\n", "No HTTP IPv4 addresses found.");
+    }
+    printf("+----+-----------------+---------+-----------+---------------------+--------+\n");
+    sqlite3_finalize(stmt);
+    sqlite3_close(db);
+}
+
+// Display IPv6 HTTP
+void Display_http_ipv6_table()
+{
+    sqlite3 *db;
+    const char *db_path = DB_PATH;
+    if (sqlite3_open(db_path, &db) != SQLITE_OK)
+    {
+        printf("Cannot open database: %s\n", sqlite3_errmsg(db));
+        return;
+    }
+
+    sqlite3_stmt *stmt;
+    const char *sql =
+        "SELECT AddressId, InterfaceId, Address, AddressVersion, AddressType, AddressAddedDate, Port "
+        "FROM NetworkAddresses "
+        "WHERE AddressType = 'http_black' AND AddressVersion = 'IPV6'";
+
+    if (sqlite3_prepare_v2(db, sql, -1, &stmt, 0) != SQLITE_OK)
+    {
+        printf("Failed to prepare statement: %s\n", sqlite3_errmsg(db));
+        sqlite3_close(db);
+        return;
+    }
+
+    // In b?ng
+    // printf("\n+----+------------+---------------------------+---------+-----------+---------------------+--------+\n");
+    // printf("| ID | Interface  |         Address           | Version |   Type    |    Added Date       |   Port |\n");
+    // printf("+----+------------+---------------------------+---------+-----------+---------------------+--------+\n");
+    printf("\n+----+---------------------------------------------+---------+-----------+---------------------+---------------------+--------+\n");
+    printf("| #  |                   Address                    | Version |   Type    |   Added Date        |    Time Out         |  Port  |\n");
+    printf("+----+---------------------------------------------+---------+-----------+---------------------+---------------------+--------+\n");
+
+    int stt = 1;
+    while (sqlite3_step(stmt) == SQLITE_ROW)
+    {
+        int id = sqlite3_column_int(stmt, 0);
+        int interface_id = sqlite3_column_int(stmt, 1);
+        const unsigned char *addr = sqlite3_column_text(stmt, 2);
+        const unsigned char *version = sqlite3_column_text(stmt, 3);
+        const unsigned char *type = sqlite3_column_text(stmt, 4);
+        const unsigned char *date = sqlite3_column_text(stmt, 5);
+        const unsigned char *port = sqlite3_column_text(stmt, 6);
+
+        printf("| %-2d | %-10d | %-43s | %-7s | %-9s | %-19s | %-4s |\n",
+               stt++,
+               interface_id,
+               addr ? (const char *)addr : "",
+               version ? (const char *)version : "",
+               type ? (const char *)type : "",
+               date ? (const char *)date : "",
+               port ? (const char *)port : "");
+    }
+    printf("+----+------------+---------------------------+---------+-----------+---------------------+--------+\n");
+
+    sqlite3_finalize(stmt);
+    sqlite3_close(db);
+}
+
+// // In b?ng
+// printf("\n+----+------------+-----------------+---------+-----------+---------------------+--------+\n");
+// printf("| ID | Interface  |    Address      | Version |   Type    |    Added Date       |   Port |\n");
+// printf("+----+------------+-----------------+---------+-----------+---------------------+--------+\n");
+// int stt = 1;
+// while (sqlite3_step(stmt) == SQLITE_ROW)
+// {
+//     int id = sqlite3_column_int(stmt, 0);
+//     int interface_id = sqlite3_column_int(stmt, 1);
+//     const unsigned char *addr = sqlite3_column_text(stmt, 2);
+//     const unsigned char *version = sqlite3_column_text(stmt, 3);
+//     const unsigned char *type = sqlite3_column_text(stmt, 4);
+//     const unsigned char *date = sqlite3_column_text(stmt, 5);
+//     const unsigned char *port = sqlite3_column_text(stmt, 6);
+
+//     printf("| %-2d | %-10d | %-15s | %-7s | %-9s | %-19s | %-4s |\n",
+//            stt++,
+//            interface_id,
+//            addr ? (const char *)addr : "",
+//            version ? (const char *)version : "",
+//            type ? (const char *)type : "",
+//            date ? (const char *)date : "",
+//            port ? (const char *)port : "(NULL)");
 // }
+// printf("+----+------------+-----------------+---------+-----------+---------------------+--------+\n");
+
+// sqlite3_finalize(stmt);
+// sqlite3_close(db);
+
+// BLOCK
+// Display IPv4 block
+
+void Display_IPv4_block_table()
+{
+    sqlite3 *db;
+    const char *db_path = DB_PATH;
+
+    if (sqlite3_open(db_path, &db) != SQLITE_OK)
+    {
+        printf("Cannot open database: %s\n", sqlite3_errmsg(db));
+        return;
+    }
+
+    sqlite3_stmt *stmt;
+    const char *sql = "SELECT Address, AddressVersion, AddressType, AddressAddedDate, AddressTimeOut, Port "
+                      "FROM NetworkAddresses "
+                      "WHERE AddressType = 'blocked' AND AddressVersion = 'IPv4' AND Port = ?";
+
+    if (sqlite3_prepare_v2(db, sql, -1, &stmt, 0) != SQLITE_OK)
+    {
+        printf("Failed to prepare statement: %s\n", sqlite3_errmsg(db));
+        sqlite3_close(db);
+        return;
+    }
+
+    // T?o t n port theo d?nh d?ng "eth1", "eth2",...
+    char port_name[8];
+    snprintf(port_name, sizeof(port_name), "eth%d", current_port);
+
+    // G n gi  tr? cho bi?n bind (tham s? ?)
+    if (sqlite3_bind_text(stmt, 1, port_name, -1, SQLITE_STATIC) != SQLITE_OK)
+    {
+        printf("Failed to bind port name: %s\n", sqlite3_errmsg(db));
+        sqlite3_finalize(stmt);
+        sqlite3_close(db);
+        return;
+    }
+
+    // In b?ng ti u d?
+    printf("\n+----+-----------------+---------+-----------+---------------------+---------------------+--------+\n");
+    printf("| #  |     Address     | Version |   Type    |   Added Date        |    Time Out         |  Port  |\n");
+    printf("+----+-----------------+---------+-----------+---------------------+---------------------+--------+\n");
+
+    int stt = 1;
+    int found = 0;
+    while (sqlite3_step(stmt) == SQLITE_ROW)
+    {
+        found = 1;
+        const unsigned char *addr = sqlite3_column_text(stmt, 0);
+        const unsigned char *version = sqlite3_column_text(stmt, 1);
+        const unsigned char *type = sqlite3_column_text(stmt, 2);
+        const unsigned char *date = sqlite3_column_text(stmt, 3);
+        const unsigned char *timeout = sqlite3_column_text(stmt, 4);
+        const unsigned char *port = sqlite3_column_text(stmt, 5);
+
+        printf("| %-2d | %-15s | %-7s | %-9s | %-19s | %-19s | %-6s |\n",
+               stt++,
+               addr ? (const char *)addr : "",
+               version ? (const char *)version : "",
+               type ? (const char *)type : "",
+               date ? (const char *)date : "",
+               timeout ? (const char *)timeout : "",
+               port ? (const char *)port : "");
+    }
+
+    if (!found)
+    {
+        printf("| %-80s |\n", "No IPv4 blocked addresses found for this port.");
+    }
+
+    printf("+----+-----------------+---------+-----------+---------------------+---------------------+--------+\n");
+
+    sqlite3_finalize(stmt);
+    sqlite3_close(db);
+}
+
+// Display IPv6 block
+
+void Display_IPv6_block_table()
+{
+    sqlite3 *db;
+    const char *db_path = DB_PATH;
+    if (sqlite3_open(db_path, &db) != SQLITE_OK)
+    {
+        printf("Cannot open database: %s\n", sqlite3_errmsg(db));
+        return;
+    }
+
+    sqlite3_stmt *stmt;
+    const char *sql = "SELECT AddressId, InterfaceId, Address, AddressVersion, AddressType, AddressAddedDate, Port "
+                      "FROM NetworkAddresses "
+                      "WHERE AddressType = 'blocked' AND AddressVersion = 'IPv6' AND Port = ?";
+
+    if (sqlite3_prepare_v2(db, sql, -1, &stmt, 0) != SQLITE_OK)
+    {
+        printf("Failed to prepare statement: %s\n", sqlite3_errmsg(db));
+        sqlite3_close(db);
+        return;
+    }
+
+    // T?o t n port t? current_port (eth1, eth2, ...)
+    char port_name[8];
+    snprintf(port_name, sizeof(port_name), "eth%d", current_port);
+
+    // Truy?n port_name v o SQL (d?u ?)
+    if (sqlite3_bind_text(stmt, 1, port_name, -1, SQLITE_STATIC) != SQLITE_OK)
+    {
+        printf("Failed to bind port name: %s\n", sqlite3_errmsg(db));
+        sqlite3_finalize(stmt);
+        sqlite3_close(db);
+        return;
+    }
+
+    // In b?ng
+
+    printf("\r\n ============================================================================================================================================================================================================+");
+    printf("\n+----+------------+-----------------------------------------+---------+-----------+---------------------+------+\n");
+    printf("\r| ID | Interface  |                   Address               | Version |    Type   |      Added Date     | Port |\n");
+    printf("\r+----+------------+-----------------------------------------+---------+-----------+---------------------+------+\n");
+    int stt = 1;
+    while (sqlite3_step(stmt) == SQLITE_ROW)
+    {
+        int id = sqlite3_column_int(stmt, 0);
+        int interface_id = sqlite3_column_int(stmt, 1);
+        const unsigned char *addr = sqlite3_column_text(stmt, 2);
+        const unsigned char *version = sqlite3_column_text(stmt, 3);
+        const unsigned char *type = sqlite3_column_text(stmt, 4);
+        const unsigned char *date = sqlite3_column_text(stmt, 5);
+        const unsigned char *port = sqlite3_column_text(stmt, 6);
+
+        printf("| %-2d | %-10d | %-15s | %-7s | %-9s | %-19s | %-4s |\n",
+               stt++,
+               interface_id,
+               addr ? (const char *)addr : "",
+               version ? (const char *)version : "",
+               type ? (const char *)type : "",
+               date ? (const char *)date : "",
+               port ? (const char *)port : "");
+    }
+    printf("\r+-----+-----------+-----------------------------------------+---------+-----------+---------------------+------+\n");
+    sqlite3_finalize(stmt);
+    sqlite3_close(db);
+}
+// PROTECT
+// Display IPv4 protect
+void Display_IPv4_Protected_Table()
+{
+    sqlite3 *db;
+    const char *db_path = DB_PATH; // d  d?nh nghia ? d?u file
+    if (sqlite3_open(db_path, &db) != SQLITE_OK)
+    {
+        printf("Cannot open database: %s\n", sqlite3_errmsg(db));
+        return;
+    }
+
+    sqlite3_stmt *stmt;
+    const char *sql = "SELECT AddressId, InterfaceId, Address, AddressVersion, AddressType, AddressAddedDate, Port "
+                      "FROM NetworkAddresses "
+                      "WHERE AddressType = 'protected' AND AddressVersion = 'IPv4' AND Port = ?";
+
+    if (sqlite3_prepare_v2(db, sql, -1, &stmt, 0) != SQLITE_OK)
+    {
+        printf("Failed to prepare statement: %s\n", sqlite3_errmsg(db));
+        sqlite3_close(db);
+        return;
+    }
+
+    // (eth1, eth2, ...)
+    char port_name[8];
+    snprintf(port_name, sizeof(port_name), "eth%d", current_port);
+
+    // Truy?n port_name v o SQL (d?u ?)
+    if (sqlite3_bind_text(stmt, 1, port_name, -1, SQLITE_STATIC) != SQLITE_OK)
+    {
+        printf("Failed to bind port name: %s\n", sqlite3_errmsg(db));
+        sqlite3_finalize(stmt);
+        sqlite3_close(db);
+        return;
+    }
+
+    // In b?ng
+    printf("\n+----+------------+-----------------+---------+-----------+---------------------+------+\n");
+    printf("| ID | Interface  |    Address      | Version |   Type    |    Added Date       | Port |\n");
+    printf("+----+------------+-----------------+---------+-----------+---------------------+------+\n");
+    int stt = 1;
+    while (sqlite3_step(stmt) == SQLITE_ROW)
+    {
+        int id = sqlite3_column_int(stmt, 0);
+        int interface_id = sqlite3_column_int(stmt, 1);
+        const unsigned char *addr = sqlite3_column_text(stmt, 2);
+        const unsigned char *version = sqlite3_column_text(stmt, 3);
+        const unsigned char *type = sqlite3_column_text(stmt, 4);
+        const unsigned char *date = sqlite3_column_text(stmt, 5);
+        const unsigned char *port = sqlite3_column_text(stmt, 6);
+
+        printf("| %-2d | %-10d | %-15s | %-7s | %-9s | %-19s | %-4s |\n",
+               stt++,
+               interface_id,
+               addr ? (const char *)addr : "",
+               version ? (const char *)version : "",
+               type ? (const char *)type : "",
+               date ? (const char *)date : "",
+               port ? (const char *)port : "");
+    }
+    printf("+----+------------+-----------------+---------+-----------+---------------------+------+\n");
+
+    sqlite3_finalize(stmt);
+    sqlite3_close(db);
+}
+
+// Display IPv6 Protect
+void Display_IPv6_Protected_Table()
+{
+    sqlite3 *db;
+    const char *db_path = DB_PATH; // d  d?nh nghia ? d?u file
+    if (sqlite3_open(db_path, &db) != SQLITE_OK)
+    {
+        printf("Cannot open database: %s\n", sqlite3_errmsg(db));
+        return;
+    }
+
+    sqlite3_stmt *stmt;
+    const char *sql = "SELECT AddressId, InterfaceId, Address, AddressVersion, AddressType, AddressAddedDate, Port "
+                      "FROM NetworkAddresses "
+                      "WHERE AddressType = 'protected' AND AddressVersion = 'IPv6' AND Port = ?";
+
+    if (sqlite3_prepare_v2(db, sql, -1, &stmt, 0) != SQLITE_OK)
+    {
+        printf("Failed to prepare statement: %s\n", sqlite3_errmsg(db));
+        sqlite3_close(db);
+        return;
+    }
+
+    // T?o t n port t? current_port (eth1, eth2, ...)
+    char port_name[8];
+    snprintf(port_name, sizeof(port_name), "eth%d", current_port);
+
+    // Truy?n port_name v o SQL (d?u ?)
+    if (sqlite3_bind_text(stmt, 1, port_name, -1, SQLITE_STATIC) != SQLITE_OK)
+    {
+        printf("Failed to bind port name: %s\n", sqlite3_errmsg(db));
+        sqlite3_finalize(stmt);
+        sqlite3_close(db);
+        return;
+    }
+
+    // In b?ng
+
+    printf("\r\n ============================================================================================================================================================================================================+");
+    printf("\n+----+------------+-----------------------------------------+---------+-----------+---------------------+------+\n");
+    printf("\r| ID | Interface  |                   Address               | Version |    Type   |      Added Date     | Port |\n");
+    printf("\r+----+------------+-----------------------------------------+---------+-----------+---------------------+------+\n");
+    int stt = 1;
+    while (sqlite3_step(stmt) == SQLITE_ROW)
+    {
+        int id = sqlite3_column_int(stmt, 0);
+        int interface_id = sqlite3_column_int(stmt, 1);
+        const unsigned char *addr = sqlite3_column_text(stmt, 2);
+        const unsigned char *version = sqlite3_column_text(stmt, 3);
+        const unsigned char *type = sqlite3_column_text(stmt, 4);
+        const unsigned char *date = sqlite3_column_text(stmt, 5);
+        const unsigned char *port = sqlite3_column_text(stmt, 6);
+
+        printf("| %-2d | %-10d | %-15s | %-7s | %-9s | %-19s | %-4s |\n",
+               stt++,
+               interface_id,
+               addr ? (const char *)addr : "",
+               version ? (const char *)version : "",
+               type ? (const char *)type : "",
+               date ? (const char *)date : "",
+               port ? (const char *)port : "");
+    }
+    printf("\r+-----+-----------+-----------------------------------------+---------+-----------+---------------------+------+\n");
+    sqlite3_finalize(stmt);
+    sqlite3_close(db);
+}
+
+// VPN
+// update ipv4 vpn
+void update_vpn_ipv4(const char *ip)
+{
+    sqlite3 *db;
+    if (sqlite3_open(DB_PATH, &db) != SQLITE_OK)
+    {
+        printf("Cannot open database: %s\n", sqlite3_errmsg(db));
+        return;
+    }
+
+    // Ki?m tra IP d  t?n t?i chua
+    sqlite3_stmt *stmt_check;
+    const char *sql_check =
+        "SELECT AddressId FROM NetworkAddresses WHERE Address = ? AND AddressType = 'vpn_white' AND AddressVersion = 'IPv4'";
+    if (sqlite3_prepare_v2(db, sql_check, -1, &stmt_check, 0) == SQLITE_OK)
+    {
+        sqlite3_bind_text(stmt_check, 1, ip, -1, SQLITE_STATIC);
+
+        int exists = 0;
+        if (sqlite3_step(stmt_check) == SQLITE_ROW)
+        {
+            exists = 1;
+        }
+        sqlite3_finalize(stmt_check);
+
+        if (exists)
+        {
+            printf("IPv4 address %s already exists in VPN table.\n", ip);
+        }
+        else
+        {
+            // Ch n m?i n?u chua t?n t?i
+            sqlite3_stmt *stmt_insert;
+            const char *sql_insert =
+                "INSERT INTO NetworkAddresses (InterfaceId, Address, AddressType, AddressVersion, Port, AddressAddedDate, AddressTimeOut) "
+                "VALUES (1, ?, 'vpn_white', 'IPv4', NULL, ?, 0)";
+
+            if (sqlite3_prepare_v2(db, sql_insert, -1, &stmt_insert, 0) == SQLITE_OK)
+            {
+                // Format ng y gi? th nh "YYYY/MM/DD HH:MM:SS"
+                char current_datetime[20];
+                time_t now = time(NULL);
+                strftime(current_datetime, sizeof(current_datetime), "%Y/%m/%d %H:%M:%S", localtime(&now));
+
+                sqlite3_bind_text(stmt_insert, 1, ip, -1, SQLITE_STATIC);
+                sqlite3_bind_text(stmt_insert, 2, current_datetime, -1, SQLITE_STATIC);
+
+                if (sqlite3_step(stmt_insert) == SQLITE_DONE)
+                    printf("Inserted new VPN IPv4 address %s.\n", ip);
+                else
+                    printf("Failed to insert VPN IPv4 address.\n");
+
+                sqlite3_finalize(stmt_insert);
+            }
+        }
+    }
+
+    sqlite3_close(db);
+}
+
+// Update ipv6 vpn
+void update_vpn_ipv6(const char *ip)
+{
+    sqlite3 *db;
+    if (sqlite3_open(DB_PATH, &db) != SQLITE_OK)
+    {
+        printf("Cannot open database: %s\n", sqlite3_errmsg(db));
+        return;
+    }
+
+    sqlite3_stmt *stmt_check;
+    const char *sql_check =
+        "SELECT AddressId FROM NetworkAddresses WHERE Address = ? AND AddressType = 'vpn_white' AND AddressVersion = 'IPv6'";
+    if (sqlite3_prepare_v2(db, sql_check, -1, &stmt_check, 0) == SQLITE_OK)
+    {
+        sqlite3_bind_text(stmt_check, 1, ip, -1, SQLITE_STATIC);
+
+        int exists = 0;
+        if (sqlite3_step(stmt_check) == SQLITE_ROW)
+        {
+            exists = 1;
+        }
+        sqlite3_finalize(stmt_check);
+
+        if (exists)
+        {
+            printf("IPv6 address %s already exists in VPN table.\n", ip);
+        }
+        else
+        {
+            sqlite3_stmt *stmt_insert;
+            const char *sql_insert =
+                "INSERT INTO NetworkAddresses (InterfaceId, Address, AddressType, AddressVersion, Port, AddressAddedDate, AddressTimeOut) "
+                "VALUES (1, ?, 'vpn_white', 'IPv6', NULL, ?, 0)";
+
+            if (sqlite3_prepare_v2(db, sql_insert, -1, &stmt_insert, 0) == SQLITE_OK)
+            {
+
+                char current_datetime[20];
+                time_t now = time(NULL);
+                strftime(current_datetime, sizeof(current_datetime), "%Y/%m/%d %H:%M:%S", localtime(&now));
+
+                sqlite3_bind_text(stmt_insert, 1, ip, -1, SQLITE_STATIC);
+                sqlite3_bind_text(stmt_insert, 2, current_datetime, -1, SQLITE_STATIC);
+
+                if (sqlite3_step(stmt_insert) == SQLITE_DONE)
+                    printf("Inserted new VPN IPv6 address %s.\n", ip);
+                else
+                    printf("Failed to insert VPN IPv6 address.\n");
+
+                sqlite3_finalize(stmt_insert);
+            }
+        }
+    }
+
+    sqlite3_close(db);
+}
+
+// HTTP
+// update ipv4 HTTP
+void update_http_ipv4(const char *ip)
+{
+    sqlite3 *db;
+    if (sqlite3_open(DB_PATH, &db) != SQLITE_OK)
+    {
+        printf("Cannot open database: %s\n", sqlite3_errmsg(db));
+        return;
+    }
+
+    // Ki?m tra IP d  t?n t?i chua
+    sqlite3_stmt *stmt_check;
+    const char *sql_check =
+        "SELECT AddressId FROM NetworkAddresses WHERE Address = ? AND AddressType = 'http_black' AND AddressVersion = 'IPV4'";
+    if (sqlite3_prepare_v2(db, sql_check, -1, &stmt_check, 0) == SQLITE_OK)
+    {
+        sqlite3_bind_text(stmt_check, 1, ip, -1, SQLITE_STATIC);
+
+        int exists = 0;
+        if (sqlite3_step(stmt_check) == SQLITE_ROW)
+        {
+            exists = 1;
+        }
+        sqlite3_finalize(stmt_check);
+
+        if (exists)
+        {
+            printf("IPv4 address %s already exists in HTTP table.\n", ip);
+        }
+        else
+        {
+            // Ch n m?i n?u chua t?n t?i
+            sqlite3_stmt *stmt_insert;
+            const char *sql_insert =
+                "INSERT INTO NetworkAddresses (InterfaceId, Address, AddressType, AddressVersion, Port, AddressAddedDate, AddressTimeOut) "
+                "VALUES (1, ?, 'http_black', 'IPV4', NULL, ?, 0)";
+
+            if (sqlite3_prepare_v2(db, sql_insert, -1, &stmt_insert, 0) == SQLITE_OK)
+            {
+                // Format ng y gi? th nh "YYYY/MM/DD HH:MM:SS"
+                char current_datetime[20];
+                time_t now = time(NULL);
+                strftime(current_datetime, sizeof(current_datetime), "%Y/%m/%d %H:%M:%S", localtime(&now));
+
+                sqlite3_bind_text(stmt_insert, 1, ip, -1, SQLITE_STATIC);
+                sqlite3_bind_text(stmt_insert, 2, current_datetime, -1, SQLITE_STATIC);
+
+                if (sqlite3_step(stmt_insert) == SQLITE_DONE)
+                    printf("Inserted new HTTP IPv4 address %s.\n", ip);
+                else
+                    printf("Failed to insert HTTP IPv4 address.\n");
+
+                sqlite3_finalize(stmt_insert);
+            }
+        }
+    }
+
+    sqlite3_close(db);
+}
+
+// Update ipv6 HTTP
+void update_http_ipv6(const char *ip)
+{
+    sqlite3 *db;
+    if (sqlite3_open(DB_PATH, &db) != SQLITE_OK)
+    {
+        printf("Cannot open database: %s\n", sqlite3_errmsg(db));
+        return;
+    }
+
+    sqlite3_stmt *stmt_check;
+    const char *sql_check =
+        "SELECT AddressId FROM NetworkAddresses WHERE Address = ? AND AddressType = 'http_black' AND AddressVersion = 'IPv6'";
+    if (sqlite3_prepare_v2(db, sql_check, -1, &stmt_check, 0) == SQLITE_OK)
+    {
+        sqlite3_bind_text(stmt_check, 1, ip, -1, SQLITE_STATIC);
+
+        int exists = 0;
+        if (sqlite3_step(stmt_check) == SQLITE_ROW)
+        {
+            exists = 1;
+        }
+        sqlite3_finalize(stmt_check);
+
+        if (exists)
+        {
+            printf("IPv6 address %s already exists in HTTP table.\n", ip);
+        }
+        else
+        {
+            sqlite3_stmt *stmt_insert;
+            const char *sql_insert =
+                "INSERT INTO NetworkAddresses (InterfaceId, Address, AddressType, AddressVersion, Port, AddressAddedDate, AddressTimeOut) "
+                "VALUES (1, ?, 'http_black', 'IPv6', NULL, ?, 0)";
+
+            if (sqlite3_prepare_v2(db, sql_insert, -1, &stmt_insert, 0) == SQLITE_OK)
+            {
+
+                char current_datetime[20];
+                time_t now = time(NULL);
+                strftime(current_datetime, sizeof(current_datetime), "%Y/%m/%d %H:%M:%S", localtime(&now));
+
+                sqlite3_bind_text(stmt_insert, 1, ip, -1, SQLITE_STATIC);
+                sqlite3_bind_text(stmt_insert, 2, current_datetime, -1, SQLITE_STATIC);
+
+                if (sqlite3_step(stmt_insert) == SQLITE_DONE)
+                    printf("Inserted new HTTP IPv6 address %s.\n", ip);
+                else
+                    printf("Failed to insert HTTP IPv6 address.\n");
+
+                sqlite3_finalize(stmt_insert);
+            }
+        }
+    }
+
+    sqlite3_close(db);
+}
+
+// BLOCKED
+// Update Block ipv4
+void update_blocked_ipv4(const char *ip, const char *port)
+{
+    sqlite3 *db;
+    if (sqlite3_open(DB_PATH, &db) != SQLITE_OK)
+    {
+        printf("Cannot open database: %s\n", sqlite3_errmsg(db));
+        return;
+    }
+
+    int interface_id = -1;
+    sqlite3_stmt *stmt_get_id;
+    const char *sql_get_id = "SELECT InterfaceId FROM DeviceInterfaces WHERE InterfaceName = ?";
+    if (sqlite3_prepare_v2(db, sql_get_id, -1, &stmt_get_id, 0) == SQLITE_OK)
+    {
+        sqlite3_bind_text(stmt_get_id, 1, port, -1, SQLITE_STATIC);
+        if (sqlite3_step(stmt_get_id) == SQLITE_ROW)
+        {
+            interface_id = sqlite3_column_int(stmt_get_id, 0);
+        }
+        sqlite3_finalize(stmt_get_id);
+    }
+
+    if (interface_id == -1)
+    {
+        printf("Failed to find InterfaceId for port %s.\n", port);
+        sqlite3_close(db);
+        return;
+    }
+
+    sqlite3_stmt *stmt_check;
+    const char *sql_check = "SELECT AddressId FROM NetworkAddresses WHERE Address = ? AND AddressType = 'blocked' AND AddressVersion = 'IPv4'";
+    if (sqlite3_prepare_v2(db, sql_check, -1, &stmt_check, 0) == SQLITE_OK)
+    {
+        sqlite3_bind_text(stmt_check, 1, ip, -1, SQLITE_STATIC);
+
+        int exists = 0;
+        if (sqlite3_step(stmt_check) == SQLITE_ROW)
+        {
+            exists = 1;
+        }
+        sqlite3_finalize(stmt_check);
+
+        if (exists)
+        {
+
+            sqlite3_stmt *stmt_update;
+            const char *sql_update = "UPDATE NetworkAddresses SET Port = ? WHERE Address = ? AND AddressType = 'blocked' AND AddressVersion = 'IPv4'";
+            if (sqlite3_prepare_v2(db, sql_update, -1, &stmt_update, 0) == SQLITE_OK)
+            {
+                sqlite3_bind_text(stmt_update, 1, port, -1, SQLITE_STATIC);
+                sqlite3_bind_text(stmt_update, 2, ip, -1, SQLITE_STATIC);
+                if (sqlite3_step(stmt_update) == SQLITE_DONE)
+                    printf(" Updated port of blocked IPv6 address %s to %s.\n", ip, port);
+                else
+                    printf(" Failed to update port.\n");
+                sqlite3_finalize(stmt_update);
+            }
+        }
+        else
+        {
+
+            sqlite3_stmt *stmt_insert;
+            const char *sql_insert =
+                "INSERT INTO NetworkAddresses (InterfaceId, Address, AddressType, AddressVersion, Port, AddressAddedDate, AddressTimeOut) "
+                "VALUES (?, ?, 'blocked', 'IPv4', ?, ?, 0)";
+
+            if (sqlite3_prepare_v2(db, sql_insert, -1, &stmt_insert, 0) == SQLITE_OK)
+            {
+                char current_date[20];
+                time_t now = time(NULL);
+                strftime(current_date, sizeof(current_date), "%Y/%m/%d %H:%M:%S", localtime(&now));
+                sqlite3_bind_int(stmt_insert, 1, interface_id);
+                sqlite3_bind_text(stmt_insert, 2, ip, -1, SQLITE_STATIC);
+                sqlite3_bind_text(stmt_insert, 3, port, -1, SQLITE_STATIC);
+                sqlite3_bind_text(stmt_insert, 4, current_date, -1, SQLITE_STATIC);
+
+                if (sqlite3_step(stmt_insert) == SQLITE_DONE)
+                    printf(" Inserted new blocked IPv4 address %s on port %s (InterfaceId %d).\n", ip, port, interface_id);
+                else
+                    printf(" Failed to insert IPv4 address.\n");
+
+                sqlite3_finalize(stmt_insert);
+            }
+        }
+    }
+
+    sqlite3_close(db);
+}
+
+// Update IPv6 BLOCK
+void update_blocked_ipv6(const char *ip, const char *port)
+{
+    sqlite3 *db;
+    if (sqlite3_open(DB_PATH, &db) != SQLITE_OK)
+    {
+        printf("Cannot open database: %s\n", sqlite3_errmsg(db));
+        return;
+    }
+
+    int interface_id = -1;
+    sqlite3_stmt *stmt_get_id;
+    const char *sql_get_id = "SELECT InterfaceId FROM DeviceInterfaces WHERE InterfaceName = ?";
+    if (sqlite3_prepare_v2(db, sql_get_id, -1, &stmt_get_id, 0) == SQLITE_OK)
+    {
+        sqlite3_bind_text(stmt_get_id, 1, port, -1, SQLITE_STATIC);
+        if (sqlite3_step(stmt_get_id) == SQLITE_ROW)
+        {
+            interface_id = sqlite3_column_int(stmt_get_id, 0);
+        }
+        sqlite3_finalize(stmt_get_id);
+    }
+
+    if (interface_id == -1)
+    {
+        printf("Failed to find InterfaceId for port %s.\n", port);
+        sqlite3_close(db);
+        return;
+    }
+
+    sqlite3_stmt *stmt_check;
+    const char *sql_check = "SELECT AddressId FROM NetworkAddresses WHERE Address = ? AND AddressType = 'blocked' AND AddressVersion = 'IPv6'";
+    if (sqlite3_prepare_v2(db, sql_check, -1, &stmt_check, 0) == SQLITE_OK)
+    {
+        sqlite3_bind_text(stmt_check, 1, ip, -1, SQLITE_STATIC);
+
+        int exists = 0;
+        if (sqlite3_step(stmt_check) == SQLITE_ROW)
+        {
+            exists = 1;
+        }
+        sqlite3_finalize(stmt_check);
+
+        if (exists)
+        {
+            sqlite3_stmt *stmt_update;
+            const char *sql_update = "UPDATE NetworkAddresses SET Port = ? WHERE Address = ? AND AddressType = 'blocked' AND AddressVersion = 'IPv6'";
+            if (sqlite3_prepare_v2(db, sql_update, -1, &stmt_update, 0) == SQLITE_OK)
+            {
+                sqlite3_bind_text(stmt_update, 1, port, -1, SQLITE_STATIC);
+                sqlite3_bind_text(stmt_update, 2, ip, -1, SQLITE_STATIC);
+                if (sqlite3_step(stmt_update) == SQLITE_DONE)
+                    printf(" Updated port of blocked IPv6 address %s to %s.\n", ip, port);
+                else
+                    printf(" Failed to update port.\n");
+                sqlite3_finalize(stmt_update);
+            }
+        }
+        else
+        {
+            sqlite3_stmt *stmt_insert;
+            const char *sql_insert =
+                "INSERT INTO NetworkAddresses (InterfaceId, Address, AddressType, AddressVersion, Port, AddressAddedDate, AddressTimeOut) "
+                "VALUES (?, ?, 'blocked', 'IPv6', ?, ?, 0)";
+
+            if (sqlite3_prepare_v2(db, sql_insert, -1, &stmt_insert, 0) == SQLITE_OK)
+            {
+                char current_date[20];
+                time_t now = time(NULL);
+                strftime(current_date, sizeof(current_date), "%Y/%m/%d %H:%M:%S", localtime(&now));
+                sqlite3_bind_int(stmt_insert, 1, interface_id);
+                sqlite3_bind_text(stmt_insert, 2, ip, -1, SQLITE_STATIC);
+                sqlite3_bind_text(stmt_insert, 3, port, -1, SQLITE_STATIC);
+                sqlite3_bind_text(stmt_insert, 4, current_date, -1, SQLITE_STATIC);
+                if (sqlite3_step(stmt_insert) == SQLITE_DONE)
+                    printf(" Inserted new blocked IPv6 address %s on port %s (InterfaceId %d).\n", ip, port, interface_id);
+                else
+                    printf(" Failed to insert IPv6 address.\n");
+
+                sqlite3_finalize(stmt_insert);
+            }
+        }
+    }
+
+    sqlite3_close(db);
+}
+
+// PROTECT
+// Update protect ipv4
+void update_protected_ipv4_port(const char *ip, const char *port)
+{
+    sqlite3 *db;
+    if (sqlite3_open(DB_PATH, &db) != SQLITE_OK)
+    {
+        printf("Cannot open database: %s\n", sqlite3_errmsg(db));
+        return;
+    }
+
+    int interface_id = -1;
+    sqlite3_stmt *stmt_get_id;
+    const char *sql_get_id = "SELECT InterfaceId FROM DeviceInterfaces WHERE InterfaceName = ?";
+    if (sqlite3_prepare_v2(db, sql_get_id, -1, &stmt_get_id, 0) == SQLITE_OK)
+    {
+        sqlite3_bind_text(stmt_get_id, 1, port, -1, SQLITE_STATIC);
+        if (sqlite3_step(stmt_get_id) == SQLITE_ROW)
+        {
+            interface_id = sqlite3_column_int(stmt_get_id, 0);
+        }
+        sqlite3_finalize(stmt_get_id);
+    }
+
+    if (interface_id == -1)
+    {
+        printf("Failed to find InterfaceId for port %s.\n", port);
+        sqlite3_close(db);
+        return;
+    }
+
+    sqlite3_stmt *stmt_check;
+    const char *sql_check = "SELECT AddressId FROM NetworkAddresses WHERE Address = ? AND AddressType = 'protected' AND AddressVersion = 'IPv4'";
+    if (sqlite3_prepare_v2(db, sql_check, -1, &stmt_check, 0) == SQLITE_OK)
+    {
+        sqlite3_bind_text(stmt_check, 1, ip, -1, SQLITE_STATIC);
+
+        int exists = 0;
+        if (sqlite3_step(stmt_check) == SQLITE_ROW)
+        {
+            exists = 1;
+        }
+        sqlite3_finalize(stmt_check);
+
+        if (exists)
+        {
+
+            sqlite3_stmt *stmt_update;
+            const char *sql_update = "UPDATE NetworkAddresses SET Port = ? WHERE Address = ? AND AddressType = 'protected' AND AddressVersion = 'IPv4'";
+            if (sqlite3_prepare_v2(db, sql_update, -1, &stmt_update, 0) == SQLITE_OK)
+            {
+                sqlite3_bind_text(stmt_update, 1, port, -1, SQLITE_STATIC);
+                sqlite3_bind_text(stmt_update, 2, ip, -1, SQLITE_STATIC);
+                if (sqlite3_step(stmt_update) == SQLITE_DONE)
+                    printf(" Updated port of protected IPv6 address %s to %s.\n", ip, port);
+                else
+                    printf(" Failed to update port.\n");
+                sqlite3_finalize(stmt_update);
+            }
+        }
+        else
+        {
+
+            sqlite3_stmt *stmt_insert;
+            const char *sql_insert =
+                "INSERT INTO NetworkAddresses (InterfaceId, Address, AddressType, AddressVersion, Port, AddressAddedDate, AddressTimeOut) "
+                "VALUES (?, ?, 'protected', 'IPv4', ?, ?, 0)";
+
+            if (sqlite3_prepare_v2(db, sql_insert, -1, &stmt_insert, 0) == SQLITE_OK)
+            {
+                char current_date[20];
+                time_t now = time(NULL);
+                strftime(current_date, sizeof(current_date), "%Y/%m/%d %H:%M:%S", localtime(&now));
+                sqlite3_bind_int(stmt_insert, 1, interface_id);
+                sqlite3_bind_text(stmt_insert, 2, ip, -1, SQLITE_STATIC);
+                sqlite3_bind_text(stmt_insert, 3, port, -1, SQLITE_STATIC);
+                sqlite3_bind_text(stmt_insert, 4, current_date, -1, SQLITE_STATIC);
+
+                if (sqlite3_step(stmt_insert) == SQLITE_DONE)
+                    printf(" Inserted new protected IPv4 address %s on port %s (InterfaceId %d).\n", ip, port, interface_id);
+                else
+                    printf(" Failed to insert IPv4 address.\n");
+
+                sqlite3_finalize(stmt_insert);
+            }
+        }
+    }
+
+    sqlite3_close(db);
+}
+
+// Update IPv6 protect
+void update_protected_ipv6_port(const char *ip, const char *port)
+{
+    sqlite3 *db;
+    if (sqlite3_open(DB_PATH, &db) != SQLITE_OK)
+    {
+        printf("Cannot open database: %s\n", sqlite3_errmsg(db));
+        return;
+    }
+
+    int interface_id = -1;
+    sqlite3_stmt *stmt_get_id;
+    const char *sql_get_id = "SELECT InterfaceId FROM DeviceInterfaces WHERE InterfaceName = ?";
+    if (sqlite3_prepare_v2(db, sql_get_id, -1, &stmt_get_id, 0) == SQLITE_OK)
+    {
+        sqlite3_bind_text(stmt_get_id, 1, port, -1, SQLITE_STATIC);
+        if (sqlite3_step(stmt_get_id) == SQLITE_ROW)
+        {
+            interface_id = sqlite3_column_int(stmt_get_id, 0);
+        }
+        sqlite3_finalize(stmt_get_id);
+    }
+
+    if (interface_id == -1)
+    {
+        printf("Failed to find InterfaceId for port %s.\n", port);
+        sqlite3_close(db);
+        return;
+    }
+
+    sqlite3_stmt *stmt_check;
+    const char *sql_check = "SELECT AddressId FROM NetworkAddresses WHERE Address = ? AND AddressType = 'protected' AND AddressVersion = 'IPv6'";
+    if (sqlite3_prepare_v2(db, sql_check, -1, &stmt_check, 0) == SQLITE_OK)
+    {
+        sqlite3_bind_text(stmt_check, 1, ip, -1, SQLITE_STATIC);
+
+        int exists = 0;
+        if (sqlite3_step(stmt_check) == SQLITE_ROW)
+        {
+            exists = 1;
+        }
+        sqlite3_finalize(stmt_check);
+
+        if (exists)
+        {
+            sqlite3_stmt *stmt_update;
+            const char *sql_update = "UPDATE NetworkAddresses SET Port = ? WHERE Address = ? AND AddressType = 'protected' AND AddressVersion = 'IPv6'";
+            if (sqlite3_prepare_v2(db, sql_update, -1, &stmt_update, 0) == SQLITE_OK)
+            {
+                sqlite3_bind_text(stmt_update, 1, port, -1, SQLITE_STATIC);
+                sqlite3_bind_text(stmt_update, 2, ip, -1, SQLITE_STATIC);
+                if (sqlite3_step(stmt_update) == SQLITE_DONE)
+                    printf(" Updated port of protected IPv6 address %s to %s.\n", ip, port);
+                else
+                    printf(" Failed to update port.\n");
+                sqlite3_finalize(stmt_update);
+            }
+        }
+        else
+        {
+            sqlite3_stmt *stmt_insert;
+            const char *sql_insert =
+                "INSERT INTO NetworkAddresses (InterfaceId, Address, AddressType, AddressVersion, Port, AddressAddedDate, AddressTimeOut) "
+                "VALUES (?, ?, 'protected', 'IPv6', ?, ?, 0)";
+
+            if (sqlite3_prepare_v2(db, sql_insert, -1, &stmt_insert, 0) == SQLITE_OK)
+            {
+                char current_date[20];
+                time_t now = time(NULL);
+                strftime(current_date, sizeof(current_date), "%Y/%m/%d %H:%M:%S", localtime(&now));
+                sqlite3_bind_int(stmt_insert, 1, interface_id);
+                sqlite3_bind_text(stmt_insert, 2, ip, -1, SQLITE_STATIC);
+                sqlite3_bind_text(stmt_insert, 3, port, -1, SQLITE_STATIC);
+                sqlite3_bind_text(stmt_insert, 4, current_date, -1, SQLITE_STATIC);
+                if (sqlite3_step(stmt_insert) == SQLITE_DONE)
+                    printf(" Inserted new protected IPv6 address %s on port %s (InterfaceId %d).\n", ip, port, interface_id);
+                else
+                    printf(" Failed to insert IPv6 address.\n");
+
+                sqlite3_finalize(stmt_insert);
+            }
+        }
+    }
+
+    sqlite3_close(db);
+}
+
+// VPN
+// Delete IPv4 VPN
+void delete_vpn_ipv4(const char *ip)
+{
+    sqlite3 *db;
+    if (sqlite3_open(DB_PATH, &db) != SQLITE_OK)
+    {
+        printf("Cannot open database: %s\n", sqlite3_errmsg(db));
+        return;
+    }
+
+    sqlite3_stmt *stmt;
+    const char *sql = "DELETE FROM NetworkAddresses WHERE Address = ? AND AddressType = 'vpn_white' AND AddressVersion = 'IPv4'";
+    if (sqlite3_prepare_v2(db, sql, -1, &stmt, 0) == SQLITE_OK)
+    {
+        sqlite3_bind_text(stmt, 1, ip, -1, SQLITE_STATIC);
+        if (sqlite3_step(stmt) == SQLITE_DONE)
+        {
+            printf("Deleted IPv4 address %s from VPN table.\n", ip);
+        }
+        else
+        {
+            printf("Failed to delete IPv4 address from VPN table.\n");
+        }
+        sqlite3_finalize(stmt);
+    }
+    sqlite3_close(db);
+}
+
+// Delete IPv6 VPN
+void delete_vpn_ipv6(const char *ip)
+{
+    sqlite3 *db;
+    if (sqlite3_open(DB_PATH, &db) != SQLITE_OK)
+    {
+        printf("Cannot open database: %s\n", sqlite3_errmsg(db));
+        return;
+    }
+
+    sqlite3_stmt *stmt;
+    const char *sql = "DELETE FROM NetworkAddresses WHERE Address = ? AND AddressType = 'vpn_white' AND AddressVersion = 'IPv6'";
+    if (sqlite3_prepare_v2(db, sql, -1, &stmt, 0) == SQLITE_OK)
+    {
+        sqlite3_bind_text(stmt, 1, ip, -1, SQLITE_STATIC);
+        if (sqlite3_step(stmt) == SQLITE_DONE)
+        {
+            printf("Deleted IPv6 address %s from VPN table.\n", ip);
+        }
+        else
+        {
+            printf("Failed to delete IPv6 address from VPN table.\n");
+        }
+        sqlite3_finalize(stmt);
+    }
+    sqlite3_close(db);
+}
+// HTTP
+// Delete IPv4 HTTP
+void delete_http_ipv4(const char *ip)
+{
+    sqlite3 *db;
+    if (sqlite3_open(DB_PATH, &db) != SQLITE_OK)
+    {
+        printf("Cannot open database: %s\n", sqlite3_errmsg(db));
+        return;
+    }
+
+    sqlite3_stmt *stmt;
+    const char *sql = "DELETE FROM NetworkAddresses WHERE Address = ? AND AddressType = 'http_black' AND AddressVersion = 'IPv4'";
+    if (sqlite3_prepare_v2(db, sql, -1, &stmt, 0) == SQLITE_OK)
+    {
+        sqlite3_bind_text(stmt, 1, ip, -1, SQLITE_STATIC);
+        if (sqlite3_step(stmt) == SQLITE_DONE)
+        {
+            printf("Deleted IPv4 address %s from HTTP table.\n", ip);
+        }
+        else
+        {
+            printf("Failed to delete IPv4 address from HTTP table.\n");
+        }
+        sqlite3_finalize(stmt);
+    }
+    sqlite3_close(db);
+}
+
+// Delete IPv6 HTTP
+void delete_http_ipv6(const char *ip)
+{
+    sqlite3 *db;
+    if (sqlite3_open(DB_PATH, &db) != SQLITE_OK)
+    {
+        printf("Cannot open database: %s\n", sqlite3_errmsg(db));
+        return;
+    }
+
+    sqlite3_stmt *stmt;
+    const char *sql = "DELETE FROM NetworkAddresses WHERE Address = ? AND AddressType = 'http_black' AND AddressVersion = 'IPv6'";
+    if (sqlite3_prepare_v2(db, sql, -1, &stmt, 0) == SQLITE_OK)
+    {
+        sqlite3_bind_text(stmt, 1, ip, -1, SQLITE_STATIC);
+        if (sqlite3_step(stmt) == SQLITE_DONE)
+        {
+            printf("Deleted IPv4 address %s from HTTP table.\n", ip);
+        }
+        else
+        {
+            printf("Failed to delete IPv4 address from HTTP table.\n");
+        }
+        sqlite3_finalize(stmt);
+    }
+    sqlite3_close(db);
+}
+
+// BLOCK
+// Delete IPv4 Blocked
+void delete_blocked_ipv4(const char *ip)
+{
+    sqlite3 *db;
+    if (sqlite3_open(DB_PATH, &db) != SQLITE_OK)
+    {
+        printf("Cannot open database: %s\n", sqlite3_errmsg(db));
+        return;
+    }
+    sqlite3_stmt *stmt;
+    const char *sql = "DELETE FROM NetworkAddresses WHERE Address = ? AND AddressType = 'blocked' AND AddressVersion = 'IPv4'";
+    if (sqlite3_prepare_v2(db, sql, -1, &stmt, 0) == SQLITE_OK)
+    {
+        sqlite3_bind_text(stmt, 1, ip, -1, SQLITE_STATIC);
+        if (sqlite3_step(stmt) == SQLITE_DONE)
+        {
+            // printf("Deleted IPv4 address %s from blocked table.\n", ip);
+        }
+        else
+        {
+            // printf("Failed to delete IPv4 address.\n");
+        }
+        sqlite3_finalize(stmt);
+    }
+    sqlite3_close(db);
+}
+
+// Delete IPv6 Blocked
+void delete_blocked_ipv6(const char *ip)
+{
+    sqlite3 *db;
+    if (sqlite3_open(DB_PATH, &db) != SQLITE_OK)
+    {
+        printf("Cannot open database: %s\n", sqlite3_errmsg(db));
+        return;
+    }
+    sqlite3_stmt *stmt;
+    const char *sql = "DELETE FROM NetworkAddresses WHERE Address = ? AND AddressType = 'blocked' AND AddressVersion = 'IPv6'";
+    if (sqlite3_prepare_v2(db, sql, -1, &stmt, 0) == SQLITE_OK)
+    {
+        sqlite3_bind_text(stmt, 1, ip, -1, SQLITE_STATIC);
+        if (sqlite3_step(stmt) == SQLITE_DONE)
+        {
+            printf("Deleted IPv6 address %s from blocked table.\n", ip);
+        }
+        else
+        {
+            printf("Failed to delete IPv6 address.\n");
+        }
+        sqlite3_finalize(stmt);
+    }
+    sqlite3_close(db);
+}
+
+// PROTECT
+// Delete IPv4 Protect
+void delete_protected_ipv4(const char *ip)
+{
+    sqlite3 *db;
+    if (sqlite3_open(DB_PATH, &db) != SQLITE_OK)
+    {
+        printf("Cannot open database: %s\n", sqlite3_errmsg(db));
+        return;
+    }
+    sqlite3_stmt *stmt;
+    const char *sql = "DELETE FROM NetworkAddresses WHERE Address = ? AND AddressType = 'protected' AND AddressVersion = 'IPv4'";
+    if (sqlite3_prepare_v2(db, sql, -1, &stmt, 0) == SQLITE_OK)
+    {
+        sqlite3_bind_text(stmt, 1, ip, -1, SQLITE_STATIC);
+        if (sqlite3_step(stmt) == SQLITE_DONE)
+        {
+            // printf("Deleted IPv4 address %s from protected table.\n", ip);
+        }
+        else
+        {
+            // printf("Failed to delete IPv4 address.\n");
+        }
+        sqlite3_finalize(stmt);
+    }
+    sqlite3_close(db);
+}
+
+// Delete IPv6 Protect
+void delete_protected_ipv6(const char *ip)
+{
+    sqlite3 *db;
+    if (sqlite3_open(DB_PATH, &db) != SQLITE_OK)
+    {
+        printf("Cannot open database: %s\n", sqlite3_errmsg(db));
+        return;
+    }
+    sqlite3_stmt *stmt;
+    const char *sql = "DELETE FROM NetworkAddresses WHERE Address = ? AND AddressType = 'protected' AND AddressVersion = 'IPv6'";
+    if (sqlite3_prepare_v2(db, sql, -1, &stmt, 0) == SQLITE_OK)
+    {
+        sqlite3_bind_text(stmt, 1, ip, -1, SQLITE_STATIC);
+        if (sqlite3_step(stmt) == SQLITE_DONE)
+        {
+            printf("Deleted IPv6 address %s from protected table.\n", ip);
+        }
+        else
+        {
+            printf("Failed to delete IPv6 address.\n");
+        }
+        sqlite3_finalize(stmt);
+    }
+    sqlite3_close(db);
+}
+///////////////////////////////////////////////////////////////////////////////////////
 void SetIPv4Target(int serial_port)
 {
-  char key_mode = '4';
-  write(serial_port, &key_mode, sizeof(key_mode));
-  usleep(100000);
-  write(serial_port, &key_enter, sizeof(key_enter));
-  usleep(100000);
-  printf("\r\n");
-  printf("\r\n ============================================================================================================================================================================================================+");
-  printf("\r\n    SETTING     | Enter Server IPv4 address want to protect : ");
-  send_ipv4_address(serial_port);
-  ReturnMode2(serial_port);
+    char choice;
+    printf("\r\n ============================================================================================================================================================================================================+");
+    printf("\r\n    SETTING     | Do you want to (1) ADD, (2) REMOVE Server IPv4 address from protect table, or (Z) EXIT? (1/2/Z): ");
+
+    while (1)
+    {
+        scanf(" %c", &choice);
+        clear_input();
+        if (choice == '1' || choice == '2' || choice == 'Z' || choice == 'z')
+            break;
+        printf("\r\n    SETTING     | Please enter 1 (ADD), 2 (REMOVE), or z (EXIT): ");
+    }
+
+    if (choice == 'Z' || choice == 'z')
+    {
+        // printf("\r\n    SETTING     | Exiting IPv4 target configuration.\n");
+        return;
+    }
+    if (choice == '1')
+    {
+        current_config_type = CONFIG_IPV4_PROTECT;
+        printf("\r\n    SETTING     | Enter Server IPv4 address you want to ADD: ");
+    }
+    else
+    {
+        current_config_type = CONFIG_REMOVE_IPV4_PROTECT;
+        printf("\r\n    SETTING     | Enter Server IPv4 address you want to REMOVE from protect table: ");
+    }
+
+    while (1)
+    {
+        scanf("%15s", temp_ipv4_address);
+        if (validate_ip_address(temp_ipv4_address))
+            break;
+        printf(" Invalid! Please input again: ");
+    }
+
+    if (choice == '1')
+    {
+        char port_name[8];
+        snprintf(port_name, sizeof(port_name), "eth%d", current_port);
+        update_protected_ipv4_port(temp_ipv4_address, port_name);
+    }
+    else
+    {
+        delete_protected_ipv4(temp_ipv4_address);
+        printf("\r\n    SETTING     | Successfully removed %s from protect table (if existed).\n", temp_ipv4_address);
+        usleep(100000);
+    }
+
+    ConfirmAndSaveConfig(serial_port);
 }
 
 void SetIPv6Target(int serial_port)
 {
-  char key_mode = 'R';
-  write(serial_port, &key_mode, sizeof(key_mode));
-  usleep(100000);
-  write(serial_port, &key_enter, sizeof(key_enter));
-  printf("\r\n");
-  printf("\r\n ============================================================================================================================================================================================================+");
-  printf("\r\n    SETTING     | Enter Server IPv6 address want to protect : ");
-  send_ipv6_address(serial_port);
-  ReturnMode2(serial_port);
+    char choice;
+    printf("\r\n ============================================================================================================================================================================================================+");
+    printf("\r\n    SETTING     | Do you want to (1) Add or (2) Remove Server IPv6 address from protect table ,or (Z) Exit? (1/2/Z): ");
+    while (1)
+    {
+        scanf(" %c", &choice);
+        if (choice == '1' || choice == '2' || choice == 'Z' || choice == 'z')
+            break;
+        printf("\r\n    SETTING     | Please enter 1 (ADD), 2 (REMOVE), or Z (EXIT): ");
+    }
+
+    if (choice == 'Z' || choice == 'z')
+    {
+        // printf("\r\n    SETTING     | Exiting IPv4 target configuration.\n");
+        return;
+    }
+
+    if (choice == '1')
+    {
+        current_config_type = CONFIG_IPV6_PROTECT;
+        printf("\r\n    SETTING     | Enter Server IPv6 address want to protect : ");
+    }
+    else
+    {
+        current_config_type = CONFIG_REMOVE_IPV6_PROTECT;
+        printf("\r\n    SETTING     | Enter Server IPv6 address want to remove IP from protect table : ");
+    }
+
+    char ipv6_address[40];
+    struct in6_addr addr;
+    unsigned short ipv6_segments[8];
+    while (1)
+    {
+        scanf("%39s", ipv6_address);
+        if (inet_pton(AF_INET6, ipv6_address, &addr) == 1)
+        {
+            for (int i = 0; i < 8; i++)
+            {
+                ipv6_segments[i] = (addr.s6_addr[i * 2] << 8) | addr.s6_addr[i * 2 + 1];
+            }
+            snprintf(full_ipv6_address, sizeof(full_ipv6_address),
+                     "%04x:%04x:%04x:%04x:%04x:%04x:%04x:%04x",
+                     ipv6_segments[0], ipv6_segments[1], ipv6_segments[2], ipv6_segments[3],
+                     ipv6_segments[4], ipv6_segments[5], ipv6_segments[6], ipv6_segments[7]);
+            strcpy(temp_ipv6_address, full_ipv6_address);
+            break;
+        }
+        else
+        {
+            printf(" Invalid! Please input!!!");
+        }
+    }
+
+    if (choice == '1')
+    {
+        char port_name[8];
+        snprintf(port_name, sizeof(port_name), "eth%d", current_port);
+        update_protected_ipv6_port(temp_ipv6_address, port_name);
+    }
+    else
+    {
+        delete_protected_ipv6(temp_ipv6_address);
+        printf("\r\n    SETTING     | Successfully removed %s from protect table (if existed).\n", temp_ipv6_address);
+        usleep(100000);
+    }
+    ConfirmAndSaveConfig(serial_port);
 }
 
-void SetIPv4Block(int serial_port)
+int validate_ipv6_address(const char *ip_address)
 {
-  char key_mode = 'T';
-  write(serial_port, &key_mode, sizeof(key_mode));
-  usleep(100000);
-  write(serial_port, &key_enter, sizeof(key_enter));
-  printf("\r\n");
-  printf("\r\n ============================================================================================================================================================================================================+");
-  printf("\r\n    SETTING     | Enter Server IPv4 address want to block : ");
-  send_ipv4_address_http_add(serial_port);
+    struct in6_addr addr6;
+    return inet_pton(AF_INET6, ip_address, &addr6) == 1;
 }
+
+// void SetIPv6Block(int serial_port)
+// {
+//     char key_mode = 'X';
+//     write(serial_port, &key_mode, sizeof(key_mode));
+//     usleep(100000);
+//     write(serial_port, &key_enter, sizeof(key_enter));
+//     printf("\r\n");
+//     printf("\r\n =================================================================================================+");
+//     printf("\r\n    SETTING     | Enter Server IPv4 address want to remove IP from block table : ");
+//     send_ipv4_address_http_remove(serial_port);
+// }
 
 void SetIPv6Block(int serial_port)
 {
-  char key_mode = '{';
-  write(serial_port, &key_mode, sizeof(key_mode));
-  usleep(100000);
-  write(serial_port, &key_enter, sizeof(key_enter));
-  printf("\r\n");
-  printf("\r\n ============================================================================================================================================================================================================+");
-  printf("\r\n    SETTING     | Enter Server IPv6 address want to block : ");
-  send_ipv6_address_http_add(serial_port);
-}
+    char choice;
+    printf("\r\n ============================================================================================================================================================================================================+");
+    printf("\r\n    SETTING     | Do you want to (1) Add or (2) Remove Server IPv6 address from Block table ,or (Z) Exit? (1/2/Z): ");
 
-void RemoveIPv4Block(int serial_port)
+    while (1)
+    {
+        scanf(" %c", &choice);
+        if (choice == '1' || choice == '2' || choice == 'Z' || choice == 'z')
+            break;
+        printf("\r\n    SETTING     | Please enter 1 (ADD), 2 (REMOVE), or Z (EXIT): ");
+    }
+
+    if (choice == 'Z' || choice == 'z')
+    {
+        // printf("\r\n    SETTING     | Exiting IPv4 target configuration.\n");
+        return;
+    }
+
+    if (choice == '3')
+    {
+        // printf("\r\n    SETTING     | Exiting IPv6 target configuration.\n");
+        return;
+    }
+    if (choice == '1')
+    {
+        current_config_type = CONFIG_IPV6_BLOCK;
+        printf("\r\n    SETTING     | Enter Server IPv6 address you want to ADD: ");
+    }
+    else
+    {
+        current_config_type = CONFIG_REMOVE_IPV6_BLOCK;
+        printf("\r\n    SETTING     | Enter Server IPv6 address you want to REMOVE from protect table: ");
+    }
+
+    char ipv6_address[40];
+    struct in6_addr addr;
+    unsigned short ipv6_segments[8];
+    while (1)
+    {
+        scanf("%39s", ipv6_address);
+        if (inet_pton(AF_INET6, ipv6_address, &addr) == 1)
+        {
+            for (int i = 0; i < 8; i++)
+            {
+                ipv6_segments[i] = (addr.s6_addr[i * 2] << 8) | addr.s6_addr[i * 2 + 1];
+            }
+            snprintf(full_ipv6_address, sizeof(full_ipv6_address),
+                     "%04x:%04x:%04x:%04x:%04x:%04x:%04x:%04x",
+                     ipv6_segments[0], ipv6_segments[1], ipv6_segments[2], ipv6_segments[3],
+                     ipv6_segments[4], ipv6_segments[5], ipv6_segments[6], ipv6_segments[7]);
+            strcpy(temp_ipv6_address, full_ipv6_address);
+            break;
+        }
+        else
+        {
+            printf(" Invalid! Please input!!!");
+        }
+    }
+
+    if (choice == '1')
+    {
+        char port_name[8];
+        snprintf(port_name, sizeof(port_name), "eth%d", current_port);
+        update_blocked_ipv6(temp_ipv6_address, port_name);
+    }
+    else
+    {
+        delete_blocked_ipv6(temp_ipv6_address);
+        printf("\r\n    SETTING     | Successfully removed %s from protect table (if existed).\n", temp_ipv6_address);
+        usleep(100000);
+    }
+
+    ConfirmAndSaveConfig(serial_port);
+}
+// void SetIPv4Block(int serial_port)
+// {
+//   char key_mode = 'T';
+//   write(serial_port, &key_mode, sizeof(key_mode));
+//   usleep(100000);
+//   write(serial_port, &key_enter, sizeof(key_enter));
+//   printf("\r\n");
+//   printf("\r\n ============================================================================================================================================================================================================+");
+//   printf("\r\n    SETTING     | Enter Server IPv4 address want to block : ");
+//   send_ipv4_address_http_add(serial_port);
+// }
+
+void SetIPv4Block(int serial_port)
 {
-  char key_mode = 'X';
-  write(serial_port, &key_mode, sizeof(key_mode));
-  usleep(100000);
-  write(serial_port, &key_enter, sizeof(key_enter));
-  printf("\r\n");
-  printf("\r\n ============================================================================================================================================================================================================+");
-  printf("\r\n    SETTING     | Enter Server IPv4 address want to remove IP from block table : ");
-  send_ipv4_address_http_remove(serial_port);
+    char choice;
+    printf("\r\n ============================================================================================================================================================================================================+");
+    printf("\r\n    SETTING     | Do you want to (1) Add or (2) Remove Server IPv4 address from Block table ,or (Z) Exit? (1/2/Z): ");
+
+    while (1)
+    {
+        scanf(" %c", &choice);
+        if (choice == '1' || choice == '2' || choice == 'Z' || choice == 'z')
+            break;
+        printf("\r\n    SETTING     | Please enter 1 (ADD), 2 (REMOVE), or Z (EXIT): ");
+    }
+
+    if (choice == 'Z' || choice == 'z')
+    {
+        // printf("\r\n    SETTING     | Exiting IPv4 target configuration.\n");
+        return;
+    }
+
+    if (choice == '1')
+    {
+        current_config_type = CONFIG_IPV4_BLOCK;
+        printf("\r\n    SETTING     | Enter Server IPv4 address you want to ADD: ");
+    }
+    else
+    {
+        current_config_type = CONFIG_REMOVE_IPV4_BLOCK;
+        printf("\r\n    SETTING     | Enter Server IPv4 address you want to REMOVE from Block table: ");
+    }
+
+    while (1)
+    {
+        scanf("%15s", temp_ipv4_address);
+        if (validate_ip_address(temp_ipv4_address))
+            break;
+        printf(" Invalid! Please input again: ");
+    }
+
+    if (choice == '1')
+    {
+        char port_name[8];
+        snprintf(port_name, sizeof(port_name), "eth%d", current_port);
+        update_blocked_ipv4(temp_ipv4_address, port_name);
+    }
+    else
+    {
+        delete_blocked_ipv4(temp_ipv4_address);
+        printf("\r\n    SETTING     | Successfully removed %s from protect table (if existed).\n", temp_ipv4_address);
+        usleep(100000);
+    }
+
+    ConfirmAndSaveConfig(serial_port);
 }
 
 void RemoveIPv6Block(int serial_port)
 {
-  char key_mode = '}';
-  write(serial_port, &key_mode, sizeof(key_mode));
-  usleep(100000);
-  write(serial_port, &key_enter, sizeof(key_enter));
-  printf("\r\n");
-  printf("\r\n ============================================================================================================================================================================================================+");
-  printf("\r\n    SETTING     | Enter Server IPv6 address want to remove IP from block table : ");
-  send_ipv6_address_http_remove(serial_port);
+    char key_mode = '}';
+    char key_enter = '\r';
+    write(serial_port, &key_mode, sizeof(key_mode));
+    usleep(100000);
+    write(serial_port, &key_enter, sizeof(key_enter));
+    printf("\r\n");
+    printf("\r\n ============================================================================================================================================================================================================+");
+    printf("\r\n    SETTING     | Enter Server IPv6 address want to remove IP from block table : ");
+    send_ipv6_address_http_remove(serial_port, temp_ipv6_address);
 }
 
 void ReturnMode2(int serial_port)
 {
-  char key;
-  char enter = '\r';
-  system("clear");
-  display_logo1();
-  display_table(serial_port);
-  // printf("\r\n\t\t|                                                                                                                                                                        |\n");
-  printf("\r\n ============================================================================================================================================================================================================+");
-  printf("\r\n    SETTING     | Return to the device configuration menu? (Y):");
-  while (1)
-  {
-    scanf("%c", &key);
-    if (key == 'y' || key == 'Y')
+    char key;
+    char enter = '\r';
+    // system("clear");
+    // display_logo1();
+    printf("\r\n ============================================================================================================================================================================================================+");
+    printf("\r\n    SETTING     | Return to the device configuration menu? (Y):");
+    while (1)
     {
-      break;
+        scanf("%c", &key);
+        if (key == 'y' || key == 'Y')
+        {
+            break;
+        }
+        if (key != 'y' || key != 'Y')
+        {
+            printf("\r    SETTING     | Return to the device configuration menu? (Y): ");
+        }
     }
-    if (key != 'y' || key != 'Y')
-    {
-      printf("\r    SETTING     | Return to the device configuration menu? (Y): ");
-    }
-  }
+    new_menu(serial_port);
 }
 
 void ReturnMode2b(int serial_port)
 {
-  system("clear");
-  display_logo1();
-  display_table(serial_port);
-  char key;
-  char enter = '\r';
-  // printf("\n");
-  printf("\r\n ============================================================================================================================================================================================================+");
-  printf("\r\n    SETTING     | Return to the device configuration menu? (Y):");
-  while (1)
-  {
-    scanf("%c", &key);
-    if (key == 'y' || key == 'Y')
+    system("clear");
+    display_logo1();
+    // display_table(serial_port);
+    char key;
+    char enter = '\r';
+    // printf("\n");
+    printf("\r\n ============================================================================================================================================================================================================+");
+    printf("\r\n    SETTING     | Return to the device configuration menu? (Y):");
+
+    while (1)
     {
-      break;
+        scanf("%c", &key);
+        if (key == 'y' || key == 'Y')
+        {
+            break;
+        }
+        if (key != 'y' || key != 'Y')
+        {
+            printf("\r    SETTING     | Return to the device configuration menu? (Y): ");
+        }
     }
-    if (key != 'y' || key != 'Y')
-    {
-      printf("\r    SETTING     | Return to the device configuration menu? (Y): ");
-    }
-  }
 }
 void printf_uart(int serial_port)
 {
-  int a = 0;
-  char read1[50000];
-  while (1)
-  {
-    memset(&read1, 0, sizeof(read1));
-    int num_bytes = read(serial_port, &read1, sizeof(read1));
-    printf("%s", read1);
-    a = a + 1;
-    if (read1[num_bytes - 1] == '*')
+    int a = 0;
+    char read1[50000];
+    while (1)
     {
-      break;
+        memset(&read1, 0, sizeof(read1));
+        int num_bytes = read(serial_port, &read1, sizeof(read1));
+        printf("%s", read1);
+        a = a + 1;
+        if (read1[num_bytes - 1] == '*')
+        {
+            break;
+        }
     }
-  }
 }
 
 void printf_uart1(int serial_port)
 {
 
-  struct winsize w;
-  int max_lines, current_line = 0;
-  ioctl(STDOUT_FILENO, TIOCGWINSZ, &w);
-  max_lines = w.ws_row - 3;
-  char key2, ch, key3;
-  bool rs = false;
-  struct statvfs stat1;
-  full_sd1 = false;
-  system("clear");
-start:
-  printf("\033[1;36m \n\n|\tTime\t\t|  \t\tSource IP\t\t    |  \t\tDest IP\t\t\t       | Source Port\t| Dest Port\t| Protocol\t| \tType\t\t|\tBW\t|\tPKT/s\t|\n\033[0m");
-
-  if (statvfs("/", &stat1) != 0)
-  {
-    perror("statvfs error");
-    pthread_exit(NULL);
-  }
-
-  unsigned long total_space = (stat1.f_blocks * stat1.f_frsize);
-  unsigned long used_space = (stat1.f_blocks - stat1.f_bfree) * stat1.f_frsize;
-  float memory_usage = (float)used_space / total_space * 100;
-  float CAPACITY = (float)total_space / (1024 * 1024 * 1024);
-  float used_space_gb = (float)used_space / (1024 * 1024 * 1024);
-
-  char read1[50000];
-  int ctrl_p_pressed = 0;
-  time_t ctrl_p_time;
-
-  char msg10[] = {'\r'};
-
-  while (1)
-  {
-
-    if (print_buffer_pos > 0)
-    {
-
-      if (current_line >= max_lines - 3)
-      {
-        system("clear");
-        printf("\033[1;36m \n\n|\tTime\t\t|  \t\tSource IP\t\t    |  \t\tDest IP\t\t\t       | Source Port\t| Dest Port\t| Protocol\t| \tType\t\t|\tBW\t|\tPKT/s\t|\n\033[0m");
-
-        current_line = 0;
-      }
-
-      printf("%s", print_buffer);
-      current_line++;
-      fflush(stdout);
-
-      print_buffer_pos = 0;
-    }
-
-    if (kbhit())
-    {
-      ch = getchar();
-
-      if (ch == 16)
-      {
-
-        ctrl_p_pressed = 1;
-        ctrl_p_time = time(NULL);
-      }
-    }
-    if (ctrl_p_pressed && (time(NULL) - ctrl_p_time >= 1))
-    {
-      break;
-    }
-
-    if ((full_sd == true && full_sd1 == false))
-    {
-      do
-      {
-        printf("\r\n | ALLOWED THRESHOLD IS EXCEEDED, PLEASE CHECK LOGFILE !!! ");
-        printf("\r\n | CAPACITY: %.2f GB (100 %)   |  Used space: %.2f GB (%.2f%%)    | Free space: %.2f GB (%.2f%%)", CAPACITY, used_space_gb, 100 - memory_usage, CAPACITY - used_space_gb, memory_usage);
-        printf("\r\n | Do you want check log file (Y/N)? :  ");
-        scanf(" %c", &key2);
-        if ((key2 == 'Y') || (key2 == 'y'))
-        {
-          break;
-        }
-        else if ((key2 == 'N') || (key2 == 'n'))
-        {
-          break;
-        }
-
-      } while (1);
-      if ((key2 == 'Y') || (key2 == 'y'))
-      {
-        Mode_Condition_SDCard(serial_port);
-      }
-      else if ((key2 == 'N') || (key2 == 'n'))
-      {
-        full_sd1 = true;
-
-        goto start;
-      }
-    }
-  }
-
-  if (ch == 16)
-  {
+    struct winsize w;
+    int max_lines, current_line = 0;
+    ioctl(STDOUT_FILENO, TIOCGWINSZ, &w);
+    max_lines = w.ws_row - 3;
+    char key2, ch, key3;
+    bool rs = false;
+    struct statvfs stat1;
+    full_sd1 = false;
     system("clear");
-    options_mode1(serial_port);
-  }
+start:
+    printf("\033[1;36m \n\n|\tTime\t\t|  \t\tSource IP\t\t    |  \t\tDest IP\t\t\t       | Source Port\t| Dest Port\t| Protocol\t| \tType\t\t|\tBW\t|\tPKT/s\t|\n\033[0m");
+
+    if (statvfs("/", &stat1) != 0)
+    {
+        perror("statvfs error");
+        pthread_exit(NULL);
+    }
+
+    unsigned long total_space = (stat1.f_blocks * stat1.f_frsize);
+    unsigned long used_space = (stat1.f_blocks - stat1.f_bfree) * stat1.f_frsize;
+    float memory_usage = (float)used_space / total_space * 100;
+    float CAPACITY = (float)total_space / (1024 * 1024 * 1024);
+    float used_space_gb = (float)used_space / (1024 * 1024 * 1024);
+
+    char read1[50000];
+    int ctrl_p_pressed = 0;
+    time_t ctrl_p_time;
+
+    char msg10[] = {'\r'};
+
+    while (1)
+    {
+
+        if (print_buffer_pos > 0)
+        {
+
+            if (current_line >= max_lines - 3)
+            {
+                system("clear");
+                printf("\033[1;36m \n\n|\tTime\t\t|  \t\tSource IP\t\t    |  \t\tDest IP\t\t\t       | Source Port\t| Dest Port\t| Protocol\t| \tType\t\t|\tBW\t|\tPKT/s\t|\n\033[0m");
+
+                current_line = 0;
+            }
+
+            printf("%s", print_buffer);
+            current_line++;
+            fflush(stdout);
+
+            print_buffer_pos = 0;
+        }
+
+        if (kbhit())
+        {
+            ch = getchar();
+
+            if (ch == 16)
+            {
+
+                ctrl_p_pressed = 1;
+                ctrl_p_time = time(NULL);
+            }
+        }
+        if (ctrl_p_pressed && (time(NULL) - ctrl_p_time >= 1))
+        {
+            break;
+        }
+
+        if ((full_sd == true && full_sd1 == false))
+        {
+            do
+            {
+                printf("\r\n | ALLOWED THRESHOLD IS EXCEEDED, PLEASE CHECK LOGFILE !!! ");
+                printf("\r\n | CAPACITY: %.2f GB (100 %)   |  Used space: %.2f GB (%.2f%%)    | Free space: %.2f GB (%.2f%%)", CAPACITY, used_space_gb, 100 - memory_usage, CAPACITY - used_space_gb, memory_usage);
+                printf("\r\n | Do you want check log file (Y/N)? :  ");
+                scanf(" %c", &key2);
+                if ((key2 == 'Y') || (key2 == 'y'))
+                {
+                    break;
+                }
+                else if ((key2 == 'N') || (key2 == 'n'))
+                {
+                    break;
+                }
+
+            } while (1);
+            if ((key2 == 'Y') || (key2 == 'y'))
+            {
+                Mode_Condition_SDCard(serial_port);
+            }
+            else if ((key2 == 'N') || (key2 == 'n'))
+            {
+                full_sd1 = true;
+
+                goto start;
+            }
+        }
+    }
+
+    if (ch == 16)
+    {
+        system("clear");
+        options_mode1(serial_port);
+    }
 }
 
-void send_array(int serial_port)
+//////////////////////////////////////////////////////////////////////////////////////////
+int send_array(int serial_port)
 {
-  char array[10];
-  char enter[] = {'\r'};
-  int valid_input = 0;
+    char array[10];
+    int valid_input = 0;
+    int num = 0;
 
-  while (!valid_input)
-  {
-    scanf("%s", array);
-    int num = atoi(array);
-    if (num > 65535)
+    while (!valid_input)
     {
-      printf("The value must be less than 65536, Please re-enter: ");
+        scanf("%s", array);
+        num = atoi(array);
+        if (num > 65535)
+        {
+            printf("The value must be less than 65536, Please re-enter: ");
+        }
+        else
+        {
+            valid_input = 1;
+        }
     }
-    else
-    {
-      valid_input = 1;
-    }
-  }
 
-  int n = strlen(array);
-  for (int i = 0; i < n; i++)
-  {
-    char data[2] = {array[i], '\0'};
-    send_data(serial_port, data, sizeof(data) - 1);
-  }
-  sleep(1);
-  write(serial_port, enter, sizeof(enter));
+    return num;
 }
 
 void send_duration_time(int serial_port)
 {
-  char key_mode = '%';
-  char array[10];
-  char enter[] = {'\r'};
-  int valid_input = 0;
+    char key_mode = '%';
+    char array[10];
+    char enter[] = {'\r'};
+    int valid_input = 0;
 
-  while (!valid_input)
-  {
-    scanf("%s", array);
-    int num = atoi(array);
-    if (num > 20000000)
+    while (!valid_input)
     {
-      printf("The value must be less than 2s, Please re-enter: ");
+        scanf("%s", array);
+        int num = atoi(array);
+        if (num > 20000000)
+        {
+            printf("The value must be less than 2s, Please re-enter: ");
+        }
+        else
+        {
+            valid_input = 1;
+        }
     }
-    else
-    {
-      valid_input = 1;
-    }
-  }
 
-  write(serial_port, &key_mode, sizeof(key_mode));
-  usleep(100000);
-  write(serial_port, &key_enter, sizeof(key_enter));
-  usleep(300000);
-  int n = strlen(array);
-  for (int i = 0; i < n; i++)
-  {
-    char data[2] = {array[i], '\0'};
-    send_data(serial_port, data, sizeof(data) - 1);
-  }
-  sleep(1);
-  write(serial_port, enter, sizeof(enter));
+    write(serial_port, &key_mode, sizeof(key_mode));
+    usleep(100000);
+    write(serial_port, &key_enter, sizeof(key_enter));
+    usleep(300000);
+    int n = strlen(array);
+    for (int i = 0; i < n; i++)
+    {
+        char data[2] = {array[i], '\0'};
+        send_data(serial_port, data, sizeof(data) - 1);
+    }
+    sleep(1);
+    write(serial_port, enter, sizeof(enter));
 }
 
 int is_valid_date(int day, int month, int year)
 {
-  int days_in_month[] = {31, 28 + (year % 4 == 0 && (year % 100 != 0 || year % 400 == 0)), 31, 30, 31, 30, 31, 31, 30, 31, 30, 31};
-  if (month < 1 || month > 12)
-    return 0;
-  return day >= 1 && day <= days_in_month[month - 1];
+    int days_in_month[] = {31, 28 + (year % 4 == 0 && (year % 100 != 0 || year % 400 == 0)), 31, 30, 31, 30, 31, 31, 30, 31, 30, 31};
+    if (month < 1 || month > 12)
+        return 0;
+    return day >= 1 && day <= days_in_month[month - 1];
 }
 
 void send_user_time(int serial_port)
 {
-  char msg10[] = {'\r'};
-  int yy, mm, dd, hh, xx, cc;
-  char time_array[11];
-  char confirm;
-  do
-  {
-
-    while (1)
+    char msg10[] = {'\r'};
+    int yy, mm, dd, hh, xx, cc;
+    char time_array[11];
+    char confirm;
+    do
     {
-      printf("\r\n\t\t| Input year(yy, ex: 24 for 2024): ");
-      scanf("%d", &yy);
-      if (yy >= 0 && yy <= 99)
-        break;
-      printf("\r\n\t\t| Invalid year. Please re-enter:");
-    }
-    while (1)
+
+        while (1)
+        {
+            printf("\r\n\t\t| Input year(yy, ex: 24 for 2024): ");
+            scanf("%d", &yy);
+            if (yy >= 0 && yy <= 99)
+                break;
+            printf("\r\n\t\t| Invalid year. Please re-enter:");
+        }
+        while (1)
+        {
+            printf("\r\n\t\t| Input month (mm,  01 --> 12): ");
+            scanf("%d", &mm);
+            if (mm >= 1 && mm <= 12)
+                break;
+            printf("\r\n\t\t| Invalid month. Please re-enter:");
+        }
+        while (1)
+        {
+            printf("\r\n\t\t| Input day (dd, 	01 --> 31): ");
+            scanf("%d", &dd);
+            //  break;
+            if (is_valid_date(dd, mm, 2000 + yy))
+                break;
+            printf("\r\n\t\t| Invalid day. Please re-enter:");
+        }
+
+        while (1)
+        {
+            printf("\r\n\t\t| Input hour (hh,  01 --> 12): ");
+            scanf("%d", &hh);
+            //  break;
+            if (hh >= 1 && hh <= 12)
+                break;
+            printf("\r\n\t\t| Invalid hour. Please re-enter: ");
+        }
+
+        // Nh?p ph t (xx)
+        while (1)
+        {
+            printf("\r\n\t\t| Input minutes (mm,  00 --> 59): ");
+            scanf("%d", &xx);
+            if (xx >= 0 && xx <= 59)
+                break;
+            printf("\r\n\t\t| Invalid minutes. Please re-enter: ");
+        }
+
+        // Nh?p gi y (cc)
+        while (1)
+        {
+            printf("\r\n\t\t| Input seconds (ss, 00 --> 59):  ");
+            scanf("%d", &cc);
+            if (cc >= 0 && cc <= 59)
+                break;
+            printf("\r\n\t\t| Invalid seconds. Please re-enter:\n ");
+        }
+        printf("\n\t\t| You entered: %02d-%02d-%02d  %02d:%02d:%02d", yy, mm, dd, hh, xx, cc);
+        printf("\n\t\t| Are you sure? (Y/N): ");
+        scanf(" %c", &confirm);
+    } while (confirm != 'Y' && confirm != 'y');
+
+    time_array[0] = '0' + (yy / 10);
+    time_array[1] = '0' + (yy % 10);
+    time_array[2] = '0' + (mm / 10); // Ch? s? d?u ti n c?a mm
+    time_array[3] = '0' + (mm % 10); // Ch? s? th? hai c?a mm
+    time_array[4] = '0' + (dd / 10); // Ch? s? d?u ti n c?a dd
+
+    time_array[5] = '0' + (dd % 10);  // Ch? s? th? hai c?a dd
+    time_array[6] = '0' + (hh / 10);  // Ch? s? d?u ti n c?a hh
+    time_array[7] = '0' + (hh % 10);  // Ch? s? th? hai c?a hh
+    time_array[8] = '0' + (xx / 10);  // Ch? s? d?u ti n c?a xx
+    time_array[9] = '0' + (xx % 10);  // Ch? s? th? hai c?a xx
+    time_array[10] = '0' + (cc / 10); // Ch? s? d?u ti n c?a cc
+    time_array[11] = '0' + (cc % 10); // Ch? s? th? hai c?a cc
+
+    for (int i = 0; i < 12; i++)
     {
-      printf("\r\n\t\t| Input month (mm,  01 --> 12): ");
-      scanf("%d", &mm);
-      if (mm >= 1 && mm <= 12)
-        break;
-      printf("\r\n\t\t| Invalid month. Please re-enter:");
-    }
-    while (1)
-    {
-      printf("\r\n\t\t| Input day (dd, 	01 --> 31): ");
-      scanf("%d", &dd);
-      //  break;
-      if (is_valid_date(dd, mm, 2000 + yy))
-        break;
-      printf("\r\n\t\t| Invalid day. Please re-enter:");
+        usleep(100000);
+        send_data(serial_port, &time_array[i], sizeof(char));
+        // printf("   g?i : %s\n", time_array[i]);
+        // printf("20%d - %d - %d  %d-%d-%d", yy,mm,dd,hh,xx,cc);
     }
 
-    while (1)
-    {
-      printf("\r\n\t\t| Input hour (hh,  01 --> 12): ");
-      scanf("%d", &hh);
-      //  break;
-      if (hh >= 1 && hh <= 12)
-        break;
-      printf("\r\n\t\t| Invalid hour. Please re-enter: ");
-    }
+    //  printf("\t\t=============================");
+    //    printf("\t\t20%d - %d - %d  %d:%d:%d", yy,mm,dd,hh,xx,cc);
 
-    // Nh?p ph t (xx)
-    while (1)
-    {
-      printf("\r\n\t\t| Input minutes (mm,  00 --> 59): ");
-      scanf("%d", &xx);
-      if (xx >= 0 && xx <= 59)
-        break;
-      printf("\r\n\t\t| Invalid minutes. Please re-enter: ");
-    }
-
-    // Nh?p gi y (cc)
-    while (1)
-    {
-      printf("\r\n\t\t| Input seconds (ss, 00 --> 59):  ");
-      scanf("%d", &cc);
-      if (cc >= 0 && cc <= 59)
-        break;
-      printf("\r\n\t\t| Invalid seconds. Please re-enter:\n ");
-    }
-    printf("\n\t\t| You entered: %02d-%02d-%02d  %02d:%02d:%02d", yy, mm, dd, hh, xx, cc);
-    printf("\n\t\t| Are you sure? (Y/N): ");
-    scanf(" %c", &confirm);
-  } while (confirm != 'Y' && confirm != 'y');
-
-  time_array[0] = '0' + (yy / 10);
-  time_array[1] = '0' + (yy % 10);
-  time_array[2] = '0' + (mm / 10); // Ch? s? d?u ti n c?a mm
-  time_array[3] = '0' + (mm % 10); // Ch? s? th? hai c?a mm
-  time_array[4] = '0' + (dd / 10); // Ch? s? d?u ti n c?a dd
-
-  time_array[5] = '0' + (dd % 10);  // Ch? s? th? hai c?a dd
-  time_array[6] = '0' + (hh / 10);  // Ch? s? d?u ti n c?a hh
-  time_array[7] = '0' + (hh % 10);  // Ch? s? th? hai c?a hh
-  time_array[8] = '0' + (xx / 10);  // Ch? s? d?u ti n c?a xx
-  time_array[9] = '0' + (xx % 10);  // Ch? s? th? hai c?a xx
-  time_array[10] = '0' + (cc / 10); // Ch? s? d?u ti n c?a cc
-  time_array[11] = '0' + (cc % 10); // Ch? s? th? hai c?a cc
-
-  for (int i = 0; i < 12; i++)
-  {
-    usleep(100000);
-    send_data(serial_port, &time_array[i], sizeof(char));
-    // printf("   g?i : %s\n", time_array[i]);
-    // printf("20%d - %d - %d  %d-%d-%d", yy,mm,dd,hh,xx,cc);
-  }
-
-  //  printf("\t\t=============================");
-  //    printf("\t\t20%d - %d - %d  %d:%d:%d", yy,mm,dd,hh,xx,cc);
-
-  sleep(1);
-  write(serial_port, msg10, sizeof(msg10));
+    sleep(1);
+    write(serial_port, msg10, sizeof(msg10));
 }
 
 void change_info_acc_admin_mode(int serial_port)
 {
 start:
-  system("clear");
-  char key = 0;
-  char enter = '\r';
-  display_logo1();
-  printf("\r\n ============================================================================================================================================================================================================+");
-  printf("\r\n ==> Mode 3 is selected.                                                                                                                                                                                     |");
-  printf("\r\n                                                                                                                                                                                                             |");
-  printf("\r\n================+===========+==========================================+=====================================================================================================================================+");
-  printf("\r\n    DISPLAY     |           |                                          |                                                                                                                                     |");
-  printf("\r\n\t\t| Key Enter |           Choose 1 option below:         |                                                                                                                                     |");
-  printf("\r\n\t\t+-----------+------------------------------------------+                                                                                                                                     |");
-  printf("\r\n\t\t|     0.    | Change password user account.            |                                                                                                                                     |");
-  printf("\r\n\t\t+-----------+------------------------------------------+                                                                                                                                     |");
-  printf("\r\n\t\t|     1.    | Add new user account.                    |                                                                                                                                     |");
-  printf("\r\n\t\t+-----------+------------------------------------------+                                                                                                                                     |");
-  printf("\r\n\t\t|     2.    | Display saved user account.              |                                                                                                                                     |");
-  printf("\r\n\t\t+-----------+------------------------------------------+                                                                                                                                     |");
-  printf("\r\n\t\t|     3.    | Delete user account.                     |                                                                                                                                     |");
-  printf("\r\n\t\t+-----------+------------------------------------------+                                                                                                                                     |");
-  printf("\r\n\t\t|     4.    | Reset all user accounts.                 |                                                                                                                                     |");
-  printf("\r\n\t\t+-----------+------------------------------------------+                                                                                                                                     |");
-  printf("\r\n\t\t|     5.    | Change root password.                    |                                                                                                                                     |");
-  printf("\r\n\t\t+-----------+------------------------------------------+                                                                                                                                     |");
-  printf("\r\n\t\t|     6.    | Load default setting from manufacturer.  |                                                                                                                                     |");
-  printf("\r\n\t\t+-----------+------------------------------------------+                                                                                                                                     |");
-  printf("\r\n\t\t|     7.    | ==> Exit.                                |                                                                                                                                     |");
-  printf("\r\n\t\t+-----------+------------------------------------------+                                                                                                                                     |");
-  printf("\r\n\t\t+--------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------+");
-  printf("\r\n================+============================================================================================================================================================================================+");
-  printf("\r\n    SETTING     |  --> Your choice: ");
+    system("clear");
+    char key = 0;
+    char enter = '\r';
+    display_logo1();
+    printf("\r\n ============================================================================================================================================================================================================+");
+    printf("\r\n ==> Mode 3 is selected.                                                                                                                                                                                     |");
+    printf("\r\n                                                                                                                                                                                                             |");
+    printf("\r\n================+===========+==========================================+=====================================================================================================================================+");
+    printf("\r\n    DISPLAY     |           |                                          |                                                                                                                                     |");
+    printf("\r\n\t\t| Key Enter |           Choose 1 option below:         |                                                                                                                                     |");
+    printf("\r\n\t\t+-----------+------------------------------------------+                                                                                                                                     |");
+    printf("\r\n\t\t|     0.    | Change password user account.            |                                                                                                                                     |");
+    printf("\r\n\t\t+-----------+------------------------------------------+                                                                                                                                     |");
+    printf("\r\n\t\t|     1.    | Add new user account.                    |                                                                                                                                     |");
+    printf("\r\n\t\t+-----------+------------------------------------------+                                                                                                                                     |");
+    printf("\r\n\t\t|     2.    | Display saved user account.              |                                                                                                                                     |");
+    printf("\r\n\t\t+-----------+------------------------------------------+                                                                                                                                     |");
+    printf("\r\n\t\t|     3.    | Delete user account.                     |                                                                                                                                     |");
+    printf("\r\n\t\t+-----------+------------------------------------------+                                                                                                                                     |");
+    printf("\r\n\t\t|     4.    | Reset all user accounts.                 |                                                                                                                                     |");
+    printf("\r\n\t\t+-----------+------------------------------------------+                                                                                                                                     |");
+    printf("\r\n\t\t|     5.    | Change root password.                    |                                                                                                                                     |");
+    printf("\r\n\t\t+-----------+------------------------------------------+                                                                                                                                     |");
+    printf("\r\n\t\t|     6.    | Load default setting from manufacturer.  |                                                                                                                                     |");
+    printf("\r\n\t\t+-----------+------------------------------------------+                                                                                                                                     |");
+    printf("\r\n\t\t|     7.    | ==> Exit.                                |                                                                                                                                     |");
+    printf("\r\n\t\t+-----------+------------------------------------------+                                                                                                                                     |");
+    printf("\r\n\t\t+--------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------+");
+    printf("\r\n================+============================================================================================================================================================================================+");
+    printf("\r\n    SETTING     |  --> Your choice: ");
 
-  while (1)
-  {
-    scanf("%c", &key);
-    if (key == '0' || key == '1' || key == '2' || key == '3' || key == '4' || key == '5' || key == '6' || key == '7')
+    while (1)
     {
-      break;
+        scanf("%c", &key);
+        if (key == '0' || key == '1' || key == '2' || key == '3' || key == '4' || key == '5' || key == '6' || key == '7')
+        {
+            break;
+        }
+        if (key != '0' || key != '1' || key != '2' || key != '3' || key != '4' || key != '5' || key != '6' || key != '7')
+        {
+            printf("\r     SETTING     | --> Your choice: ");
+        }
     }
-    if (key != '0' || key != '1' || key != '2' || key != '3' || key != '4' || key != '5' || key != '6' || key != '7')
+
+    if (key == '0')
     {
-      printf("\r     SETTING     | --> Your choice: ");
+        system("clear");
+        display_logo1();
+        display_account(serial_port);
+        check_username_change_pass(serial_port);
+        goto start;
     }
-  }
+    else if (key == '1')
+    {
+        system("clear");
+        display_logo1();
+        display_account(serial_port);
+        add_acount(serial_port);
+        goto start;
+    }
+    else if (key == '2')
+    {
+        system("clear");
+        display_logo1();
+        display_account(serial_port);
+        ReturnMode3();
+        goto start;
+    }
+    else if (key == '3')
+    {
+        system("clear");
+        display_logo1();
+        display_account(serial_port);
+        delete_account(serial_port);
+        goto start;
+    }
+    else if (key == '4')
+    {
+        system("clear");
+        display_logo1();
+        display_account(serial_port);
+        reset_account(serial_port);
+        goto start;
+    }
+    else if (key == '5')
+    {
+        system("clear");
+        display_logo1();
+        display_account(serial_port);
+        change_root(serial_port);
+        goto start;
+    }
 
-  if (key == '0')
-  {
-    system("clear");
-    display_logo1();
-    display_account(serial_port);
-    check_username_change_pass(serial_port);
-    goto start;
-  }
-  else if (key == '1')
-  {
-    system("clear");
-    display_logo1();
-    display_account(serial_port);
-    add_acount(serial_port);
-    goto start;
-  }
-  else if (key == '2')
-  {
-    system("clear");
-    display_logo1();
-    display_account(serial_port);
-    ReturnMode3();
-    goto start;
-  }
-  else if (key == '3')
-  {
-    system("clear");
-    display_logo1();
-    display_account(serial_port);
-    delete_account(serial_port);
-    goto start;
-  }
-  else if (key == '4')
-  {
-    system("clear");
-    display_logo1();
-    display_account(serial_port);
-    reset_account(serial_port);
-    goto start;
-  }
-  else if (key == '5')
-  {
-    system("clear");
-    display_logo1();
-    display_account(serial_port);
-    change_root(serial_port);
-    goto start;
-  }
-
-  else if (key == '6')
-  {
-    system("clear");
-    display_logo1();
-    display_table(serial_port);
-    setload_default(serial_port);
-    goto start;
-  }
-  else if (key == '7')
-  {
-    // DisplayTable();
-    // printf_uart(serial_port);
-    // SaveEEPROM(serial_port);
-  }
+    else if (key == '6')
+    {
+        system("clear");
+        display_logo1();
+        // display_table(serial_port);
+        Display_table_2(serial_port);
+        setload_default(serial_port);
+        goto start;
+    }
+    else if (key == '7')
+    {
+        // DisplayTable();
+        // printf_uart(serial_port);
+        // SaveEEPROM(serial_port);
+    }
 }
 void ReturnMode3()
 {
-  char key;
-  char enter = '\r';
-  // system("clear");
-  // display_logo2();
-  // display_account(serial_port);
+    char key;
+    char enter = '\r';
+    // system("clear");
+    // display_logo2();
+    // display_account(serial_port);
 
-  printf("\r\n================+============================================================================================================================================================================================+");
-  printf("\r\n    SETTING     | Return to the device configuration menu? (Y): ");
+    printf("\r\n================+============================================================================================================================================================================================+");
+    printf("\r\n    SETTING     | Return to the device configuration menu? (Y): ");
 
-  while (1)
-  {
-    scanf("%c", &key);
-    if (key == 'y' || key == 'Y')
+    while (1)
     {
-      system("clear");
-      // write(serial_port, &key, sizeof(key));
-      // usleep(100000);
-      // write(serial_port, &enter, sizeof(enter));
-      // usleep(1000000);
-      break;
+        scanf("%c", &key);
+        if (key == 'y' || key == 'Y')
+        {
+            system("clear");
+            // write(serial_port, &key, sizeof(key));
+            // usleep(100000);
+            // write(serial_port, &enter, sizeof(enter));
+            // usleep(1000000);
+            break;
+        }
+        if (key != 'y' || key != 'Y')
+        {
+            printf("\r    SETTING     | Return to the device configuration menu? (Y): ");
+        }
     }
-    if (key != 'y' || key != 'Y')
-    {
-      printf("\r    SETTING     | Return to the device configuration menu? (Y): ");
-    }
-  }
 
-  // char *data = receive_data(serial_port);
-  // if (data == NULL)
-  // {
-  //   return;
-  // }
-  // if ((strchr(data, 'X') != NULL))
-  // {
-  //   change_info_acc_admin_mode(serial_port);
-  // }
+    // char *data = receive_data(serial_port);
+    // if (data == NULL)
+    // {
+    //   return;
+    // }
+    // if ((strchr(data, 'X') != NULL))
+    // {
+    //   change_info_acc_admin_mode(serial_port);
+    // }
 }
 
 void add_acount(int serial_port)
 {
-  // char key_mode = '+';
-  // write(serial_port, &key_mode, sizeof(key_mode));
-  // usleep(100000);
-  // write(serial_port, &key_enter, sizeof(key_enter));
-  // usleep(100000);
-  input_and_send_account1(serial_port);
-  char *data = receive_data(serial_port);
-  if (data == NULL)
-  {
-    printf("Error receiving data\n");
-    return;
-  }
-  if ((strchr(data, 'Y') != NULL))
-  {
-    printf("\r\n\t\t+============================================================================================================================================================================================+");
-    printf("\r\n\t\t|                                               Successfully !!!                                                                                                                             |");
-    printf("\r\n\t\t+============================================================================================================================================================================================+");
-    usleep(2000000);
-    system("clear");
-    display_logo1();
-    display_account(serial_port);
-    ReturnMode3();
-  }
-  else if ((strchr(data, 'F') != NULL))
-  {
-    printf("\r\n\t\t+============================================================================================================================================================================================+");
-    printf("\r\n\t\t| Cannot add new user. The number of user accounts is full!.                                                                                                                                 |");
-    printf("\r\n\t\t+============================================================================================================================================================================================+");
-    usleep(2000000);
-    system("clear");
-    display_logo1();
-    display_account(serial_port);
-    ReturnMode3();
-  }
-  else if ((strchr(data, 'V') != NULL))
-  {
-    printf("\r\n\t\t+============================================================================================================================================================================================+");
-    printf("\r\n\t\t| Cannot add new user. Account already exists!.                                                                                                                                              |");
-    printf("\r\n\t\t+============================================================================================================================================================================================+");
-    printf("\r\n\t\t|                                                                                                                                                                                            |");
-    printf("\r\n\t\t+--------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------+");
-    usleep(2000000);
-    system("clear");
-    display_logo1();
-    display_account(serial_port);
-    ReturnMode3();
-  }
-  if ((strchr(data, 'G') != NULL))
-  {
-    printf("\r\n\t\t+============================================================================================================================================================================================+");
-    printf("\r\n\t\t| Change Password Successfully!.                                                                                                                                                             |");
-    printf("\r\n\t\t+============================================================================================================================================================================================+");
-    usleep(2000000);
-    system("clear");
-    display_logo1();
-    display_account(serial_port);
-    ReturnMode3();
-  }
+    // char key_mode = '+';
+    // write(serial_port, &key_mode, sizeof(key_mode));
+    // usleep(100000);
+    // write(serial_port, &key_enter, sizeof(key_enter));
+    // usleep(100000);
+    input_and_send_account1(serial_port);
+    char *data = receive_data(serial_port);
+    if (data == NULL)
+    {
+        printf("Error receiving data\n");
+        return;
+    }
+    if ((strchr(data, 'Y') != NULL))
+    {
+        printf("\r\n\t\t+============================================================================================================================================================================================+");
+        printf("\r\n\t\t|                                               Successfully !!!                                                                                                                             |");
+        printf("\r\n\t\t+============================================================================================================================================================================================+");
+        usleep(2000000);
+        system("clear");
+        display_logo1();
+        display_account(serial_port);
+        ReturnMode3();
+    }
+    else if ((strchr(data, 'F') != NULL))
+    {
+        printf("\r\n\t\t+============================================================================================================================================================================================+");
+        printf("\r\n\t\t| Cannot add new user. The number of user accounts is full!.                                                                                                                                 |");
+        printf("\r\n\t\t+============================================================================================================================================================================================+");
+        usleep(2000000);
+        system("clear");
+        display_logo1();
+        display_account(serial_port);
+        ReturnMode3();
+    }
+    else if ((strchr(data, 'V') != NULL))
+    {
+        printf("\r\n\t\t+============================================================================================================================================================================================+");
+        printf("\r\n\t\t| Cannot add new user. Account already exists!.                                                                                                                                              |");
+        printf("\r\n\t\t+============================================================================================================================================================================================+");
+        printf("\r\n\t\t|                                                                                                                                                                                            |");
+        printf("\r\n\t\t+--------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------+");
+        usleep(2000000);
+        system("clear");
+        display_logo1();
+        display_account(serial_port);
+        ReturnMode3();
+    }
+    if ((strchr(data, 'G') != NULL))
+    {
+        printf("\r\n\t\t+============================================================================================================================================================================================+");
+        printf("\r\n\t\t| Change Password Successfully!.                                                                                                                                                             |");
+        printf("\r\n\t\t+============================================================================================================================================================================================+");
+        usleep(2000000);
+        system("clear");
+        display_logo1();
+        display_account(serial_port);
+        ReturnMode3();
+    }
 }
 void delete_account(int serial_port)
 {
-  // char key_mode = ')';
-  // write(serial_port, &key_mode, sizeof(key_mode));
-  // usleep(100000);
-  // write(serial_port, &key_enter, sizeof(key_enter));
-  // usleep(100000);
-  input_and_send_username(serial_port);
-  char *data = receive_data(serial_port);
-  if (data == NULL)
-  {
-    printf("Error receiving data\n");
-    return;
-  }
-  if ((strchr(data, 'Y') != NULL))
-  {
-    printf("\r\n\t\t+============================================================================================================================================================================================+");
-    printf("\r\n\t\t|                                               Successfully !!!                                                                                                                             |");
-    printf("\r\n\t\t+============================================================================================================================================================================================+");
-    sleep(2);
-    system("clear");
-    display_logo1();
-    display_account(serial_port);
-    ReturnMode3();
-  }
-  else if ((strchr(data, 'F')))
-  {
-    printf("\r\n\t\t+============================================================================================================================================================================================+");
-    printf("\r\n\t\t|                                               Wrong user account.                                                                                                                          |");
-    printf("\r\n\t\t+============================================================================================================================================================================================+");
-    sleep(2);
-    system("clear");
-    display_logo1();
-    display_account(serial_port);
-    ReturnMode3();
-  }
+    // char key_mode = ')';
+    // write(serial_port, &key_mode, sizeof(key_mode));
+    // usleep(100000);
+    // write(serial_port, &key_enter, sizeof(key_enter));
+    // usleep(100000);
+    input_and_send_username(serial_port);
+    char *data = receive_data(serial_port);
+    if (data == NULL)
+    {
+        printf("Error receiving data\n");
+        return;
+    }
+    if ((strchr(data, 'Y') != NULL))
+    {
+        printf("\r\n\t\t+============================================================================================================================================================================================+");
+        printf("\r\n\t\t|                                               Successfully !!!                                                                                                                             |");
+        printf("\r\n\t\t+============================================================================================================================================================================================+");
+        sleep(2);
+        system("clear");
+        display_logo1();
+        display_account(serial_port);
+        ReturnMode3();
+    }
+    else if ((strchr(data, 'F')))
+    {
+        printf("\r\n\t\t+============================================================================================================================================================================================+");
+        printf("\r\n\t\t|                                               Wrong user account.                                                                                                                          |");
+        printf("\r\n\t\t+============================================================================================================================================================================================+");
+        sleep(2);
+        system("clear");
+        display_logo1();
+        display_account(serial_port);
+        ReturnMode3();
+    }
 }
 void DisplayAccount(int serial_port)
 {
-  ReturnMode3(serial_port);
+    ReturnMode3(serial_port);
 }
 
 void reset_account(int serial_port)
 {
-  char key;
-  char enter = '\r';
-  char key_mode = '[';
-  // write(serial_port, &key_mode, sizeof(key_mode));
-  // usleep(100000);
-  // write(serial_port, &key_enter, sizeof(key_enter));
-  // usleep(100000);
-  printf("\r\n================+============================================================================================================================================================================================+");
-  printf("\r\n    SETTING     | Do you want to reset all user account? (Y): ");
+    char key;
+    char enter = '\r';
+    char key_mode = '[';
+    // write(serial_port, &key_mode, sizeof(key_mode));
+    // usleep(100000);
+    // write(serial_port, &key_enter, sizeof(key_enter));
+    // usleep(100000);
+    printf("\r\n================+============================================================================================================================================================================================+");
+    printf("\r\n    SETTING     | Do you want to reset all user account? (Y): ");
 
-  while (1)
-  {
-    scanf("%c", &key);
-    if (key == 'y' || key == 'Y')
+    while (1)
     {
-      write(serial_port, &key_mode, sizeof(key_mode));
-      usleep(100000);
-      write(serial_port, &key_enter, sizeof(key_enter));
-      usleep(500000);
-      write(serial_port, &key, sizeof(key));
-      usleep(100000);
-      // write(serial_port,&enter,sizeof(enter));
-      // usleep(1000000);
-      break;
-    }
-    if (key == 'n' || key == 'N')
-    {
-      break;
-    }
+        scanf("%c", &key);
+        if (key == 'y' || key == 'Y')
+        {
+            write(serial_port, &key_mode, sizeof(key_mode));
+            usleep(100000);
+            write(serial_port, &key_enter, sizeof(key_enter));
+            usleep(500000);
+            write(serial_port, &key, sizeof(key));
+            usleep(100000);
+            // write(serial_port,&enter,sizeof(enter));
+            // usleep(1000000);
+            break;
+        }
+        if (key == 'n' || key == 'N')
+        {
+            break;
+        }
 
-    if (key != 'y' || key != 'Y' || key != 'n' || key != 'N')
-    {
-      printf("\r    SETTING     | Do you want to reset all user account? (Y): ");
+        if (key != 'y' || key != 'Y' || key != 'n' || key != 'N')
+        {
+            printf("\r    SETTING     | Do you want to reset all user account? (Y): ");
+        }
     }
-  }
-  system("clear");
-  display_logo1();
-  display_account(serial_port);
-  ReturnMode3();
-  // char *data = receive_data(serial_port);
-  // if (data == NULL)
-  // {
-  //   printf("Error receiving data\n");
-  //   return;
-  // }
-  // if ((strchr(data, 'R') != NULL))
-  // {
-  //   system("clear");
-  //   ReturnMode3(serial_port);
-  // }
+    system("clear");
+    display_logo1();
+    display_account(serial_port);
+    ReturnMode3();
+    // char *data = receive_data(serial_port);
+    // if (data == NULL)
+    // {
+    //   printf("Error receiving data\n");
+    //   return;
+    // }
+    // if ((strchr(data, 'R') != NULL))
+    // {
+    //   system("clear");
+    //   ReturnMode3(serial_port);
+    // }
 }
 
 void change_root(int serial_port)
 {
-  // char key_mode = ';';
-  // write(serial_port, &key_mode, sizeof(key_mode));
-  // usleep(100000);
-  // write(serial_port, &key_enter, sizeof(key_enter));
-  // usleep(100000);
-  input_and_send_password(serial_port);
-  // char *data = receive_data(serial_port);
-  // if (data == NULL)
-  // {
-  //   printf("Error receiving data\n");
-  //   return;
-  // }
-  // if ((strchr(data, 'N') != NULL) || (strchr(data, 'n')))
-  // {
-  //   system("clear");
-  //   ReturnMode3(serial_port);
-  // }
-  system("clear");
-  display_logo1();
-  display_account(serial_port);
-  ReturnMode3();
+    // char key_mode = ';';
+    // write(serial_port, &key_mode, sizeof(key_mode));
+    // usleep(100000);
+    // write(serial_port, &key_enter, sizeof(key_enter));
+    // usleep(100000);
+    input_and_send_password(serial_port);
+    // char *data = receive_data(serial_port);
+    // if (data == NULL)
+    // {
+    //   printf("Error receiving data\n");
+    //   return;
+    // }
+    // if ((strchr(data, 'N') != NULL) || (strchr(data, 'n')))
+    // {
+    //   system("clear");
+    //   ReturnMode3(serial_port);
+    // }
+    system("clear");
+    display_logo1();
+    display_account(serial_port);
+    ReturnMode3();
 }
 
 void setload_default(int serial_port)
 {
-  char key;
-  char enter = '\r';
-  char key_mode = ']';
+    char key;
+    char enter = '\r';
+    char key_mode = ']';
 
-  printf("\r\n================+============================================================================================================================================================================================+\n");
-  printf("\r\n    SETTING     | Do you want to load default device configuration from manufacturer? (Y/N): ");
+    printf("\r\n================+============================================================================================================================================================================================+\n");
+    printf("\r\n    SETTING     | Do you want to load default device configuration from manufacturer? (Y/N): ");
 
-  while (1)
-  {
-    scanf("%c", &key);
-    if (key == 'y' || key == 'Y' || key == 'n' || key == 'N')
+    while (1)
     {
+        scanf("%c", &key);
+        if (key == 'y' || key == 'Y' || key == 'n' || key == 'N')
+        {
 
-      write(serial_port, &key_mode, sizeof(key_mode));
-      usleep(100000);
-      write(serial_port, &key_enter, sizeof(key_enter));
-      usleep(500000);
-      // system("clear");
-      write(serial_port, &key, sizeof(key));
-      usleep(100000);
-      // write(serial_port,&enter,sizeof(enter));
-      // usleep(1000000);
-      break;
+            write(serial_port, &key_mode, sizeof(key_mode));
+            usleep(100000);
+            write(serial_port, &key_enter, sizeof(key_enter));
+            usleep(500000);
+
+            write(serial_port, &key, sizeof(key));
+            usleep(100000);
+
+            break;
+        }
+        if (key != 'y' || key != 'Y' || key != 'n' || key != 'N')
+        {
+
+            printf("\r   SETTING     | Do you want to load default device configuration from manufacturer? (Y/N): ");
+        }
     }
-    if (key != 'y' || key != 'Y' || key != 'n' || key != 'N')
-    {
-      // system("clear");
-      printf("\r   SETTING     | Do you want to load default device configuration from manufacturer? (Y/N): ");
-    }
-  }
-  system("clear");
-  display_logo1();
-  display_table(serial_port);
-  ReturnMode3();
-  // display_table(serial_port);
-  //   ReturnMode3 ();
-  //  char *data = receive_data(serial_port);
-  //  if (data == NULL)
-  //  {
-  //    printf("Error receiving data\n");
-  //    return;
-  //  }
-  //  if ((strchr(data, 'N') != NULL))
-  //  {
-  //    system("clear");
-  //  }
-  //  else if ((strchr(data, 'Y') != NULL))
-  //  {
-  //    system("clear");
-  //  }
+    system("clear");
+    display_logo1();
+    display_table(serial_port);
+    ReturnMode3();
 }
 
 int kbhit(void)
 {
-  struct termios oldt, newt;
-  int ch;
-  int oldf;
+    struct termios oldt, newt;
+    int ch;
+    int oldf;
 
-  tcgetattr(STDIN_FILENO, &oldt);
-  newt = oldt;
-  newt.c_lflag &= ~ICANON;
-  tcsetattr(STDIN_FILENO, TCSANOW, &newt);
-  oldf = fcntl(STDIN_FILENO, F_GETFL, 0);
-  fcntl(STDIN_FILENO, F_SETFL, oldf | O_NONBLOCK);
+    tcgetattr(STDIN_FILENO, &oldt);
+    newt = oldt;
+    newt.c_lflag &= ~ICANON;
+    tcsetattr(STDIN_FILENO, TCSANOW, &newt);
+    oldf = fcntl(STDIN_FILENO, F_GETFL, 0);
+    fcntl(STDIN_FILENO, F_SETFL, oldf | O_NONBLOCK);
 
-  ch = getchar();
+    ch = getchar();
 
-  tcsetattr(STDIN_FILENO, TCSANOW, &oldt);
-  fcntl(STDIN_FILENO, F_SETFL, oldf);
+    tcsetattr(STDIN_FILENO, TCSANOW, &oldt);
+    fcntl(STDIN_FILENO, F_SETFL, oldf);
 
-  if (ch != EOF)
-  {
-    ungetc(ch, stdin);
-    return 1;
-  }
+    if (ch != EOF)
+    {
+        ungetc(ch, stdin);
+        return 1;
+    }
 
-  return 0;
+    return 0;
 }
 // Ham cau hinh port uart
 int configure_serial_port(const char *device, int baud_rate)
 {
-  int serial_port = open(device, O_RDWR);
-  struct termios tty;
-  if (tcgetattr(serial_port, &tty) != 0)
-  {
-    printf("Error %i from tcgetattr: %s\n", errno, strerror(errno));
-    return 1;
-  }
-  tty.c_cflag &= ~PARENB;        // Clear parity bit, disabling parity (most common)
-  tty.c_cflag &= ~CSTOPB;        // Clear stop field, only one stop bit used in communication (most common)
-  tty.c_cflag &= ~CSIZE;         // Clear all bits that set the data size
-  tty.c_cflag |= CS8;            // 8 bits per byte (most common)
-  tty.c_cflag &= ~CRTSCTS;       // Disable RTS/CTS hardware flow control (most common)
-  tty.c_cflag |= CREAD | CLOCAL; // Turn on READ & ignore ctrl lines (CLOCAL = 1)
+    int serial_port = open(device, O_RDWR);
+    struct termios tty;
+    if (tcgetattr(serial_port, &tty) != 0)
+    {
+        printf("Error %i from tcgetattr: %s\n", errno, strerror(errno));
+        return 1;
+    }
+    tty.c_cflag &= ~PARENB;        // Clear parity bit, disabling parity (most common)
+    tty.c_cflag &= ~CSTOPB;        // Clear stop field, only one stop bit used in communication (most common)
+    tty.c_cflag &= ~CSIZE;         // Clear all bits that set the data size
+    tty.c_cflag |= CS8;            // 8 bits per byte (most common)
+    tty.c_cflag &= ~CRTSCTS;       // Disable RTS/CTS hardware flow control (most common)
+    tty.c_cflag |= CREAD | CLOCAL; // Turn on READ & ignore ctrl lines (CLOCAL = 1)
 
-  tty.c_lflag &= ~ICANON;
-  tty.c_lflag &= ~ECHO;                                                        // Disable echo
-  tty.c_lflag &= ~ECHOE;                                                       // Disable erasure
-  tty.c_lflag &= ~ECHONL;                                                      // Disable new-line echo
-  tty.c_lflag &= ~ISIG;                                                        // Disable interpretation of INTR, QUIT and SUSP
-  tty.c_iflag &= ~(IXON | IXOFF | IXANY);                                      // Turn off s/w flow ctrl
-  tty.c_iflag &= ~(IGNBRK | BRKINT | PARMRK | ISTRIP | INLCR | IGNCR | ICRNL); // Disable any special handling of received bytes
+    tty.c_lflag &= ~ICANON;
+    tty.c_lflag &= ~ECHO;                                                        // Disable echo
+    tty.c_lflag &= ~ECHOE;                                                       // Disable erasure
+    tty.c_lflag &= ~ECHONL;                                                      // Disable new-line echo
+    tty.c_lflag &= ~ISIG;                                                        // Disable interpretation of INTR, QUIT and SUSP
+    tty.c_iflag &= ~(IXON | IXOFF | IXANY);                                      // Turn off s/w flow ctrl
+    tty.c_iflag &= ~(IGNBRK | BRKINT | PARMRK | ISTRIP | INLCR | IGNCR | ICRNL); // Disable any special handling of received bytes
 
-  tty.c_oflag &= ~OPOST; // Prevent special interpretation of output bytes (e.g. newline chars)
-  tty.c_oflag &= ~ONLCR; // Prevent conversion of newline to carriage return/line feed
-  // tty.c_oflag &= ~OXTABS; // Prevent conversion of tabs to spaces (NOT PRESENT ON LINUX)
-  // tty.c_oflag &= ~ONOEOT; // Prevent removal of C-d chars (0x004) in output (NOT PRESENT ON LINUX)
+    tty.c_oflag &= ~OPOST; // Prevent special interpretation of output bytes (e.g. newline chars)
+    tty.c_oflag &= ~ONLCR; // Prevent conversion of newline to carriage return/line feed
+    // tty.c_oflag &= ~OXTABS; // Prevent conversion of tabs to spaces (NOT PRESENT ON LINUX)
+    // tty.c_oflag &= ~ONOEOT; // Prevent removal of C-d chars (0x004) in output (NOT PRESENT ON LINUX)
 
-  tty.c_cc[VTIME] = 10; // Wait for up to 1s (10 deciseconds), returning as soon as any data is received.
-  tty.c_cc[VMIN] = 0;
+    tty.c_cc[VTIME] = 10; // Wait for up to 1s (10 deciseconds), returning as soon as any data is received.
+    tty.c_cc[VMIN] = 0;
 
-  // Set in/out baud rate
-  cfsetispeed(&tty, baud_rate);
-  cfsetospeed(&tty, baud_rate);
+    // Set in/out baud rate
+    cfsetispeed(&tty, baud_rate);
+    cfsetospeed(&tty, baud_rate);
 
-  // Save tty settings, also checking for error
-  if (tcsetattr(serial_port, TCSANOW, &tty) != 0)
-  {
-    printf("Error %i from tcsetattr: %s\n", errno, strerror(errno));
-    return 1;
-  }
-  return serial_port;
+    // Save tty settings, also checking for error
+    if (tcsetattr(serial_port, TCSANOW, &tty) != 0)
+    {
+        printf("Error %i from tcsetattr: %s\n", errno, strerror(errno));
+        return 1;
+    }
+    return serial_port;
 }
 // Ham nhap account
 void input_and_send_account(int serial_port)
 {
-  char enter[] = {'\r'};
-  char username[17];
-  char password[17];
-  int valid_input = 0;
+    char enter[] = {'\r'};
+    char username[17];
+    char password[17];
+    int valid_input = 0;
 
-  while (!valid_input)
-  {
-    printf("\r\n ===============+============================================================================================================================================================================================+");
-    printf("\r\n      LOG IN    | Username: ");
-    scanf("%16s", username);
-    printf("\r\n\t\t| Password: ");
-    scanf("%16s", password);
-
-    if (strlen(username) > 16 || strlen(password) > 16)
+    while (!valid_input)
     {
-      printf("The account or password exceeds 16 characters. Please re-enter.\n");
+        printf("\r\n ===============+============================================================================================================================================================================================+");
+        printf("\r\n      LOG IN    | Username: ");
+        scanf("%16s", username);
+        printf("\r\n\t\t| Password: ");
+        scanf("%16s", password);
+
+        if (strlen(username) > 16 || strlen(password) > 16)
+        {
+            printf("The account or password exceeds 16 characters. Please re-enter.\n");
+        }
+        else
+        {
+            valid_input = 1;
+        }
     }
-    else
+
+    // while (getchar() != '\n')
+    //   ;
+    // getchar();
+    write(serial_port, &key_check_account, sizeof(key_check_account));
+    usleep(1000);
+    write(serial_port, &key_enter, sizeof(key_enter));
+    usleep(200000);
+    int n_username = strlen(username);
+    for (int i = 0; i < n_username; i++)
     {
-      valid_input = 1;
+        usleep(50000);
+        char data[2] = {username[i], '\0'};
+        send_data(serial_port, data, sizeof(data) - 1);
     }
-  }
+    usleep(500000);
+    write(serial_port, enter, sizeof(enter));
 
-  // while (getchar() != '\n')
-  //   ;
-  // getchar();
-  write(serial_port, &key_check_account, sizeof(key_check_account));
-  usleep(1000);
-  write(serial_port, &key_enter, sizeof(key_enter));
-  usleep(200000);
-  int n_username = strlen(username);
-  for (int i = 0; i < n_username; i++)
-  {
-    usleep(50000);
-    char data[2] = {username[i], '\0'};
-    send_data(serial_port, data, sizeof(data) - 1);
-  }
-  usleep(500000);
-  write(serial_port, enter, sizeof(enter));
-
-  int n_password = strlen(password);
-  for (int i = 0; i < n_password; i++)
-  {
-    usleep(50000);
-    char data[2] = {password[i], '\0'};
-    send_data(serial_port, data, sizeof(data) - 1);
-  }
-  usleep(500000);
-  write(serial_port, enter, sizeof(enter));
+    int n_password = strlen(password);
+    for (int i = 0; i < n_password; i++)
+    {
+        usleep(50000);
+        char data[2] = {password[i], '\0'};
+        send_data(serial_port, data, sizeof(data) - 1);
+    }
+    usleep(500000);
+    write(serial_port, enter, sizeof(enter));
 }
 void input_and_send_account1(int serial_port)
 {
-  char key_mode = '+';
-  char enter[] = {'\r'};
-  char username[17];
-  char password[17];
-  int valid_input = 0;
+    char key_mode = '+';
+    char enter[] = {'\r'};
+    char username[17];
+    char password[17];
+    int valid_input = 0;
 
-  while (!valid_input)
-  {
-    printf("\r\n ===============+============================================================================================================================================================================================+");
-    printf("\r\n    Account     | Enter Username: ");
-    scanf("%16s", username);
-    printf("\r\n\t\t| Enter Password: ");
-    scanf("%16s", password);
-
-    if (strlen(username) > 16 || strlen(password) > 16)
+    while (!valid_input)
     {
-      printf("The account or password exceeds 16 characters. Please re-enter.\n");
+        printf("\r\n ===============+============================================================================================================================================================================================+");
+        printf("\r\n    Account     | Enter Username: ");
+        scanf("%16s", username);
+        printf("\r\n\t\t| Enter Password: ");
+        scanf("%16s", password);
+
+        if (strlen(username) > 16 || strlen(password) > 16)
+        {
+            printf("The account or password exceeds 16 characters. Please re-enter.\n");
+        }
+        else
+        {
+            valid_input = 1;
+        }
     }
-    else
+
+    // while (getchar() != '\n')
+    //   ;
+    // getchar();
+    write(serial_port, &key_mode, sizeof(key_mode));
+    usleep(100000);
+    write(serial_port, &key_enter, sizeof(key_enter));
+    usleep(200000);
+    int n_username = strlen(username);
+    for (int i = 0; i < n_username; i++)
     {
-      valid_input = 1;
+        usleep(50000);
+        char data[2] = {username[i], '\0'};
+        send_data(serial_port, data, sizeof(data) - 1);
     }
-  }
+    sleep(1);
+    write(serial_port, enter, sizeof(enter));
 
-  // while (getchar() != '\n')
-  //   ;
-  // getchar();
-  write(serial_port, &key_mode, sizeof(key_mode));
-  usleep(100000);
-  write(serial_port, &key_enter, sizeof(key_enter));
-  usleep(200000);
-  int n_username = strlen(username);
-  for (int i = 0; i < n_username; i++)
-  {
-    usleep(50000);
-    char data[2] = {username[i], '\0'};
-    send_data(serial_port, data, sizeof(data) - 1);
-  }
-  sleep(1);
-  write(serial_port, enter, sizeof(enter));
-
-  int n_password = strlen(password);
-  for (int i = 0; i < n_password; i++)
-  {
-    usleep(50000);
-    char data[2] = {password[i], '\0'};
-    send_data(serial_port, data, sizeof(data) - 1);
-  }
-  sleep(1);
-  write(serial_port, enter, sizeof(enter));
+    int n_password = strlen(password);
+    for (int i = 0; i < n_password; i++)
+    {
+        usleep(50000);
+        char data[2] = {password[i], '\0'};
+        send_data(serial_port, data, sizeof(data) - 1);
+    }
+    sleep(1);
+    write(serial_port, enter, sizeof(enter));
 }
 void input_and_send_account2(int serial_port)
 {
-  char key_mode = '(';
-  char enter[] = {'\r'};
-  char username[17];
-  char password[17];
-  int valid_input = 0;
+    char key_mode = '(';
+    char enter[] = {'\r'};
+    char username[17];
+    char password[17];
+    int valid_input = 0;
 
-  while (!valid_input)
-  {
-    printf("\r\n ===============+============================================================================================================================================================================================+");
-    printf("\r\n    Account     | Enter Username: ");
-    scanf("%16s", username);
-    printf("\r\n\t\t| Enter Password: ");
-    scanf("%16s", password);
-
-    if (strlen(username) > 16 || strlen(password) > 16)
+    while (!valid_input)
     {
-      printf("The account or password exceeds 16 characters. Please re-enter.\n");
+        printf("\r\n ===============+============================================================================================================================================================================================+");
+        printf("\r\n    Account     | Enter Username: ");
+        scanf("%16s", username);
+        printf("\r\n\t\t| Enter Password: ");
+        scanf("%16s", password);
+
+        if (strlen(username) > 16 || strlen(password) > 16)
+        {
+            printf("The account or password exceeds 16 characters. Please re-enter.\n");
+        }
+        else
+        {
+            valid_input = 1;
+        }
     }
-    else
+
+    // while (getchar() != '\n')
+    //   ;
+    // getchar();
+    write(serial_port, &key_mode, sizeof(key_mode));
+    usleep(100000);
+    write(serial_port, &key_enter, sizeof(key_enter));
+    usleep(200000);
+    int n_username = strlen(username);
+    for (int i = 0; i < n_username; i++)
     {
-      valid_input = 1;
+        usleep(50000);
+        char data[2] = {username[i], '\0'};
+        send_data(serial_port, data, sizeof(data) - 1);
     }
-  }
+    sleep(1);
+    write(serial_port, enter, sizeof(enter));
 
-  // while (getchar() != '\n')
-  //   ;
-  // getchar();
-  write(serial_port, &key_mode, sizeof(key_mode));
-  usleep(100000);
-  write(serial_port, &key_enter, sizeof(key_enter));
-  usleep(200000);
-  int n_username = strlen(username);
-  for (int i = 0; i < n_username; i++)
-  {
-    usleep(50000);
-    char data[2] = {username[i], '\0'};
-    send_data(serial_port, data, sizeof(data) - 1);
-  }
-  sleep(1);
-  write(serial_port, enter, sizeof(enter));
-
-  int n_password = strlen(password);
-  for (int i = 0; i < n_password; i++)
-  {
-    usleep(50000);
-    char data[2] = {password[i], '\0'};
-    send_data(serial_port, data, sizeof(data) - 1);
-  }
-  sleep(1);
-  write(serial_port, enter, sizeof(enter));
+    int n_password = strlen(password);
+    for (int i = 0; i < n_password; i++)
+    {
+        usleep(50000);
+        char data[2] = {password[i], '\0'};
+        send_data(serial_port, data, sizeof(data) - 1);
+    }
+    sleep(1);
+    write(serial_port, enter, sizeof(enter));
 }
 // delete acount
 void input_and_send_username(int serial_port)
 {
-  char key_mode = ')';
+    char key_mode = ')';
 
-  char enter[] = {'\r'};
-  char username[17];
-  int valid_input = 0;
+    char enter[] = {'\r'};
+    char username[17];
+    int valid_input = 0;
 
-  while (!valid_input)
-  {
-    printf("\r\n ===============+============================================================================================================================================================================================+");
-    printf("\r\n    Account     | Enter an account username account need to be deleted: ");
-    scanf("%16s", username);
-
-    if (strlen(username) > 16)
+    while (!valid_input)
     {
-      printf("The username exceeds 16 characters. Please re-enter.\n");
+        printf("\r\n ===============+============================================================================================================================================================================================+");
+        printf("\r\n    Account     | Enter an account username account need to be deleted: ");
+        scanf("%16s", username);
+
+        if (strlen(username) > 16)
+        {
+            printf("The username exceeds 16 characters. Please re-enter.\n");
+        }
+        else
+        {
+            valid_input = 1;
+        }
     }
-    else
+    // while (getchar() != '\n')
+    //   ;
+    // getchar();
+    write(serial_port, &key_mode, sizeof(key_mode));
+    usleep(100000);
+    write(serial_port, &key_enter, sizeof(key_enter));
+    usleep(200000);
+    int n_username = strlen(username);
+    for (int i = 0; i < n_username; i++)
     {
-      valid_input = 1;
+        usleep(50000);
+        char data[2] = {username[i], '\0'};
+        send_data(serial_port, data, sizeof(data) - 1);
     }
-  }
-  // while (getchar() != '\n')
-  //   ;
-  // getchar();
-  write(serial_port, &key_mode, sizeof(key_mode));
-  usleep(100000);
-  write(serial_port, &key_enter, sizeof(key_enter));
-  usleep(200000);
-  int n_username = strlen(username);
-  for (int i = 0; i < n_username; i++)
-  {
-    usleep(50000);
-    char data[2] = {username[i], '\0'};
-    send_data(serial_port, data, sizeof(data) - 1);
-  }
-  sleep(1);
-  write(serial_port, enter, sizeof(enter));
+    sleep(1);
+    write(serial_port, enter, sizeof(enter));
 }
 
 void input_and_send_password(int serial_port)
 {
 
-  char key_mode = ';';
+    char key_mode = ';';
 
-  // usleep(100000);
-  // write(serial_port, &key_enter, sizeof(key_enter));
-  // usleep(100000);
-  char enter[] = {'\r'};
-  char password[17];
-  int valid_input = 0;
+    // usleep(100000);
+    // write(serial_port, &key_enter, sizeof(key_enter));
+    // usleep(100000);
+    char enter[] = {'\r'};
+    char password[17];
+    int valid_input = 0;
 
-  while (!valid_input)
-  {
-    printf("\r\n ===============+============================================================================================================================================================================================+");
-    printf("\r\n    Account     | Enter new password for root: ");
-    scanf("%16s", password);
-
-    if (strlen(password) > 16)
+    while (!valid_input)
     {
-      printf("The username exceeds 16 characters. Please re-enter.\n");
+        printf("\r\n ===============+============================================================================================================================================================================================+");
+        printf("\r\n    Account     | Enter new password for root: ");
+        scanf("%16s", password);
+
+        if (strlen(password) > 16)
+        {
+            printf("The username exceeds 16 characters. Please re-enter.\n");
+        }
+        else
+        {
+            valid_input = 1;
+        }
     }
-    else
+    // while (getchar() != '\n')
+    //   ;
+    // getchar();
+    write(serial_port, &key_mode, sizeof(key_mode));
+    usleep(100000);
+    write(serial_port, &key_enter, sizeof(key_enter));
+    usleep(200000);
+    int n_password = strlen(password);
+    for (int i = 0; i < n_password; i++)
     {
-      valid_input = 1;
+        usleep(50000);
+        char data[2] = {password[i], '\0'};
+        send_data(serial_port, data, sizeof(data) - 1);
     }
-  }
-  // while (getchar() != '\n')
-  //   ;
-  // getchar();
-  write(serial_port, &key_mode, sizeof(key_mode));
-  usleep(100000);
-  write(serial_port, &key_enter, sizeof(key_enter));
-  usleep(200000);
-  int n_password = strlen(password);
-  for (int i = 0; i < n_password; i++)
-  {
-    usleep(50000);
-    char data[2] = {password[i], '\0'};
-    send_data(serial_port, data, sizeof(data) - 1);
-  }
-  sleep(1);
-  write(serial_port, enter, sizeof(enter));
+    sleep(1);
+    write(serial_port, enter, sizeof(enter));
 }
 // Ham gui du lieu tu uart
 int send_data(int serial_port, const char *data, size_t size)
 {
-  int num_byte = write(serial_port, data, size);
-  if (num_byte < 0)
-  {
-    printf("Error reading: %s", strerror(errno));
-    return 1;
-  }
-  return num_byte;
+    int num_byte = write(serial_port, data, size);
+    if (num_byte < 0)
+    {
+        printf("Error reading: %s", strerror(errno));
+        return 1;
+    }
+    return num_byte;
 }
-
+/////////////////////////khong duoc xoa ////////////////////////////////
 // Ham nhan du lieu tu uart
 char *receive_data(int serial_port)
 {
-  static char read_buf[256];
-  memset(read_buf, '\0', sizeof(read_buf));
+    static char read_buf[256];
+    memset(read_buf, '\0', sizeof(read_buf));
 
-  int num_bytes = read(serial_port, &read_buf, sizeof(read_buf));
-  if (num_bytes < 0)
-  {
-    printf("Error reading: %s\n", strerror(errno));
-    return NULL;
-  }
+    int num_bytes = read(serial_port, &read_buf, sizeof(read_buf) - 1 );
+    if (num_bytes < 0)
+    {
+        //printf("Error reading: %s\n", strerror(errno));
+        return NULL;
+    }
+    // read_buf[num_bytes] = '\0';
+    return read_buf;
+}
 
-  // read_buf[num_bytes] = '\0';
-  return read_buf;
+// char *receive_data2(int serial_port, const char *ID, const char *Value) {
+//     static char buffer[256];
+//     int t = 0;
+//     buffer[0] = '\0'; // Clear buffer
+//     while (1) {
+//         char *data1 = receive_data(serial_port);
+//         printf("\nReceived message: %s\n", data1);
+//         if ((strchr(data1, 'Y') != NULL)) {
+
+//             break;
+//         } else if ((strchr(data1, 'N') != NULL) || (t == 10)) {
+
+//             break;
+//         }
+//         t++;
+//     }
+//     return buffer;
+// }
+char *receive_data2(int serial_port)
+{
+    static char read_buf[256];
+    memset(read_buf, '\0', sizeof(read_buf));
+
+    int num_bytes = read(serial_port, read_buf, sizeof(read_buf) - 1); // Đọc tối đa 255 ký tự, chừa 1 cho '\0'
+    if (num_bytes < 0)
+    {
+        printf("Error reading: %s\n", strerror(errno));
+        return NULL;
+    }
+
+    // read_buf[num_bytes] = '\0'; // Đảm bảo kết thúc chuỗi
+    return read_buf;
 }
 
 //
 void Mode_Condition_SDCard(int serial_port)
 {
-  system("clear");
-  display_logo1();
-  char key, key1;
-  char enter = '\r';
-  printf("\r\n                                                                                                                                                                                                             |");
-  display_setting_user1();
-  printf("\r\n ================+===========+===============================================================================================================================================================================+");
-  printf("\r\n     DISPLAY     |           |                                                                                                                                                                               |");
-  printf("\r\n\t\t | Key Enter |                  Mode                                                                                                                                                         |");
-  printf("\r\n\t\t +-----------+-------------------------------------------------------------------------------------------------------------------------------------------------------------------------------+");
-  printf("\r\n\t\t |     1:    | Display Flood LogFile                                                                                                                                                                |");
-  printf("\r\n\t\t +-----------+-------------------------------------------------------------------------------------------------------------------------------------------------------------------------------+");
-  printf("\r\n\t\t |     2:    | Display Normal LogFile                                                                                                                                                               |");
-  printf("\r\n\t\t +-----------+-------------------------------------------------------------------------------------------------------------------------------------------------------------------------------+");
-  printf("\r\n\t\t |     3:    | Exit                                                                                                                                                                          |");
-  printf("\r\n\t\t +-----------+-------------------------------------------------------------------------------------------------------------------------------------------------------------------------------+");
-  printf("\r\n ----------------+-------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------+");
-  printf("\r\n ================+===========================================================================================================================================================================================+\n");
+    system("clear");
+    display_logo1();
+    char key, key1;
+    char enter = '\r';
+    printf("\r\n                                                                                                                                                                                                             |");
+    display_setting_user1();
+    printf("\r\n ================+===========+===============================================================================================================================================================================+");
+    printf("\r\n     DISPLAY     |           |                                                                                                                                                                               |");
+    printf("\r\n\t\t | Key Enter |                  Mode                                                                                                                                                         |");
+    printf("\r\n\t\t +-----------+-------------------------------------------------------------------------------------------------------------------------------------------------------------------------------+");
+    printf("\r\n\t\t |     1:    | Display Flood LogFile                                                                                                                                                                |");
+    printf("\r\n\t\t +-----------+-------------------------------------------------------------------------------------------------------------------------------------------------------------------------------+");
+    printf("\r\n\t\t |     2:    | Display Normal LogFile                                                                                                                                                               |");
+    printf("\r\n\t\t +-----------+-------------------------------------------------------------------------------------------------------------------------------------------------------------------------------+");
+    printf("\r\n\t\t |     3:    | Exit                                                                                                                                                                          |");
+    printf("\r\n\t\t +-----------+-------------------------------------------------------------------------------------------------------------------------------------------------------------------------------+");
+    printf("\r\n ----------------+-------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------+");
+    printf("\r\n ================+===========================================================================================================================================================================================+\n");
 
-  while (1)
-  {
-    scanf("%c", &key);
-    if (key == '1')
+    while (1)
     {
-      display_log_files(LOG_FLOOD_DIR);
-
-      printf("\r\n ================+===========================================================================================================================================================================================+\n");
-      printf("\r\n    SETTING     | Press key Y to return!");
-
-      while (1)
-      {
-        scanf("%c", &key1);
-        if (key1 == 'y' || key1 == 'Y')
+        scanf("%c", &key);
+        if (key == '1')
         {
-          system("clear");
-          display_logo1();
-          Mode_Condition_SDCard(serial_port);
-        }
-        if (key1 != 'y' || key1 != 'Y')
-        {
-          printf("\r    SETTING     | Press key Y to return! ");
-        }
-      }
-    }
-    if (key == '2')
-    {
-      display_log_files(LOG_NORMAL_DIR);
+            display_log_files(LOG_FLOOD_DIR);
 
-      printf("\r\n ================+===========================================================================================================================================================================================+\n");
-      printf("\r\n    SETTING     | Press key Y to return!");
+            printf("\r\n ================+===========================================================================================================================================================================================+\n");
+            printf("\r\n    SETTING     | Press key Y to return!");
 
-      while (1)
-      {
-        scanf("%c", &key1);
-        if (key1 == 'y' || key1 == 'Y')
-        {
-          system("clear");
-          display_logo1();
-          Mode_Condition_SDCard(serial_port);
+            while (1)
+            {
+                scanf("%c", &key1);
+                if (key1 == 'y' || key1 == 'Y')
+                {
+                    system("clear");
+                    display_logo1();
+                    Mode_Condition_SDCard(serial_port);
+                }
+                if (key1 != 'y' || key1 != 'Y')
+                {
+                    printf("\r    SETTING     | Press key Y to return! ");
+                }
+            }
         }
-        if (key1 != 'y' || key1 != 'Y')
+        if (key == '2')
         {
-          printf("\r    SETTING     | Press key Y to return! ");
-        }
-      }
-    }
-    if (key == '3')
-    {
-      options_mode1(serial_port);
-      break;
-    }
+            display_log_files(LOG_NORMAL_DIR);
 
-    if (key != '1' || key != '2' || key != '3')
-    {
-      printf("\r     SETTING     | --> Please choose Mode: ");
+            printf("\r\n ================+===========================================================================================================================================================================================+\n");
+            printf("\r\n    SETTING     | Press key Y to return!");
+
+            while (1)
+            {
+                scanf("%c", &key1);
+                if (key1 == 'y' || key1 == 'Y')
+                {
+                    system("clear");
+                    display_logo1();
+                    Mode_Condition_SDCard(serial_port);
+                }
+                if (key1 != 'y' || key1 != 'Y')
+                {
+                    printf("\r    SETTING     | Press key Y to return! ");
+                }
+            }
+        }
+        if (key == '3')
+        {
+            options_mode1(serial_port);
+            break;
+        }
+
+        if (key != '1' || key != '2' || key != '3')
+        {
+            printf("\r     SETTING     | --> Please choose Mode: ");
+        }
     }
-  }
 }
 
 void Mode_Condition_SDCard_User(int serial_port)
 {
 start:
-  system("clear");
-  display_logo1();
-  char key, key1;
-  char key3 = 'E';
-  char enter = '\r';
-  printf("\r\n                                                                                                                                                                                                             |");
-  display_setting_user();
-  printf("\r\n ================+===========+===============================================================================================================================================================================+");
-  printf("\r\n     DISPLAY     |           |                                                                                                                                                                               |");
-  printf("\r\n\t\t | Key Enter |                  Mode                                                                                                                                                         |");
-  printf("\r\n\t\t +-----------+-------------------------------------------------------------------------------------------------------------------------------------------------------------------------------+");
-  printf("\r\n\t\t |     1:    | Display Flood logfile                                                                                                                                                              |");
-  printf("\r\n\t\t +-----------+-------------------------------------------------------------------------------------------------------------------------------------------------------------------------------+");
-  printf("\r\n\t\t |     2:    | Display Normal logfile                                                                                                                                                              |");
-  printf("\r\n\t\t +-----------+-------------------------------------------------------------------------------------------------------------------------------------------------------------------------------+");
-  printf("\r\n\t\t |     3:    | Change time counter                                                                                                                                                           |");
-  printf("\r\n\t\t +-----------+-------------------------------------------------------------------------------------------------------------------------------------------------------------------------------+");
-  printf("\r\n\t\t |     4:    | Exit                                                                                                                                                                          |");
-  printf("\r\n\t\t +-----------+-------------------------------------------------------------------------------------------------------------------------------------------------------------------------------+");
-  printf("\r\n ====+===========+===========================================================================================================================================================================================+");
-  printf("\r\n\t\t |  SETTING  | --> Please choose Mode: ");
-  while (1)
-  {
-    scanf("%c", &key);
-    if (key == '1')
+    system("clear");
+    display_logo1();
+    char key, key1;
+    char key3 = 'E';
+    char enter = '\r';
+    printf("\r\n                                                                                                                                                                                                             |");
+    display_setting_user();
+    printf("\r\n ================+===========+===============================================================================================================================================================================+");
+    printf("\r\n     DISPLAY     |           |                                                                                                                                                                               |");
+    printf("\r\n\t\t | Key Enter |                  Mode                                                                                                                                                         |");
+    printf("\r\n\t\t +-----------+-------------------------------------------------------------------------------------------------------------------------------------------------------------------------------+");
+    printf("\r\n\t\t |     1:    | Display Flood logfile                                                                                                                                                              |");
+    printf("\r\n\t\t +-----------+-------------------------------------------------------------------------------------------------------------------------------------------------------------------------------+");
+    printf("\r\n\t\t |     2:    | Display Normal logfile                                                                                                                                                              |");
+    printf("\r\n\t\t +-----------+-------------------------------------------------------------------------------------------------------------------------------------------------------------------------------+");
+    printf("\r\n\t\t |     3:    | Change time counter                                                                                                                                                           |");
+    printf("\r\n\t\t +-----------+-------------------------------------------------------------------------------------------------------------------------------------------------------------------------------+");
+    printf("\r\n\t\t |     4:    | Exit                                                                                                                                                                          |");
+    printf("\r\n\t\t +-----------+-------------------------------------------------------------------------------------------------------------------------------------------------------------------------------+");
+    printf("\r\n ====+===========+===========================================================================================================================================================================================+");
+    printf("\r\n\t\t |  SETTING  | --> Please choose Mode: ");
+    while (1)
     {
-      display_log_files(LOG_FLOOD_DIR);
-      printf("\r\n ===============+============================================================================================================================================================================================+");
-      printf("\r\n    Press Y to continue... ");
-      while (1)
-      {
-        scanf("%c", &key1);
-        if (key1 == 'y' || key1 == 'Y')
+        scanf("%c", &key);
+        if (key == '1')
         {
-          break;
+            display_log_files(LOG_FLOOD_DIR);
+            printf("\r\n ===============+============================================================================================================================================================================================+");
+            printf("\r\n    Press Y to continue... ");
+            while (1)
+            {
+                scanf("%c", &key1);
+                if (key1 == 'y' || key1 == 'Y')
+                {
+                    break;
+                }
+                if (key1 != 'y' || key1 != 'Y')
+                {
+                    // printf("\r    SETTING     | Return? (Y): ");
+                }
+            }
+            break;
         }
-        if (key1 != 'y' || key1 != 'Y')
+        else if (key == '2')
         {
-          // printf("\r    SETTING     | Return? (Y): ");
+            display_log_files(LOG_NORMAL_DIR);
+            printf("\r\n ===============+============================================================================================================================================================================================+");
+            printf("\r\n    Press Y to continue... ");
+            while (1)
+            {
+                scanf("%c", &key1);
+                if (key1 == 'y' || key1 == 'Y')
+                {
+                    break;
+                }
+                if (key1 != 'y' || key1 != 'Y')
+                {
+                    // printf("\r    SETTING     | Return? (Y): ");
+                }
+            }
+            break;
         }
-      }
-      break;
-    }
-    else if (key == '2')
-    {
-      display_log_files(LOG_NORMAL_DIR);
-      printf("\r\n ===============+============================================================================================================================================================================================+");
-      printf("\r\n    Press Y to continue... ");
-      while (1)
-      {
-        scanf("%c", &key1);
-        if (key1 == 'y' || key1 == 'Y')
+        else if (key == '3')
         {
-          break;
+            break;
         }
-        if (key1 != 'y' || key1 != 'Y')
+        else if (key == '4')
         {
-          // printf("\r    SETTING     | Return? (Y): ");
+            break;
         }
-      }
-      break;
-    }
-    else if (key == '3')
-    {
-      break;
-    }
-    else if (key == '4')
-    {
-      break;
-    }
 
-    // if (key != '1' || key != '2' || key != '3')
-    //{
-    //   printf("\r\t\t |SETTING    | --> Please choose Mode: ");
-    // }
-  }
-  if (key == '3')
-  {
-    update_threshold_time_counter();
-    goto start;
-  }
-  if (key == '1' || key == '2')
-  {
-    goto start;
-  }
+        // if (key != '1' || key != '2' || key != '3')
+        //{
+        //   printf("\r\t\t |SETTING    | --> Please choose Mode: ");
+        // }
+    }
+    if (key == '3')
+    {
+        update_threshold_time_counter();
+        goto start;
+    }
+    if (key == '1' || key == '2')
+    {
+        goto start;
+    }
 }
 void Mode_Condition_SDCard_Admin(int serial_port)
 {
 start:
-  system("clear");
-  display_logo1();
-  char key, key2;
-  char key3 = 'E';
-  char enter = '\r';
-  display_setting_admin();
-  printf("\r\n ================+===========+===============================================================================================================================================================================+");
-  printf("\r\n     DISPLAY     |           |                                                                                                                                                                               |");
-  printf("\r\n\t\t | Key Enter |                  Mode                                                                                                                                                         |");
-  printf("\r\n\t\t +-----------+-------------------------------------------------------------------------------------------------------------------------------------------------------------------------------+");
-  printf("\r\n\t\t |     1:    | Display Flood log file                                                                                                                                                              |");
-  printf("\r\n\t\t +-----------+-------------------------------------------------------------------------------------------------------------------------------------------------------------------------------+");
-  printf("\r\n\t\t |     2:    | Display Normal log file                                                                                                                                                              |");
-  printf("\r\n\t\t +-----------+-------------------------------------------------------------------------------------------------------------------------------------------------------------------------------+");
-  printf("\r\n\t\t |     3:    | Delete Flood log file                                                                                                                                                               |");
-  printf("\r\n\t\t +-----------+-------------------------------------------------------------------------------------------------------------------------------------------------------------------------------+");
-  printf("\r\n\t\t |     4:    | Delete Normal log file                                                                                                                                                               |");
-  printf("\r\n\t\t +-----------+-------------------------------------------------------------------------------------------------------------------------------------------------------------------------------+");
-  printf("\r\n\t\t |     5:    | Change log file saving mode                                                                                                                                                   |");
-  printf("\r\n\t\t +-----------+-------------------------------------------------------------------------------------------------------------------------------------------------------------------------------+");
-  printf("\r\n\t\t |     6:    | Change the threshold for saving log file                                                                                                                                      |");
-  printf("\r\n\t\t +-----------+-------------------------------------------------------------------------------------------------------------------------------------------------------------------------------+");
-  printf("\r\n\t\t |     7:    | Change time counter                                                                                                                                                           |");
-  printf("\r\n\t\t +-----------+-------------------------------------------------------------------------------------------------------------------------------------------------------------------------------+");
-  printf("\r\n\t\t |     8:    | Change duration time export                                                                                                                                                   |");
-  printf("\r\n\t\t +-----------+-------------------------------------------------------------------------------------------------------------------------------------------------------------------------------+");
-  printf("\r\n\t\t |     9:    | Exit                                                                                                                                                                          |");
-  printf("\r\n\t\t +-----------+-------------------------------------------------------------------------------------------------------------------------------------------------------------------------------+");
-  printf("\r\n ================+===========================================================================================================================================================================================+\n");
-  printf("\r\n\t\t |SETTING    | --> Please choose Mode: ");
-  while (1)
-  {
-    scanf("%c", &key);
-    if (key == '1')
+    system("clear");
+    display_logo1();
+    char key, key2;
+    char key3 = 'E';
+    char enter = '\r';
+    display_setting_admin();
+    printf("\r\n ================+===========+===============================================================================================================================================================================+");
+    printf("\r\n     DISPLAY     |           |                                                                                                                                                                               |");
+    printf("\r\n\t\t | Key Enter |                  Mode                                                                                                                                                         |");
+    printf("\r\n\t\t +-----------+-------------------------------------------------------------------------------------------------------------------------------------------------------------------------------+");
+    printf("\r\n\t\t |     1:    | Display Flood log file                                                                                                                                                              |");
+    printf("\r\n\t\t +-----------+-------------------------------------------------------------------------------------------------------------------------------------------------------------------------------+");
+    printf("\r\n\t\t |     2:    | Display Normal log file                                                                                                                                                              |");
+    printf("\r\n\t\t +-----------+-------------------------------------------------------------------------------------------------------------------------------------------------------------------------------+");
+    printf("\r\n\t\t |     3:    | Delete Flood log file                                                                                                                                                               |");
+    printf("\r\n\t\t +-----------+-------------------------------------------------------------------------------------------------------------------------------------------------------------------------------+");
+    printf("\r\n\t\t |     4:    | Delete Normal log file                                                                                                                                                               |");
+    printf("\r\n\t\t +-----------+-------------------------------------------------------------------------------------------------------------------------------------------------------------------------------+");
+    printf("\r\n\t\t |     5:    | Change log file saving mode                                                                                                                                                   |");
+    printf("\r\n\t\t +-----------+-------------------------------------------------------------------------------------------------------------------------------------------------------------------------------+");
+    printf("\r\n\t\t |     6:    | Change the threshold for saving log file                                                                                                                                      |");
+    printf("\r\n\t\t +-----------+-------------------------------------------------------------------------------------------------------------------------------------------------------------------------------+");
+    printf("\r\n\t\t |     7:    | Change time counter                                                                                                                                                           |");
+    printf("\r\n\t\t +-----------+-------------------------------------------------------------------------------------------------------------------------------------------------------------------------------+");
+    printf("\r\n\t\t |     8:    | Change duration time export                                                                                                                                                   |");
+    printf("\r\n\t\t +-----------+-------------------------------------------------------------------------------------------------------------------------------------------------------------------------------+");
+    printf("\r\n\t\t |     9:    | Exit                                                                                                                                                                          |");
+    printf("\r\n\t\t +-----------+-------------------------------------------------------------------------------------------------------------------------------------------------------------------------------+");
+    printf("\r\n ================+===========================================================================================================================================================================================+\n");
+    printf("\r\n\t\t |SETTING    | --> Please choose Mode: ");
+    while (1)
     {
-      display_log_files(LOG_FLOOD_DIR);
-      printf("\r\n ================+===========================================================================================================================================================================================+\n");
-      printf("\r\n    SETTING      | Press Y to return ! ");
-      while (1)
-      {
-        scanf("%c", &key2);
-        if (key2 == 'y' || key2 == 'Y')
+        scanf("%c", &key);
+        if (key == '1')
         {
-          system("clear");
-          display_logo1();
-          break;
+            display_log_files(LOG_FLOOD_DIR);
+            printf("\r\n ================+===========================================================================================================================================================================================+\n");
+            printf("\r\n    SETTING      | Press Y to return ! ");
+            while (1)
+            {
+                scanf("%c", &key2);
+                if (key2 == 'y' || key2 == 'Y')
+                {
+                    system("clear");
+                    display_logo1();
+                    break;
+                }
+                if (key2 != 'y' || key2 != 'Y')
+                {
+                    printf("\r    SETTING     | Press Y to return ! ");
+                }
+            }
+            goto start;
         }
-        if (key2 != 'y' || key2 != 'Y')
+        if (key == '2')
         {
-          printf("\r    SETTING     | Press Y to return ! ");
+            display_log_files(LOG_NORMAL_DIR);
+            printf("\r\n ================+===========================================================================================================================================================================================+\n");
+            printf("\r\n    SETTING      | Press Y to return ! ");
+            while (1)
+            {
+                scanf("%c", &key2);
+                if (key2 == 'y' || key2 == 'Y')
+                {
+                    system("clear");
+                    display_logo1();
+                    break;
+                }
+                if (key2 != 'y' || key2 != 'Y')
+                {
+                    printf("\r    SETTING     | Press Y to return ! ");
+                }
+            }
+            goto start;
         }
-      }
-      goto start;
-    }
-    if (key == '2')
-    {
-      display_log_files(LOG_NORMAL_DIR);
-      printf("\r\n ================+===========================================================================================================================================================================================+\n");
-      printf("\r\n    SETTING      | Press Y to return ! ");
-      while (1)
-      {
-        scanf("%c", &key2);
-        if (key2 == 'y' || key2 == 'Y')
+        if (key == '3')
         {
-          system("clear");
-          display_logo1();
-          break;
+            display_log_files(LOG_FLOOD_DIR);
+            delete_log_file(LOG_FLOOD_DIR);
+            goto start;
         }
-        if (key2 != 'y' || key2 != 'Y')
+        if (key == '4')
         {
-          printf("\r    SETTING     | Press Y to return ! ");
+            display_log_files(LOG_NORMAL_DIR);
+            delete_log_file(LOG_NORMAL_DIR);
+            goto start;
         }
-      }
-      goto start;
+        if (key == '5')
+        {
+            update_mode_auto_manual();
+            sleep(2);
+            goto start;
+        }
+        if (key == '6')
+        {
+            update_threshold_SDCard();
+            sleep(2);
+            goto start;
+        }
+        if (key == '7')
+        {
+            update_threshold_time_counter();
+            sleep(2);
+            goto start;
+        }
+        if (key == '8')
+        {
+            SetDurationTime(serial_port);
+            sleep(2);
+            goto start;
+        }
+        if (key == '9')
+        {
+            break;
+        }
+        if (key != '1' || key != '2' || key != '3' || key != '4' || key != '5' || key != '6' || key != '7' || key != '8' || key != '9')
+        {
+            printf("\r\t\t |SETTING    | --> Please choose Mode: ");
+        }
     }
-    if (key == '3')
-    {
-      display_log_files(LOG_FLOOD_DIR);
-      delete_log_file(LOG_FLOOD_DIR);
-      goto start;
-    }
-    if (key == '4')
-    {
-      display_log_files(LOG_NORMAL_DIR);
-      delete_log_file(LOG_NORMAL_DIR);
-      goto start;
-    }
-    if (key == '5')
-    {
-      update_mode_auto_manual();
-      sleep(2);
-      goto start;
-    }
-    if (key == '6')
-    {
-      update_threshold_SDCard();
-      sleep(2);
-      goto start;
-    }
-    if (key == '7')
-    {
-      update_threshold_time_counter();
-      sleep(2);
-      goto start;
-    }
-    if (key == '8')
-    {
-      SetDurationTime(serial_port);
-      sleep(2);
-      goto start;
-    }
-    if (key == '9')
-    {
-      break;
-    }
-    if (key != '1' || key != '2' || key != '3' || key != '4' || key != '5' || key != '6' || key != '7' || key != '8' || key != '9')
-    {
-      printf("\r\t\t |SETTING    | --> Please choose Mode: ");
-    }
-  }
 }
 void read_config_mode_save_logfile()
 {
-  FILE *config_fp = fopen(CONFIG_FILE, "r");
-  if (config_fp == NULL)
-  {
-
-    config_fp = fopen(CONFIG_FILE, "w");
+    FILE *config_fp = fopen(AUTO_MANUAL_CONFIG_FILE, "r");
     if (config_fp == NULL)
     {
-      printf("Error creating config file: %s\n", CONFIG_FILE);
-      exit(1);
-    }
-    fprintf(config_fp, "true");
-    fclose(config_fp);
-  }
-  else
-  {
-    char value[10];
-    fscanf(config_fp, "%s", value);
-    fclose(config_fp);
-
-    if (strcmp(value, "true") == 0)
-    {
-      auto_delete_logs = true;
-    }
-    else if (strcmp(value, "false") == 0)
-    {
-      auto_delete_logs = false;
+        config_fp = fopen(AUTO_MANUAL_CONFIG_FILE, "w");
+        if (config_fp == NULL)
+        {
+            printf("Error creating config file: %s\n", AUTO_MANUAL_CONFIG_FILE);
+            return;
+        }
+        fprintf(config_fp, "true");
+        fclose(config_fp);
     }
     else
     {
-      printf("Invalid value in config file. Using default: true\n");
+        char value[10];
+        fscanf(config_fp, "%s", value);
+        fclose(config_fp);
+
+        if (strcmp(value, "true") == 0)
+        {
+            auto_delete_logs = true;
+        }
+        else if (strcmp(value, "false") == 0)
+        {
+            auto_delete_logs = false;
+        }
+        else
+        {
+            printf("Invalid value in config file. Using default: true\n");
+        }
     }
-  }
 }
 
 void write_config_mode_save_logfile()
 {
-  FILE *config_fp = fopen(CONFIG_FILE, "w");
-  if (config_fp == NULL)
-  {
-    printf("Error opening config file: %s\n", CONFIG_FILE);
-    exit(1);
-  }
+    FILE *config_fp = fopen(AUTO_MANUAL_CONFIG_FILE, "w");
+    if (config_fp == NULL)
+    {
+        printf("Error opening config file: %s\n", AUTO_MANUAL_CONFIG_FILE);
+        return;
+    }
 
-  if (auto_delete_logs)
-  {
-    fprintf(config_fp, "true");
-  }
-  else
-  {
-    fprintf(config_fp, "false");
-  }
-  fclose(config_fp);
+    if (auto_delete_logs)
+    {
+        fprintf(config_fp, "true");
+    }
+    else
+    {
+        fprintf(config_fp, "false");
+    }
+    fclose(config_fp);
 }
 
 void update_mode_auto_manual()
 {
-  char select;
-  // bool new_mode;
-  char save_choice;
+    char select;
+    // bool new_mode;
+    char save_choice;
 
-  printf("\n\t\tSelect the log file saving mode (1/2) ");
-  printf("\r\n ================+===========+===============================================================================================================================================================================+");
-  printf("\r\n\t\t+============================================================================================================================================================================================+");
-  printf("\r\n\t\t| | 1. Auto 							                                                                                                                             |");
-  printf("\r\n\t\t| +--------------+-------------+-------------+--------------------+--------------------------------------------------------------------------------------------------------------------------+");
-  printf("\r\n\t\t| | 2. Manual 		                                                                                                                                                                     |");
-  printf("\r\n\t\t| +--------------+-------------+-------------+--------------------+--------------------------------------------------------------------------------------------------------------------------+");
-  printf("\r\n ================+===========+===============================================================================================================================================================================+");
-  printf("\r\n\t\t| --> Please choose Mode: ");
-  while (1)
-  {
-    scanf("%c", &select);
-
-    if (select == '1' || select == '2')
+    printf("\n\t\tSelect the log file saving mode (1/2) ");
+    printf("\r\n ================+===========+===============================================================================================================================================================================+");
+    printf("\r\n\t\t+============================================================================================================================================================================================+");
+    printf("\r\n\t\t| | 1. Auto 							                                                                                                                             |");
+    printf("\r\n\t\t| +--------------+-------------+-------------+--------------------+--------------------------------------------------------------------------------------------------------------------------+");
+    printf("\r\n\t\t| | 2. Manual 		                                                                                                                                                                     |");
+    printf("\r\n\t\t| +--------------+-------------+-------------+--------------------+--------------------------------------------------------------------------------------------------------------------------+");
+    printf("\r\n ================+===========+===============================================================================================================================================================================+");
+    printf("\r\n\t\t| --> Please choose Mode: ");
+    while (1)
     {
-      printf("\r\n\t\tDo you want to save? (Y/N): ");
-      scanf(" %c", &save_choice);
+        scanf("%c", &select);
 
-      if (save_choice == 'y' || save_choice == 'Y')
-      {
-        if (select == '1')
+        if (select == '1' || select == '2')
         {
-          auto_delete_logs = true;
+            printf("\r\n\t\tDo you want to save? (Y/N): ");
+            scanf(" %c", &save_choice);
+
+            if (save_choice == 'y' || save_choice == 'Y')
+            {
+                if (select == '1')
+                {
+                    auto_delete_logs = true;
+                }
+                else if (select == '2')
+                {
+                    auto_delete_logs = false;
+                }
+
+                printf("\r\n\t\tUpdated logging mode successfully");
+                write_config_mode_save_logfile();
+                break;
+            }
+            else
+
+                printf("\r\n\t\tUpdate logging mode failed\n");
+            break;
         }
-        else if (select == '2')
+
+        else
         {
-          auto_delete_logs = false;
+            printf("\r\t\t| --> Please choose Mode: ");
         }
-
-        printf("\r\n\t\tUpdated logging mode successfully");
-        write_config_mode_save_logfile();
-        break;
-      }
-      else
-
-        printf("\r\n\t\tUpdate logging mode failed\n");
-      break;
     }
-
-    else
-    {
-      printf("\r\t\t| --> Please choose Mode: ");
-    }
-  }
 }
 void display_setting_user()
 {
-  struct statvfs stat1;
-  if (statvfs("/", &stat1) != 0)
-  {
-    perror("statvfs error");
-    pthread_exit(NULL);
-  }
+    struct statvfs stat1;
+    if (statvfs("/", &stat1) != 0)
+    {
+        perror("statvfs error");
+        pthread_exit(NULL);
+    }
 
-  unsigned long total_space = (stat1.f_blocks * stat1.f_frsize);
+    unsigned long total_space = (stat1.f_blocks * stat1.f_frsize);
 
-  unsigned long used_space = (stat1.f_blocks - stat1.f_bfree) * stat1.f_frsize;
-  float memory_usage = (float)used_space / total_space * 100;
-  float CAPACITY = (float)total_space / (1024 * 1024 * 1024);
-  float used_space_gb = (float)used_space / (1024 * 1024 * 1024);
-  printf("\r\n ================+===========+===============================================================================================================================================================================+");
-  printf("\r\n\t\t | CAPACITY: %.2f GB (100%)           |  Used space: %.2f GB (%.2f%%)        | Free space: %.2f GB (%.2f%%)             |", CAPACITY, used_space_gb, 100 - memory_usage, CAPACITY - used_space_gb, memory_usage);
-  printf("\r\n\t\t +-------------------------------------+--------------------------------------+--------------------------------------------------------------------------------------------------------------+");
-  printf("\r\n\t\t | Time counter: %d s                                                                                                                                                                         |", Threshold_time_counter);
-  printf("\r\n ================+===========+===============================================================================================================================================================================+");
+    unsigned long used_space = (stat1.f_blocks - stat1.f_bfree) * stat1.f_frsize;
+    float memory_usage = (float)used_space / total_space * 100;
+    float CAPACITY = (float)total_space / (1024 * 1024 * 1024);
+    float used_space_gb = (float)used_space / (1024 * 1024 * 1024);
+    printf("\r\n ================+===========+===============================================================================================================================================================================+");
+    printf("\r\n\t\t | CAPACITY: %.2f GB (100%)           |  Used space: %.2f GB (%.2f%%)        | Free space: %.2f GB (%.2f%%)             |", CAPACITY, used_space_gb, 100 - memory_usage, CAPACITY - used_space_gb, memory_usage);
+    printf("\r\n\t\t +-------------------------------------+--------------------------------------+--------------------------------------------------------------------------------------------------------------+");
+    printf("\r\n\t\t | Time counter: %d s                                                                                                                                                                         |", Threshold_time_counter);
+    printf("\r\n ================+===========+===============================================================================================================================================================================+");
 }
 void display_setting_user1()
 {
-  struct statvfs stat1;
-  if (statvfs("/", &stat1) != 0)
-  {
-    perror("statvfs error");
-    pthread_exit(NULL);
-  }
+    struct statvfs stat1;
+    if (statvfs("/", &stat1) != 0)
+    {
+        perror("statvfs error");
+        pthread_exit(NULL);
+    }
 
-  unsigned long total_space = (stat1.f_blocks * stat1.f_frsize);
+    unsigned long total_space = (stat1.f_blocks * stat1.f_frsize);
 
-  unsigned long used_space = (stat1.f_blocks - stat1.f_bfree) * stat1.f_frsize;
-  float memory_usage = (float)used_space / total_space * 100;
-  float CAPACITY = (float)total_space / (1024 * 1024 * 1024);
-  float used_space_gb = (float)used_space / (1024 * 1024 * 1024);
+    unsigned long used_space = (stat1.f_blocks - stat1.f_bfree) * stat1.f_frsize;
+    float memory_usage = (float)used_space / total_space * 100;
+    float CAPACITY = (float)total_space / (1024 * 1024 * 1024);
+    float used_space_gb = (float)used_space / (1024 * 1024 * 1024);
 
-  printf("\r\n ================+===========+===============================================================================================================================================================================+");
-  printf("\r\n\t\t | | CAPACITY: %.2f GB (100 %)         |  Used space: %.2f GB (%.2f%%)        | Free space: %.2f GB (%.2f%%)", CAPACITY, used_space_gb, 100 - memory_usage, CAPACITY - used_space_gb, memory_usage);
-  printf("\r\n\t\t | +----------------------------------+-----------------------------------+------------------------------------------------------------------------------------------------------------------+");
-  printf("\r\n ================+===========+===============================================================================================================================================================================+");
+    printf("\r\n ================+===========+===============================================================================================================================================================================+");
+    printf("\r\n\t\t | | CAPACITY: %.2f GB (100 %)         |  Used space: %.2f GB (%.2f%%)        | Free space: %.2f GB (%.2f%%)", CAPACITY, used_space_gb, 100 - memory_usage, CAPACITY - used_space_gb, memory_usage);
+    printf("\r\n\t\t | +----------------------------------+-----------------------------------+------------------------------------------------------------------------------------------------------------------+");
+    printf("\r\n ================+===========+===============================================================================================================================================================================+");
 }
 void display_setting_admin()
 {
-  struct statvfs stat1;
-  if (statvfs("/", &stat1) != 0)
-  {
-    perror("statvfs error");
-    pthread_exit(NULL);
-  }
-  char mode_save_logfile[7];
+    struct statvfs stat1;
+    if (statvfs("/", &stat1) != 0)
+    {
+        perror("statvfs error");
+        pthread_exit(NULL);
+    }
+    char mode_save_logfile[7];
 
-  unsigned long total_space = (stat1.f_blocks * stat1.f_frsize);
+    unsigned long total_space = (stat1.f_blocks * stat1.f_frsize);
 
-  unsigned long used_space = (stat1.f_blocks - stat1.f_bfree) * stat1.f_frsize;
-  float memory_usage = (float)used_space / total_space * 100;
-  float CAPACITY = (float)total_space / (1024 * 1024 * 1024);
-  float used_space_gb = (float)used_space / (1024 * 1024 * 1024);
+    unsigned long used_space = (stat1.f_blocks - stat1.f_bfree) * stat1.f_frsize;
+    float memory_usage = (float)used_space / total_space * 100;
+    float CAPACITY = (float)total_space / (1024 * 1024 * 1024);
+    float used_space_gb = (float)used_space / (1024 * 1024 * 1024);
 
-  if (auto_delete_logs == true)
-  {
-    strcpy(mode_save_logfile, "Auto");
-  }
-  else
-  {
-    strcpy(mode_save_logfile, "Manual");
-  }
-  printf("\r\n ================+===========+===============================================================================================================================================================================+");
-  printf("\r\n\t\t | | CAPACITY: %.2f GB (100%)         |  Used space: %.2f GB (%.2f%%)        | Free space: %.2f GB (%.2f%%)                                                                                |", CAPACITY, used_space_gb, 100 - memory_usage, CAPACITY - used_space_gb, memory_usage);
-  printf("\r\n\t\t | +--------------+-------------+-------------+-------------+---------------------+--------------+-------------------------------------------------------------------------------------------+");
-  printf("\r\n\t\t | | Current log file saving threshold: %.2f %                                                                                                                                             |", Threshold_SD);
-  printf("\r\n\t\t | +--------------+-------------+-------------+-------------+---------------------+--------------+------------------+------------------------------------------------------------------------+");
-  printf("\r\n\t\t | +--------------+-------------+-------------+-------------+---------------------+--------------+------------------+------------------------------------------------------------------------+");
-  printf("\r\n\t\t | | Current log file saving mode: %s                                                                                                                                                      |", mode_save_logfile);
-  printf("\r\n\t\t | +--------------+-------------+-------------+-------------+---------------------+--------------+------------------+------------------------------------------------------------------------+");
-  printf("\r\n\t\t | +--------------+-------------+-------------+-------------+---------------------+--------------+------------------+------------------------------------------------------------------------+");
-  printf("\r\n\t\t | | Time counter: %d s                                                                                                                                                                      |", Threshold_time_counter);
-  printf("\r\n\t\t | +--------------+-------------+-------------+-------------+---------------------+--------------+------------------+------------------------------------------------------------------------+");
-  printf("\r\n ================+===========+===============================================================================================================================================================================+");
+    if (auto_delete_logs == true)
+    {
+        strcpy(mode_save_logfile, "Auto");
+    }
+    else
+    {
+        strcpy(mode_save_logfile, "Manual");
+    }
+    printf("\r\n ================+===========+===============================================================================================================================================================================+");
+    printf("\r\n\t\t | | CAPACITY: %.2f GB (100%)         |  Used space: %.2f GB (%.2f%%)        | Free space: %.2f GB (%.2f%%)                                                                                |", CAPACITY, used_space_gb, 100 - memory_usage, CAPACITY - used_space_gb, memory_usage);
+    printf("\r\n\t\t | +--------------+-------------+-------------+-------------+---------------------+--------------+-------------------------------------------------------------------------------------------+");
+    printf("\r\n\t\t | | Current log file saving threshold: %.2f %                                                                                                                                             |", Threshold_SD);
+    printf("\r\n\t\t | +--------------+-------------+-------------+-------------+---------------------+--------------+------------------+------------------------------------------------------------------------+");
+    printf("\r\n\t\t | +--------------+-------------+-------------+-------------+---------------------+--------------+------------------+------------------------------------------------------------------------+");
+    printf("\r\n\t\t | | Current log file saving mode: %s                                                                                                                                                      |", mode_save_logfile);
+    printf("\r\n\t\t | +--------------+-------------+-------------+-------------+---------------------+--------------+------------------+------------------------------------------------------------------------+");
+    printf("\r\n\t\t | +--------------+-------------+-------------+-------------+---------------------+--------------+------------------+------------------------------------------------------------------------+");
+    printf("\r\n\t\t | | Time counter: %d s                                                                                                                                                                      |", Threshold_time_counter);
+    printf("\r\n\t\t | +--------------+-------------+-------------+-------------+---------------------+--------------+------------------+------------------------------------------------------------------------+");
+    printf("\r\n ================+===========+===============================================================================================================================================================================+");
 }
 // void display_log_files(const char *filename)
 // {
@@ -3903,161 +7505,161 @@ void display_setting_admin()
 // }
 void display_log_files(const char *dir_path)
 {
-  DIR *dir;
-  struct dirent *entry;
-  int file_count = 0;
+    DIR *dir;
+    struct dirent *entry;
+    int file_count = 0;
 
-  dir = opendir(dir_path);
-  if (dir == NULL)
-  {
-    perror("opendir error");
-    return;
-  }
-
-  printf("\r\n ================+===========================================================================================================================================================================================+");
-  printf("\r\n\t\t | List of Log Files                                                                                                    |");
-  printf("\r\n -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------");
-
-  while ((entry = readdir(dir)) != NULL)
-  {
-    if (entry->d_type == DT_REG && strstr(entry->d_name, ".log") != NULL)
+    dir = opendir(dir_path);
+    if (dir == NULL)
     {
-      file_count++;
-
-      if (file_count % 2 == 1)
-      {
-        printf("\r\n\t\t | %d. %-50s", file_count, entry->d_name);
-      }
-      else
-      {
-        printf(" | %d. %-50s |", file_count, entry->d_name);
-        printf("\r\n -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------");
-      }
+        perror("opendir error");
+        return;
     }
-  }
 
-  if (file_count % 2 == 1)
-  {
-    printf(" |\n -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------");
-  }
+    printf("\r\n ================+===========================================================================================================================================================================================+");
+    printf("\r\n\t\t | List of Log Files                                                                                                    |");
+    printf("\r\n -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------");
 
-  closedir(dir);
+    while ((entry = readdir(dir)) != NULL)
+    {
+        if (entry->d_type == DT_REG && strstr(entry->d_name, ".log") != NULL)
+        {
+            file_count++;
+
+            if (file_count % 2 == 1)
+            {
+                printf("\r\n\t\t | %d. %-50s", file_count, entry->d_name);
+            }
+            else
+            {
+                printf(" | %d. %-50s |", file_count, entry->d_name);
+                printf("\r\n -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------");
+            }
+        }
+    }
+
+    if (file_count % 2 == 1)
+    {
+        printf(" |\n -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------");
+    }
+
+    closedir(dir);
 }
 
 void delete_log_file(const char *dir_path)
 {
 
-  char key;
-  int file_index;
-  char file_name[256] = "";
-  char file_path[256];
-  printf("\r\n\t\tEnter the number: ");
-  scanf("%d", &file_index);
+    char key;
+    int file_index;
+    char file_name[256] = "";
+    char file_path[256];
+    printf("\r\n\t\tEnter the number: ");
+    scanf("%d", &file_index);
 
-  if (file_index < 1)
-  {
-    printf("\r\n\t\tThe number not valid! ");
-    return;
-  }
-
-  DIR *dir = opendir(dir_path);
-  if (dir == NULL)
-  {
-    perror("opendir error");
-    return;
-  }
-
-  struct dirent *entry;
-  int count = 0;
-  char newest_file[256] = "";
-  struct stat file_stat;
-  time_t newest_time = 0;
-
-  // find the newest file in the directory
-  while ((entry = readdir(dir)) != NULL)
-  {
-    if (entry->d_type == DT_REG && strstr(entry->d_name, ".log") != NULL)
+    if (file_index < 1)
     {
-      sprintf(file_path, "%s/%s", dir_path, entry->d_name);
-      if (stat(file_path, &file_stat) == 0)
-      {
-        if (file_stat.st_mtime > newest_time)
+        printf("\r\n\t\tThe number not valid! ");
+        return;
+    }
+
+    DIR *dir = opendir(dir_path);
+    if (dir == NULL)
+    {
+        perror("opendir error");
+        return;
+    }
+
+    struct dirent *entry;
+    int count = 0;
+    char newest_file[256] = "";
+    struct stat file_stat;
+    time_t newest_time = 0;
+
+    // find the newest file in the directory
+    while ((entry = readdir(dir)) != NULL)
+    {
+        if (entry->d_type == DT_REG && strstr(entry->d_name, ".log") != NULL)
         {
-          newest_time = file_stat.st_mtime;
-          strcpy(newest_file, entry->d_name);
+            sprintf(file_path, "%s/%s", dir_path, entry->d_name);
+            if (stat(file_path, &file_stat) == 0)
+            {
+                if (file_stat.st_mtime > newest_time)
+                {
+                    newest_time = file_stat.st_mtime;
+                    strcpy(newest_file, entry->d_name);
+                }
+            }
         }
-      }
     }
-  }
 
-  rewinddir(dir); // Reset the directory stream to read it again
+    rewinddir(dir); // Reset the directory stream to read it again
 
-  //  find the file corresponding to the user input
-  while ((entry = readdir(dir)) != NULL)
-  {
-    if (entry->d_type == DT_REG && strstr(entry->d_name, ".log") != NULL)
+    //  find the file corresponding to the user input
+    while ((entry = readdir(dir)) != NULL)
     {
-      count++;
-      if (count == file_index)
-      {
-        strcpy(file_name, entry->d_name);
-        break;
-      }
+        if (entry->d_type == DT_REG && strstr(entry->d_name, ".log") != NULL)
+        {
+            count++;
+            if (count == file_index)
+            {
+                strcpy(file_name, entry->d_name);
+                break;
+            }
+        }
     }
-  }
 
-  closedir(dir);
+    closedir(dir);
 
-  if (file_name[0] == '\0')
-  {
-    printf("\r\n\t\tFile not found! ");
-    return;
-  }
-
-  // Check if the selected file is the newest one
-  if (strcmp(file_name, newest_file) == 0)
-  {
-
-    printf("\n");
-    printf("\r\n    SETTING     | File %s is currently being written, if you delete it a new file will automatically be created to replace it? (Y/N):", newest_file);
-    while (1)
+    if (file_name[0] == '\0')
     {
-      scanf("%c", &key);
-      if (key == 'y' || key == 'Y')
-      {
+        printf("\r\n\t\tFile not found! ");
+        return;
+    }
+
+    // Check if the selected file is the newest one
+    if (strcmp(file_name, newest_file) == 0)
+    {
+
+        printf("\n");
+        printf("\r\n    SETTING     | File %s is currently being written, if you delete it a new file will automatically be created to replace it? (Y/N):", newest_file);
+        while (1)
+        {
+            scanf("%c", &key);
+            if (key == 'y' || key == 'Y')
+            {
+                sprintf(file_path, "%s/%s", dir_path, file_name);
+                if (unlink(file_path) != 0)
+                {
+                    perror("remove error");
+                    return;
+                }
+                printf("\r\n\t\tFile deleted successfully!!! %s\n", file_name);
+
+                create_new_log_file();
+                sleep(2);
+                break;
+            }
+            else if (key == 'N' || key == 'n')
+            {
+                break;
+            }
+            if (key != 'y' || key != 'Y' || key != 'n' || key != 'N')
+            {
+                printf("\r    SETTING     | File %s is currently being written, if you delete it a new file will automatically be created to replace it? (Y/N):", newest_file);
+            }
+        }
+    }
+    else
+    {
         sprintf(file_path, "%s/%s", dir_path, file_name);
         if (unlink(file_path) != 0)
         {
-          perror("remove error");
-          return;
+            perror("remove error");
+            return;
         }
         printf("\r\n\t\tFile deleted successfully!!! %s\n", file_name);
-
-        create_new_log_file();
         sleep(2);
-        break;
-      }
-      else if (key == 'N' || key == 'n')
-      {
-        break;
-      }
-      if (key != 'y' || key != 'Y' || key != 'n' || key != 'N')
-      {
-        printf("\r    SETTING     | File %s is currently being written, if you delete it a new file will automatically be created to replace it? (Y/N):", newest_file);
-      }
     }
-  }
-  else
-  {
-    sprintf(file_path, "%s/%s", dir_path, file_name);
-    if (unlink(file_path) != 0)
-    {
-      perror("remove error");
-      return;
-    }
-    printf("\r\n\t\tFile deleted successfully!!! %s\n", file_name);
-    sleep(2);
-  }
 }
 //=========================================================
 // attack
@@ -4104,794 +7706,837 @@ void delete_log_file(const char *dir_path)
 //==========================================================
 void read_threshold_timecounter_from_file()
 {
-  FILE *file = fopen(time_counter, "r");
-  if (file == NULL)
-  {
-
-    file = fopen(time_counter, "w");
+    FILE *file = fopen(time_counter, "r");
     if (file == NULL)
     {
-      printf("Error creating config file: %s\n", time_counter);
-      exit(1);
-    }
-    fprintf(file, "5"); //  ?t gi  tr? m?c d?nh l  true
-    fclose(file);
-  }
-  else
-  {
-    if (fscanf(file, "%d", &Threshold_time_counter) != 1)
-    {
-      printf("\r\n\t\tCannot threshold from file\n");
-      fclose(file);
-      exit(1);
-    }
 
-    fclose(file);
-  }
+        file = fopen(time_counter, "w");
+        if (file == NULL)
+        {
+            printf("Error creating config file: %s\n", time_counter);
+            exit(1);
+        }
+        fprintf(file, "5"); //  ?t gi  tr? m?c d?nh l  true
+        fclose(file);
+    }
+    else
+    {
+        if (fscanf(file, "%d", &Threshold_time_counter) != 1)
+        {
+            printf("\r\n\t\tCannot threshold from file\n");
+            fclose(file);
+            exit(1);
+        }
+
+        fclose(file);
+    }
 }
 
 //
 void write_threshold_time_counter_to_file()
 {
-  FILE *file = fopen(time_counter, "w");
-  if (file == NULL)
-  {
-    printf("\r\n\t\tCannot open file %s\n", time_counter);
-    exit(1);
-  }
+    FILE *file = fopen(time_counter, "w");
+    if (file == NULL)
+    {
+        printf("\r\n\t\tCannot open file %s\n", time_counter);
+        exit(1);
+    }
 
-  fprintf(file, "%d\n", Threshold_time_counter);
-  fclose(file);
+    fprintf(file, "%d\n", Threshold_time_counter);
+    fclose(file);
 }
 
 //
 void update_threshold_time_counter()
 {
-  int new_threshold;
-  char save_choice;
+    int new_threshold;
+    char save_choice;
 
-  do
-  {
-    printf("\r\n\t\t Enter the new time counter:  ");
-    scanf("%d", &new_threshold);
-
-    if (new_threshold >= 0)
+    do
     {
+        printf("\r\n\t\t Enter the new time counter:  ");
+        scanf("%d", &new_threshold);
 
-      printf("\r\n\t\t Do you want to save? (y/n): ");
-      scanf(" %c", &save_choice);
+        if (new_threshold >= 0)
+        {
 
-      if (save_choice == 'y' || save_choice == 'Y')
-      {
+            printf("\r\n\t\t Do you want to save? (y/n): ");
+            scanf(" %c", &save_choice);
 
-        Threshold_time_counter = new_threshold;
+            if (save_choice == 'y' || save_choice == 'Y')
+            {
 
-        printf("\r\n\t\t Updated time counter:  %d\n", new_threshold);
+                Threshold_time_counter = new_threshold;
 
-        write_threshold_time_counter_to_file();
-      }
-      else
-      {
+                printf("\r\n\t\t Updated time counter:  %d\n", new_threshold);
 
-        printf("\r\n\t\t Update time counter failed\n");
-      }
-    }
-    else
-    {
+                write_threshold_time_counter_to_file();
+            }
+            else
+            {
 
-      printf("Invalid value! Please re-enter.\n");
-    }
-  } while (new_threshold < 0);
+                printf("\r\n\t\t Update time counter failed\n");
+            }
+        }
+        else
+        {
+
+            printf("Invalid value! Please re-enter.\n");
+        }
+    } while (new_threshold < 0);
 }
 
 void read_threshold_from_file()
 {
-  FILE *file = fopen(threshold_logfile, "r");
-  if (file == NULL)
-  {
-    // T?o file n?u file chua t?n t?i
-    file = fopen(threshold_logfile, "w");
+    FILE *file = fopen(threshold_logfile, "r");
     if (file == NULL)
     {
-      printf("Error creating config file: %s\n", threshold_logfile);
-      exit(1);
+        // T?o file n?u file chua t?n t?i
+        file = fopen(threshold_logfile, "w");
+        if (file == NULL)
+        {
+            printf("Error creating config file: %s\n", threshold_logfile);
+            exit(1);
+        }
+        fprintf(file, "80");
+        fclose(file);
     }
-    fprintf(file, "80");
-    fclose(file);
-  }
-  else
-  {
-    if (fscanf(file, "%f", &Threshold_SD) != 1)
+    else
     {
-      printf("\r\n\t\tCannot open file \n");
-      fclose(file);
-      exit(1);
-    }
+        if (fscanf(file, "%f", &Threshold_SD) != 1)
+        {
+            printf("\r\n\t\tCannot open file \n");
+            fclose(file);
+            exit(1);
+        }
 
-    fclose(file);
-  }
+        fclose(file);
+    }
 }
 
 //
 void write_threshold_to_file()
 {
-  FILE *file = fopen(threshold_logfile, "w");
-  if (file == NULL)
-  {
-    printf("Cannot open file %s\n", threshold_logfile);
-    exit(1);
-  }
-  fprintf(file, "%f\n", Threshold_SD);
+    FILE *file = fopen(threshold_logfile, "w");
+    if (file == NULL)
+    {
+        printf("Cannot open file %s\n", threshold_logfile);
+        exit(1);
+    }
+    fprintf(file, "%f\n", Threshold_SD);
 
-  fclose(file);
+    fclose(file);
 }
 
 //
 void update_threshold_SDCard()
 {
-  float new_threshold;
-  char save_choice;
+    float new_threshold;
+    char save_choice;
 
-  do
-  {
-    printf("\r\n\t\t Enter the new threshold value (0 -> 100): ");
-    scanf("%f", &new_threshold);
-    if (new_threshold >= 0 && new_threshold <= 100)
+    do
     {
-      printf("\r\n\t\t Do you want to save? (Y/N): ");
-      scanf(" %c", &save_choice);
+        printf("\r\n\t\t Enter the new threshold value (0 -> 100): ");
+        scanf("%f", &new_threshold);
+        if (new_threshold >= 0 && new_threshold <= 100)
+        {
+            printf("\r\n\t\t Do you want to save? (Y/N): ");
+            scanf(" %c", &save_choice);
 
-      if (save_choice == 'y' || save_choice == 'Y')
-      {
+            if (save_choice == 'y' || save_choice == 'Y')
+            {
 
-        Threshold_SD = new_threshold;
-        printf("\r\n\t\t Threshold updated:  %f\n", new_threshold);
-        write_threshold_to_file();
-      }
-      else
-      {
-        // Ngu?i d ng kh ng mu?n luu
-        printf("\r\n\t\t Update logging mode failed\n");
-      }
-    }
-    else
-    {
-      // N?u nh?p gi  tr? kh ng h?p l?, y u c?u nh?p l?i
-      printf("Invalid value! Please re-enter.\n");
-    }
-  } while (new_threshold < 0 || new_threshold > 100);
+                Threshold_SD = new_threshold;
+                printf("\r\n\t\t Threshold updated:  %f\n", new_threshold);
+                write_threshold_to_file();
+            }
+            else
+            {
+                // Ngu?i d ng kh ng mu?n luu
+                printf("\r\n\t\t Update logging mode failed\n");
+            }
+        }
+        else
+        {
+            // N?u nh?p gi  tr? kh ng h?p l?, y u c?u nh?p l?i
+            printf("Invalid value! Please re-enter.\n");
+        }
+    } while (new_threshold < 0 || new_threshold > 100);
 }
 //**************************************************//
 void create_new_log_file()
 {
-  // char new_log_file[32];
-  char new_log_file_flood[64];
-  char new_log_file_normal[64];
-  char current_date[11];
-  get_current_date(current_date);
-  time_t now = time(NULL);
-  struct tm *timeinfo = localtime(&now);
-  char time_str[9];
-  strftime(time_str, sizeof(time_str), "%H-%M-%S", timeinfo);
-  sprintf(new_log_file_flood, "%s/%s_%s.log", LOG_FLOOD_DIR, current_date, time_str);
-  sprintf(new_log_file_normal, "%s/%s_%s.log", LOG_NORMAL_DIR, current_date, time_str);
+    // char new_log_file[32];
+    char new_log_file_flood[64];
+    char new_log_file_normal[64];
+    char current_date[11];
+    get_current_date(current_date);
+    time_t now = time(NULL);
+    struct tm *timeinfo = localtime(&now);
+    char time_str[9];
+    strftime(time_str, sizeof(time_str), "%H-%M-%S", timeinfo);
+    sprintf(new_log_file_flood, "%s/%s_%s.log", LOG_FLOOD_DIR, current_date, time_str);
+    sprintf(new_log_file_normal, "%s/%s_%s.log", LOG_NORMAL_DIR, current_date, time_str);
 
-  strcpy(name_logfile_flood, new_log_file_flood);
-  strcpy(name_logfile_normal, new_log_file_normal);
+    strcpy(name_logfile_flood, new_log_file_flood);
+    strcpy(name_logfile_normal, new_log_file_normal);
 
-  if (current_log_file_flood != NULL)
-  {
-    fclose(current_log_file_flood);
-  }
-  if (current_log_file_normal != NULL)
-  {
-    fclose(current_log_file_normal);
-  }
+    if (current_log_file_flood != NULL)
+    {
+        fclose(current_log_file_flood);
+    }
+    if (current_log_file_normal != NULL)
+    {
+        fclose(current_log_file_normal);
+    }
 
-  current_log_file_flood = fopen(new_log_file_flood, "a");
-  current_log_file_normal = fopen(new_log_file_normal, "a");
+    current_log_file_flood = fopen(new_log_file_flood, "a");
+    current_log_file_normal = fopen(new_log_file_normal, "a");
 
-  if (current_log_file_flood == NULL || current_log_file_normal == NULL)
-  {
-    perror("fopen error");
+    if (current_log_file_flood == NULL || current_log_file_normal == NULL)
+    {
+        perror("fopen error");
 
-    return;
-  }
-  // open_attacker_log_file();
+        return;
+    }
+    // open_attacker_log_file();
 }
 
 void process_packet(unsigned char *buffer, int size)
 {
-  struct ethhdr *eth = (struct ethhdr *)buffer;
-  int header_size = sizeof(struct ethhdr);
-  int payload_size = size - header_size;
-  const unsigned char *payload = buffer + header_size;
+    struct ethhdr *eth = (struct ethhdr *)buffer;
+    int header_size = sizeof(struct ethhdr);
+    int payload_size = size - header_size;
+    const unsigned char *payload = buffer + header_size;
 
-  if ((memcmp(eth->h_dest, target_mac_attack, 6) == 0))
-  {
-    unsigned char extracted_ID[2];
-    unsigned char extracted_src_ip[16];
-    unsigned char extracted_dst_ip[16];
-    unsigned char extracted_src_port[2];
-    unsigned char extracted_dst_port[2];
-    unsigned char extracted_protocol[1];
-    unsigned char extracted_time[4];
-    unsigned char extracted_bw[4];
-    unsigned char extracted_PKT_counter[4];
-    unsigned char extracted_type[1];
-    unsigned char extracted_check_header[1];
-
-    memcpy(extracted_ID, payload + 2, 2);
-    memcpy(extracted_src_ip, payload + 6, 16);
-    memcpy(extracted_dst_ip, payload + 22, 16);
-    memcpy(extracted_src_port, payload + 38, 2);
-    memcpy(extracted_dst_port, payload + 40, 2);
-    memcpy(extracted_protocol, payload + 42, 1);
-    memcpy(extracted_time, payload + 43, 4);
-    memcpy(extracted_bw, payload + 47, 4);
-    memcpy(extracted_PKT_counter, payload + 51, 4);
-    memcpy(extracted_type, payload + 55, 1);
-    memcpy(extracted_check_header, payload + 5, 1);
-
-    unsigned short id_value = (extracted_ID[0] << 8) | extracted_ID[1];
-    // //printf("id_value: %u\n", id_value);
-    unsigned char protocol = extracted_protocol[0];
-    //
-    time_t rawtime = (time_t)((extracted_time[0] << 24) | (extracted_time[1] << 16) | (extracted_time[2] << 8) | (extracted_time[3]));
-    struct tm *timeinfo = gmtime(&rawtime);
-    char time_str[20];
-    strftime(time_str, sizeof(time_str), "%Y-%m-%d %H:%M:%S", timeinfo);
-    //
-    unsigned int bw = ntohl(*((unsigned int *)extracted_bw));
-    unsigned int pkt_counter = ntohl(*((unsigned int *)extracted_PKT_counter));
-    unsigned char type = extracted_type[0];
-    unsigned int src_port = ntohs(*((unsigned short *)extracted_src_port));
-    unsigned int dst_port = ntohs(*((unsigned short *)extracted_dst_port));
-
-    char src_ip[42];
-    char dst_ip[42];
-    if ((unsigned char)extracted_check_header[0] == 0x42)
+    if ((memcmp(eth->h_dest, target_mac_attack, 6) == 0))
     {
-      unsigned int src_ip_int = ntohl(*((unsigned int *)extracted_src_ip));
-      unsigned int dst_ip_int = ntohl(*((unsigned int *)extracted_dst_ip));
+        unsigned char extracted_ID[2];
+        unsigned char extracted_src_ip[16];
+        unsigned char extracted_dst_ip[16];
+        unsigned char extracted_src_port[2];
+        unsigned char extracted_dst_port[2];
+        unsigned char extracted_protocol[1];
+        unsigned char extracted_time[4];
+        unsigned char extracted_bw[4];
+        unsigned char extracted_PKT_counter[4];
+        unsigned char extracted_type[1];
+        unsigned char extracted_check_header[1];
+        unsigned char extracted_port_n[1];
 
-      sprintf(src_ip, "%d.%d.%d.%d", extracted_src_ip[12], extracted_src_ip[13], extracted_src_ip[14], extracted_src_ip[15]);
-      sprintf(dst_ip, "%d.%d.%d.%d", extracted_dst_ip[12], extracted_dst_ip[13], extracted_dst_ip[14], extracted_dst_ip[15]);
-    }
-    else if ((unsigned char)extracted_check_header[0] == 0x62)
-    {
+        memcpy(extracted_ID, payload + 2, 2);
+        memcpy(extracted_src_ip, payload + 6, 16);
+        memcpy(extracted_dst_ip, payload + 22, 16);
+        memcpy(extracted_src_port, payload + 38, 2);
+        memcpy(extracted_dst_port, payload + 40, 2);
+        memcpy(extracted_protocol, payload + 42, 1);
+        memcpy(extracted_time, payload + 43, 4);
+        memcpy(extracted_bw, payload + 47, 4);
+        memcpy(extracted_PKT_counter, payload + 51, 4);
+        memcpy(extracted_type, payload + 55, 1);
+        memcpy(extracted_port_n, payload + 56, 1);
+        memcpy(extracted_check_header, payload + 5, 1);
 
-      sprintf(src_ip, "%02x%02x:%02x%02x:%02x%02x:%02x%02x:%02x%02x:%02x%02x:%02x%02x:%02x%02x", extracted_src_ip[0], extracted_src_ip[1], extracted_src_ip[2], extracted_src_ip[3],
-              extracted_src_ip[4], extracted_src_ip[5], extracted_src_ip[6], extracted_src_ip[7], extracted_src_ip[8], extracted_src_ip[9], extracted_src_ip[10], extracted_src_ip[11],
-              extracted_src_ip[12], extracted_src_ip[13], extracted_src_ip[14], extracted_src_ip[15]);
+        unsigned short id_value = (extracted_ID[0] << 8) | extracted_ID[1];
+        // //printf("id_value: %u\n", id_value);
+        unsigned char protocol = extracted_protocol[0];
+        //
+        time_t rawtime = (time_t)((extracted_time[0] << 24) | (extracted_time[1] << 16) | (extracted_time[2] << 8) | (extracted_time[3]));
+        struct tm *timeinfo = gmtime(&rawtime);
+        char time_str[20];
+        strftime(time_str, sizeof(time_str), "%Y-%m-%d %H:%M:%S", timeinfo);
+        //
+        unsigned int bw = ntohl(*((unsigned int *)extracted_bw));
+        unsigned int pkt_counter = ntohl(*((unsigned int *)extracted_PKT_counter));
+        unsigned char type = extracted_type[0];
+        unsigned char port_n = extracted_port_n[0];
+        unsigned int src_port = ntohs(*((unsigned short *)extracted_src_port));
+        unsigned int dst_port = ntohs(*((unsigned short *)extracted_dst_port));
 
-      sprintf(dst_ip, "%02x%02x:%02x%02x:%02x%02x:%02x%02x:%02x%02x:%02x%02x:%02x%02x:%02x%02x", extracted_dst_ip[0], extracted_dst_ip[1], extracted_dst_ip[2], extracted_dst_ip[3],
-              extracted_dst_ip[4], extracted_dst_ip[5], extracted_dst_ip[6], extracted_dst_ip[7], extracted_dst_ip[8], extracted_dst_ip[9], extracted_dst_ip[10], extracted_dst_ip[11],
-              extracted_dst_ip[12], extracted_dst_ip[13], extracted_dst_ip[14], extracted_dst_ip[15]);
-    }
-    char type_str[32];
-    char protocol_str[32];
-
-    //
-    switch (type)
-    {
-    case 1:
-      strcpy(type_str, "SYN Flood");
-      break;
-    case 2:
-      strcpy(type_str, "LAND Attack");
-      break;
-    case 3:
-      strcpy(type_str, "UDP Flood");
-      break;
-    case 4:
-      strcpy(type_str, "DNS Flood");
-      break;
-    case 5:
-      strcpy(type_str, "IPSec IKE Flood");
-      break;
-    case 6:
-      strcpy(type_str, "ICMP Flood");
-      break;
-    case 7:
-      strcpy(type_str, "TCP Fragment");
-      break;
-    case 8:
-      strcpy(type_str, "UDP Fragment");
-      break;
-    case 9:
-      strcpy(type_str, "DNS AUTH PKT");
-      break;
-    case 10:
-      strcpy(type_str, "HTTP Flood");
-      break;
-    default:
-      strcpy(type_str, "Unknown");
-      break;
-    }
-    //
-    switch (protocol)
-    {
-    case 6:
-      strcpy(protocol_str, "TCP");
-      break;
-    case 17:
-      strcpy(protocol_str, "UDP");
-      break;
-    case 1:
-      strcpy(protocol_str, "ICMP");
-      break;
-    case 58:
-      strcpy(protocol_str, "ICMP");
-      break;
-    default:
-      strcpy(protocol_str, "Unknown");
-      break;
-    }
-
-    char binary[10];
-    for (int i = 0; i < 9; i++)
-    {
-      binary[i] = (id_value & (1 << (8 - i))) ? '1' : '0';
-    }
-    binary[9] = '\0';
-
-    int result_str_size = 1;
-    char *result_str = NULL;
-    char *mapping[] = {" HTTP Flood ", " UDP Fragmentation attack ", " TCP Fragmentation attack ", " IPSec IKE Flood ", " ICMP Flood ", " DNS Flood ", " UDP Flood ", " LAND Attack ", " SYN Flood "};
-
-    for (int i = 0; i < 8; i++)
-    {
-      if (binary[i] == '1')
-      {
-        result_str_size += strlen(mapping[i]) + 3;
-      }
-    }
-    result_str = (char *)malloc(result_str_size + 32);
-    if (result_str == NULL)
-    {
-      perror("Failed to allocate memory");
-      return;
-    }
-    result_str[0] = '\0';
-    int types_count = 0;
-    for (int i = 0; i < 9; i++)
-    {
-      if (binary[i] == '1')
-      {
-        if (types_count > 0)
+        char src_ip[42];
+        char dst_ip[42];
+        if ((unsigned char)extracted_check_header[0] == 0x42)
         {
-          strcat(result_str, "+");
+            unsigned int src_ip_int = ntohl(*((unsigned int *)extracted_src_ip));
+            unsigned int dst_ip_int = ntohl(*((unsigned int *)extracted_dst_ip));
+
+            sprintf(src_ip, "%d.%d.%d.%d", extracted_src_ip[12], extracted_src_ip[13], extracted_src_ip[14], extracted_src_ip[15]);
+            sprintf(dst_ip, "%d.%d.%d.%d", extracted_dst_ip[12], extracted_dst_ip[13], extracted_dst_ip[14], extracted_dst_ip[15]);
+        }
+        else if ((unsigned char)extracted_check_header[0] == 0x62)
+        {
+
+            sprintf(src_ip, "%02x%02x:%02x%02x:%02x%02x:%02x%02x:%02x%02x:%02x%02x:%02x%02x:%02x%02x", extracted_src_ip[0], extracted_src_ip[1], extracted_src_ip[2], extracted_src_ip[3],
+                    extracted_src_ip[4], extracted_src_ip[5], extracted_src_ip[6], extracted_src_ip[7], extracted_src_ip[8], extracted_src_ip[9], extracted_src_ip[10], extracted_src_ip[11],
+                    extracted_src_ip[12], extracted_src_ip[13], extracted_src_ip[14], extracted_src_ip[15]);
+
+            sprintf(dst_ip, "%02x%02x:%02x%02x:%02x%02x:%02x%02x:%02x%02x:%02x%02x:%02x%02x:%02x%02x", extracted_dst_ip[0], extracted_dst_ip[1], extracted_dst_ip[2], extracted_dst_ip[3],
+                    extracted_dst_ip[4], extracted_dst_ip[5], extracted_dst_ip[6], extracted_dst_ip[7], extracted_dst_ip[8], extracted_dst_ip[9], extracted_dst_ip[10], extracted_dst_ip[11],
+                    extracted_dst_ip[12], extracted_dst_ip[13], extracted_dst_ip[14], extracted_dst_ip[15]);
+        }
+        char type_str[32];
+        char protocol_str[32];
+        // char *type_str = "Normal";
+
+        //
+        switch (type)
+        {
+        case 1:
+            strcpy(type_str, "SYN Flood");
+            break;
+        case 2:
+            strcpy(type_str, "LAND Attack");
+            break;
+        case 3:
+            strcpy(type_str, "UDP Flood");
+            break;
+        case 4:
+            strcpy(type_str, "DNS Flood");
+            break;
+        case 5:
+            strcpy(type_str, "IPSec IKE Flood");
+            break;
+        case 6:
+            strcpy(type_str, "ICMP Flood");
+            break;
+        case 7:
+            strcpy(type_str, "TCP Fragment");
+            break;
+        case 8:
+            strcpy(type_str, "UDP Fragment");
+            break;
+        case 9:
+            strcpy(type_str, "DNS AUTH PKT");
+            break;
+        case 10:
+            strcpy(type_str, "HTTP Flood");
+            break;
+        default:
+            strcpy(type_str, "Unknown");
+            break;
+        }
+        // port
+        //  port
+        char name_port_str[32];
+        //
+        if (port_n == 4)
+        {
+            return;
+        }
+        switch (port_n)
+        {
+        case 1:
+            strcpy(name_port_str, "1");
+            break;
+        case 2:
+            strcpy(name_port_str, "2");
+            break;
+        case 4:
+            strcpy(name_port_str, "0");
+            break;
+        case 8:
+            strcpy(name_port_str, "3");
+            break;
+        case 16:
+            strcpy(name_port_str, "4");
+            break;
+        case 32:
+            strcpy(name_port_str, "6");
+            break;
+        case 64:
+            strcpy(name_port_str, "7");
+            break;
+        case 128:
+            strcpy(name_port_str, "8");
+            break;
+        default:
+            strcpy(name_port_str, "0");
+            break;
         }
 
-        strcat(result_str, mapping[i]);
-        types_count++;
-      }
+        //
+        switch (protocol)
+        {
+        case 6:
+            strcpy(protocol_str, "TCP");
+            break;
+        case 17:
+            strcpy(protocol_str, "UDP");
+            break;
+        case 1:
+            strcpy(protocol_str, "ICMP");
+            break;
+        case 58:
+            strcpy(protocol_str, "ICMP");
+            break;
+        default:
+            strcpy(protocol_str, "Unknown");
+            break;
+        }
+
+        char binary[10];
+        for (int i = 0; i < 10; i++)
+        {
+            binary[i] = (id_value & (1 << (9 - i))) ? '1' : '0';
+        }
+        binary[11] = '\0';
+
+        int result_str_size = 1;
+        char *result_str = NULL;
+        char *mapping[] = {" HTTP Flood ", " UDP Fragmentation attack ", " TCP Fragmentation attack ", " IPSec IKE Flood ", " ICMP Flood ", " DNS Flood ", " UDP Flood ", " LAND Attack ", " SYN Flood "};
+
+        for (int i = 0; i < 8; i++)
+        {
+            if (binary[i] == '1')
+            {
+                result_str_size += strlen(mapping[i]) + 3;
+            }
+        }
+        result_str = (char *)malloc(result_str_size + 32);
+        if (result_str == NULL)
+        {
+            perror("Failed to allocate memory");
+            return;
+        }
+        result_str[0] = '\0';
+        int types_count = 0;
+        for (int i = 0; i < 9; i++)
+        {
+            if (binary[i] == '1')
+            {
+                if (types_count > 0)
+                {
+                    strcat(result_str, "+");
+                }
+
+                strcat(result_str, mapping[i]);
+                types_count++;
+            }
+        }
+        char lcd_message[result_str_size + 32];
+        snprintf(lcd_message, result_str_size + 32, "%s", result_str);
+        // printf("\n ss: %s", lcd_message);
+        free(result_str);
+
+        //
+        pthread_mutex_lock(&lcd_queue.mutex);
+        if (strcmp(lcd_message, current_attack) != 0)
+        {
+            strcpy(current_attack, lcd_message);
+            //  pthread_mutex_lock(&lcd_queue.mutex);
+            lcd_queue.front = lcd_queue.rear = 0;
+            // pthread_mutex_unlock(&lcd_queue.mutex);
+        }
+
+        snprintf(lcd_queue.messages[lcd_queue.rear], result_str_size + 32, "%s", lcd_message);
+        lcd_queue.rear = (lcd_queue.rear + 1) % QUEUE_SIZE;
+        pthread_cond_signal(&lcd_queue.cond);
+        pthread_mutex_unlock(&lcd_queue.mutex);
+
+        if ((memcmp(extracted_time, prev_time, 4) == 0))
+        {
+            bw_accumulated += bw;
+        }
+        else
+        {
+
+            sprintf(bw1, "%d", bw_accumulated);
+
+            bw_accumulated = bw;
+            memcpy(prev_time, extracted_time, 4);
+        }
+        // Log to file
+
+        // Send socket
+
+        pthread_mutex_lock(&log_mutex);
+        if (current_log_file_flood != NULL)
+        {
+
+            fprintf(current_log_file_flood, "%s  %s  %s  %u  %u  %s  %s  %u  %u\n",
+                    time_str, src_ip, dst_ip, src_port, dst_port, protocol_str, type_str, bw, pkt_counter);
+            fflush(current_log_file_flood);
+        }
+        pthread_mutex_unlock(&log_mutex);
+        // log_attacker_ip(src_ip);
+
+        static int packet_count = 0;
+        if (packet_count % SAMPLING_RATE == 0)
+        {
+
+            if ((unsigned char)extracted_check_header[0] == 0x42)
+            {
+                // snprintf(print_buffer + print_buffer_pos, PRINT_BUFFER_SIZE - print_buffer_pos,
+                //          " \n|  %s  |  \t\t%s\t\t    |  \t\t%s\t\t       |  %6u\t|  %6u\t|  %6s\t|  %17s    |  %8u     |  %8u     |",
+                //          time_str, src_ip, dst_ip, src_port, dst_port, protocol_str, type_str, bw, pkt_counter);
+
+                snprintf(print_buffer + print_buffer_pos, PRINT_BUFFER_SIZE - print_buffer_pos,
+                         " \n|  %s  |  \t\t%s\t\t    |  \t\t%s\t\t       |  %6u\t|  %6u\t|  %6s\t|  %s%17s%s    |  %8u     |  %10u     |",
+                         time_str, src_ip, dst_ip, src_port, dst_port, protocol_str, KRED, type_str, RESET, bw, pkt_counter);
+            }
+            else if ((unsigned char)extracted_check_header[0] == 0x62)
+            {
+                snprintf(print_buffer + print_buffer_pos, PRINT_BUFFER_SIZE - print_buffer_pos,
+                         " \n|  %s  |  %s  | %s  |  %6u\t|  %6u\t|  %6s\t| %s%17s%s    |  %8u     |  %10u     |",
+                         time_str, src_ip, dst_ip, src_port, dst_port, protocol_str, KRED, type_str, RESET, bw, pkt_counter);
+            }
+            print_buffer_pos += strlen(print_buffer + print_buffer_pos);
+        }
+        packet_count++;
+
+        if (strcmp(type_str, "HTTP Flood") == 0)
+        {
+            if (strlen(src_ip) > 20)
+            {
+                process_ip(LOGFILE_HTTP_IPv6, src_ip);
+            }
+            else
+            {
+                process_ip(LOGFILE_HTTP_IPv4, src_ip);
+            }
+        }
+        // count++;
+        count_tancong++;
     }
-    char lcd_message[result_str_size + 32];
-    snprintf(lcd_message, result_str_size + 32, "%s", result_str);
-    // printf("\n ss: %s", lcd_message);
-    free(result_str);
 
-    //
-    pthread_mutex_lock(&lcd_queue.mutex);
-    if (strcmp(lcd_message, current_attack) != 0)
-    {
-      strcpy(current_attack, lcd_message);
-      //  pthread_mutex_lock(&lcd_queue.mutex);
-      lcd_queue.front = lcd_queue.rear = 0;
-      // pthread_mutex_unlock(&lcd_queue.mutex);
-    }
-
-    snprintf(lcd_queue.messages[lcd_queue.rear], result_str_size + 32, "%s", lcd_message);
-    lcd_queue.rear = (lcd_queue.rear + 1) % QUEUE_SIZE;
-    pthread_cond_signal(&lcd_queue.cond);
-    pthread_mutex_unlock(&lcd_queue.mutex);
-
-    if ((memcmp(extracted_time, prev_time, 4) == 0))
-    {
-      bw_accumulated += bw;
-    }
-    else
-    {
-
-      sprintf(bw1, "%d", bw_accumulated);
-
-      bw_accumulated = bw;
-      memcpy(prev_time, extracted_time, 4);
-    }
-    // Log to file
-
-    // Send socket
-
-    pthread_mutex_lock(&log_mutex);
-    if (current_log_file_flood != NULL)
-    {
-
-      fprintf(current_log_file_flood, "%s  %s  %s  %u  %u  %s  %s  %u  %u\n",
-              time_str, src_ip, dst_ip, src_port, dst_port, protocol_str, type_str, bw, pkt_counter);
-      fflush(current_log_file_flood);
-    }
-    pthread_mutex_unlock(&log_mutex);
-    // log_attacker_ip(src_ip);
-
-    static int packet_count = 0;
-    if (packet_count % SAMPLING_RATE == 0)
-    {
-
-      if ((unsigned char)extracted_check_header[0] == 0x42)
-      {
-        // snprintf(print_buffer + print_buffer_pos, PRINT_BUFFER_SIZE - print_buffer_pos,
-        //          " \n|  %s  |  \t\t%s\t\t    |  \t\t%s\t\t       |  %6u\t|  %6u\t|  %6s\t|  %17s    |  %8u     |  %8u     |",
-        //          time_str, src_ip, dst_ip, src_port, dst_port, protocol_str, type_str, bw, pkt_counter);
-
-        snprintf(print_buffer + print_buffer_pos, PRINT_BUFFER_SIZE - print_buffer_pos,
-                 " \n|  %s  |  \t\t%s\t\t    |  \t\t%s\t\t       |  %6u\t|  %6u\t|  %6s\t|  %s%17s%s    |  %8u     |  %10u     |",
-                 time_str, src_ip, dst_ip, src_port, dst_port, protocol_str, KRED, type_str, RESET, bw, pkt_counter);
-      }
-      else if ((unsigned char)extracted_check_header[0] == 0x62)
-      {
-        snprintf(print_buffer + print_buffer_pos, PRINT_BUFFER_SIZE - print_buffer_pos,
-                 " \n|  %s  |  %s  | %s  |  %6u\t|  %6u\t|  %6s\t| %s%17s%s    |  %8u     |  %10u     |",
-                 time_str, src_ip, dst_ip, src_port, dst_port, protocol_str, KRED, type_str, RESET, bw, pkt_counter);
-      }
-      print_buffer_pos += strlen(print_buffer + print_buffer_pos);
-    }
-    packet_count++;
-
-    if (strcmp(type_str, "HTTP Flood") == 0)
-    {
-      if (strlen(src_ip) > 20)
-      {
-        process_ip(LOGFILE_HTTP_IPv6, src_ip);
-      }
-      else
-      {
-        process_ip(LOGFILE_HTTP_IPv4, src_ip);
-      }
-    }
-    // count++;
-    count_tancong++;
-  }
-
-  else if ((memcmp(eth->h_dest, target_mac, 6) == 0))
-  {
-
-    static const unsigned char zero_array[16] = {0};
-
-    if (memcmp(payload + 6, zero_array, 16) == 0 || memcmp(payload + 22, zero_array, 16) == 0)
-    {
-      return;
-    }
-    unsigned char extracted_ID[2];
-    unsigned char extracted_src_ip[16];
-    unsigned char extracted_dst_ip[16];
-    unsigned char extracted_src_port[2];
-    unsigned char extracted_dst_port[2];
-    unsigned char extracted_protocol[1];
-    unsigned char extracted_time[4];
-    unsigned char extracted_bw[4];
-    unsigned char extracted_PKT_counter[4];
-    unsigned char extracted_type[1];
-    unsigned char extracted_check_header[1];
-    memcpy(extracted_ID, payload + 2, 2);
-    memcpy(extracted_src_ip, payload + 6, 16);
-    memcpy(extracted_dst_ip, payload + 22, 16);
-
-    memcpy(extracted_src_port, payload + 38, 2);
-    memcpy(extracted_dst_port, payload + 40, 2);
-    memcpy(extracted_protocol, payload + 42, 1);
-    memcpy(extracted_time, payload + 43, 4);
-    memcpy(extracted_bw, payload + 47, 4);
-    memcpy(extracted_PKT_counter, payload + 51, 4);
-    memcpy(extracted_type, payload + 55, 1);
-    memcpy(extracted_check_header, payload + 5, 1);
-
-    unsigned char id_value = extracted_ID[1];
-    unsigned char protocol = extracted_protocol[0];
-    //
-    time_t rawtime = (time_t)((extracted_time[0] << 24) | (extracted_time[1] << 16) | (extracted_time[2] << 8) | (extracted_time[3]));
-    struct tm *timeinfo = gmtime(&rawtime);
-    char time_str[20];
-    strftime(time_str, sizeof(time_str), "%Y-%m-%d %H:%M:%S", timeinfo);
-    //
-    unsigned int bw = ntohl(*((unsigned int *)extracted_bw));
-    unsigned int pkt_counter = ntohl(*((unsigned int *)extracted_PKT_counter));
-    unsigned char type = extracted_type[0];
-    unsigned int src_port = ntohs(*((unsigned short *)extracted_src_port));
-    unsigned int dst_port = ntohs(*((unsigned short *)extracted_dst_port));
-
-    char src_ip[42];
-    char dst_ip[42];
-
-    if ((unsigned char)extracted_check_header[0] == 0x42)
-    {
-      unsigned int src_ip_int = ntohl(*((unsigned int *)extracted_src_ip));
-      unsigned int dst_ip_int = ntohl(*((unsigned int *)extracted_dst_ip));
-
-      sprintf(src_ip, "%d.%d.%d.%d", extracted_src_ip[12], extracted_src_ip[13], extracted_src_ip[14], extracted_src_ip[15]);
-      sprintf(dst_ip, "%d.%d.%d.%d", extracted_dst_ip[12], extracted_dst_ip[13], extracted_dst_ip[14], extracted_dst_ip[15]);
-    }
-    else if ((unsigned char)extracted_check_header[0] == 0x62)
+    else if ((memcmp(eth->h_dest, target_mac, 6) == 0))
     {
 
-      sprintf(src_ip, "%02x%02x:%02x%02x:%02x%02x:%02x%02x:%02x%02x:%02x%02x:%02x%02x:%02x%02x", extracted_src_ip[0], extracted_src_ip[1], extracted_src_ip[2], extracted_src_ip[3],
-              extracted_src_ip[4], extracted_src_ip[5], extracted_src_ip[6], extracted_src_ip[7], extracted_src_ip[8], extracted_src_ip[9], extracted_src_ip[10], extracted_src_ip[11],
-              extracted_src_ip[12], extracted_src_ip[13], extracted_src_ip[14], extracted_src_ip[15]);
-      sprintf(dst_ip, "%02x%02x:%02x%02x:%02x%02x:%02x%02x:%02x%02x:%02x%02x:%02x%02x:%02x%02x", extracted_dst_ip[0], extracted_dst_ip[1], extracted_dst_ip[2], extracted_dst_ip[3],
-              extracted_dst_ip[4], extracted_dst_ip[5], extracted_dst_ip[6], extracted_dst_ip[7], extracted_dst_ip[8], extracted_dst_ip[9], extracted_dst_ip[10], extracted_dst_ip[11],
-              extracted_dst_ip[12], extracted_dst_ip[13], extracted_dst_ip[14], extracted_dst_ip[15]);
+        static const unsigned char zero_array[16] = {0};
+
+        if (memcmp(payload + 6, zero_array, 16) == 0 || memcmp(payload + 22, zero_array, 16) == 0)
+        {
+            return;
+        }
+        unsigned char extracted_ID[2];
+        unsigned char extracted_src_ip[16];
+        unsigned char extracted_dst_ip[16];
+        unsigned char extracted_src_port[2];
+        unsigned char extracted_dst_port[2];
+        unsigned char extracted_protocol[1];
+        unsigned char extracted_time[4];
+        unsigned char extracted_bw[4];
+        unsigned char extracted_PKT_counter[4];
+        unsigned char extracted_type[1];
+        unsigned char extracted_check_header[1];
+        memcpy(extracted_ID, payload + 2, 2);
+        memcpy(extracted_src_ip, payload + 6, 16);
+        memcpy(extracted_dst_ip, payload + 22, 16);
+
+        memcpy(extracted_src_port, payload + 38, 2);
+        memcpy(extracted_dst_port, payload + 40, 2);
+        memcpy(extracted_protocol, payload + 42, 1);
+        memcpy(extracted_time, payload + 43, 4);
+        memcpy(extracted_bw, payload + 47, 4);
+        memcpy(extracted_PKT_counter, payload + 51, 4);
+        memcpy(extracted_type, payload + 55, 1);
+        memcpy(extracted_check_header, payload + 5, 1);
+
+        unsigned char id_value = extracted_ID[1];
+        unsigned char protocol = extracted_protocol[0];
+        //
+        time_t rawtime = (time_t)((extracted_time[0] << 24) | (extracted_time[1] << 16) | (extracted_time[2] << 8) | (extracted_time[3]));
+        struct tm *timeinfo = gmtime(&rawtime);
+        char time_str[20];
+        strftime(time_str, sizeof(time_str), "%Y-%m-%d %H:%M:%S", timeinfo);
+        //
+        unsigned int bw = ntohl(*((unsigned int *)extracted_bw));
+        unsigned int pkt_counter = ntohl(*((unsigned int *)extracted_PKT_counter));
+        unsigned char type = extracted_type[0];
+        unsigned int src_port = ntohs(*((unsigned short *)extracted_src_port));
+        unsigned int dst_port = ntohs(*((unsigned short *)extracted_dst_port));
+
+        char src_ip[42];
+        char dst_ip[42];
+
+        if ((unsigned char)extracted_check_header[0] == 0x42)
+        {
+            unsigned int src_ip_int = ntohl(*((unsigned int *)extracted_src_ip));
+            unsigned int dst_ip_int = ntohl(*((unsigned int *)extracted_dst_ip));
+
+            sprintf(src_ip, "%d.%d.%d.%d", extracted_src_ip[12], extracted_src_ip[13], extracted_src_ip[14], extracted_src_ip[15]);
+            sprintf(dst_ip, "%d.%d.%d.%d", extracted_dst_ip[12], extracted_dst_ip[13], extracted_dst_ip[14], extracted_dst_ip[15]);
+        }
+        else if ((unsigned char)extracted_check_header[0] == 0x62)
+        {
+
+            sprintf(src_ip, "%02x%02x:%02x%02x:%02x%02x:%02x%02x:%02x%02x:%02x%02x:%02x%02x:%02x%02x", extracted_src_ip[0], extracted_src_ip[1], extracted_src_ip[2], extracted_src_ip[3],
+                    extracted_src_ip[4], extracted_src_ip[5], extracted_src_ip[6], extracted_src_ip[7], extracted_src_ip[8], extracted_src_ip[9], extracted_src_ip[10], extracted_src_ip[11],
+                    extracted_src_ip[12], extracted_src_ip[13], extracted_src_ip[14], extracted_src_ip[15]);
+            sprintf(dst_ip, "%02x%02x:%02x%02x:%02x%02x:%02x%02x:%02x%02x:%02x%02x:%02x%02x:%02x%02x", extracted_dst_ip[0], extracted_dst_ip[1], extracted_dst_ip[2], extracted_dst_ip[3],
+                    extracted_dst_ip[4], extracted_dst_ip[5], extracted_dst_ip[6], extracted_dst_ip[7], extracted_dst_ip[8], extracted_dst_ip[9], extracted_dst_ip[10], extracted_dst_ip[11],
+                    extracted_dst_ip[12], extracted_dst_ip[13], extracted_dst_ip[14], extracted_dst_ip[15]);
+        }
+        char type_str[32];
+        char protocol_str[32];
+
+        //
+        switch (type)
+        {
+        case 0:
+            strcpy(type_str, "Normal");
+            break;
+
+        default:
+            strcpy(type_str, "Normal");
+            break;
+        }
+        //
+        switch (protocol)
+        {
+        case 6:
+            strcpy(protocol_str, "TCP");
+            break;
+        case 17:
+            strcpy(protocol_str, "UDP");
+            break;
+        case 1:
+            strcpy(protocol_str, "ICMP");
+            break;
+        case 58:
+            strcpy(protocol_str, "ICMP");
+            break;
+        default:
+            strcpy(protocol_str, "Unknown");
+            break;
+        }
+
+        pthread_mutex_lock(&log_mutex);
+        if (current_log_file_normal != NULL)
+        {
+
+            fprintf(current_log_file_normal, "%s  %s  %s  %u  %u  %s  %s  %u  %u\n",
+                    time_str, src_ip, dst_ip, src_port, dst_port, protocol_str, type_str, bw, pkt_counter);
+            fflush(current_log_file_normal);
+        }
+        pthread_mutex_unlock(&log_mutex);
+
+        // In ra terminal n?u d p ?ng di?u ki?n sampling
+        static int packet_count = 0;
+        if (packet_count % SAMPLING_RATE == 0)
+        {
+            // printf(" \n\n|\tTime\t\t\t|\tSource IP\t\t|\tDest IP\t\t|\tSource Port\t|\tDest Port\t|\tProtocol\t|\tType\t|\tBW\t|\tPKT\t|");
+            // Th m th ng tin v o b? d?m in ra terminal
+
+            // snprintf(print_buffer + print_buffer_pos, PRINT_BUFFER_SIZE - print_buffer_pos,
+            //          " \n|\t%s\t|\t%s\t|\t%s\t|\t%u\t|\t%u\t|\t%s\t|\t%s\t\t|\t%u\t|\t%u\t|",
+            //          time_str, src_ip, dst_ip, src_port, dst_port, protocol_str, type_str, bw, pkt_counter);
+
+            if ((unsigned char)extracted_check_header[0] == 0x42)
+            {
+                // snprintf(print_buffer + print_buffer_pos, PRINT_BUFFER_SIZE - print_buffer_pos,
+                //          " \n|  %s  |  \t\t%s\t\t    |  \t\t%s\t\t       |  %6u\t|  %6u\t|  %6s\t|  %17s    |  %8u     |  %8u     |",
+                //          time_str, src_ip, dst_ip, src_port, dst_port, protocol_str, type_str, bw, pkt_counter);
+                snprintf(print_buffer + print_buffer_pos, PRINT_BUFFER_SIZE - print_buffer_pos,
+                         " \n|  %s  |  \t\t%s\t\t    |  \t\t%s\t\t       |  %6u\t|  %6u\t|  %6s\t|  \x1B[32m%17s\x1B[0m    |  %8u     |  %10u     |",
+                         time_str, src_ip, dst_ip, src_port, dst_port, protocol_str, type_str, bw, pkt_counter);
+            }
+            else if ((unsigned char)extracted_check_header[0] == 0x62)
+            {
+                // snprintf(print_buffer + print_buffer_pos, PRINT_BUFFER_SIZE - print_buffer_pos,
+                //          " \n|  %s  |  %s  | %s  |  %6u\t|  %6u\t|  %6s\t|  %17s    |  %8u     |  %8u     |",
+                //          time_str, src_ip, dst_ip, src_port, dst_port, protocol_str, type_str, bw, pkt_counter);
+                snprintf(print_buffer + print_buffer_pos, PRINT_BUFFER_SIZE - print_buffer_pos,
+                         " \n|  %s  |  %s  | %s  |  %6u\t|  %6u\t|  %6s\t|  \x1B[32m%17s\x1B[0m    |  %8u     |  %10u     |",
+                         time_str, src_ip, dst_ip, src_port, dst_port, protocol_str, type_str, bw, pkt_counter);
+            }
+
+            print_buffer_pos += strlen(print_buffer + print_buffer_pos);
+        }
+        packet_count++;
+        // count++;
     }
-    char type_str[32];
-    char protocol_str[32];
-
-    //
-    switch (type)
-    {
-    case 0:
-      strcpy(type_str, "Normal");
-      break;
-
-    default:
-      strcpy(type_str, "Normal");
-      break;
-    }
-    //
-    switch (protocol)
-    {
-    case 6:
-      strcpy(protocol_str, "TCP");
-      break;
-    case 17:
-      strcpy(protocol_str, "UDP");
-      break;
-    case 1:
-      strcpy(protocol_str, "ICMP");
-      break;
-    case 58:
-      strcpy(protocol_str, "ICMP");
-      break;
-    default:
-      strcpy(protocol_str, "Unknown");
-      break;
-    }
-
-    pthread_mutex_lock(&log_mutex);
-    if (current_log_file_normal != NULL)
-    {
-
-      fprintf(current_log_file_normal, "%s  %s  %s  %u  %u  %s  %s  %u  %u\n",
-              time_str, src_ip, dst_ip, src_port, dst_port, protocol_str, type_str, bw, pkt_counter);
-      fflush(current_log_file_normal);
-    }
-    pthread_mutex_unlock(&log_mutex);
-
-    // In ra terminal n?u d p ?ng di?u ki?n sampling
-    static int packet_count = 0;
-    if (packet_count % SAMPLING_RATE == 0)
-    {
-      // printf(" \n\n|\tTime\t\t\t|\tSource IP\t\t|\tDest IP\t\t|\tSource Port\t|\tDest Port\t|\tProtocol\t|\tType\t|\tBW\t|\tPKT\t|");
-      // Th m th ng tin v o b? d?m in ra terminal
-
-      // snprintf(print_buffer + print_buffer_pos, PRINT_BUFFER_SIZE - print_buffer_pos,
-      //          " \n|\t%s\t|\t%s\t|\t%s\t|\t%u\t|\t%u\t|\t%s\t|\t%s\t\t|\t%u\t|\t%u\t|",
-      //          time_str, src_ip, dst_ip, src_port, dst_port, protocol_str, type_str, bw, pkt_counter);
-
-      if ((unsigned char)extracted_check_header[0] == 0x42)
-      {
-        // snprintf(print_buffer + print_buffer_pos, PRINT_BUFFER_SIZE - print_buffer_pos,
-        //          " \n|  %s  |  \t\t%s\t\t    |  \t\t%s\t\t       |  %6u\t|  %6u\t|  %6s\t|  %17s    |  %8u     |  %8u     |",
-        //          time_str, src_ip, dst_ip, src_port, dst_port, protocol_str, type_str, bw, pkt_counter);
-        snprintf(print_buffer + print_buffer_pos, PRINT_BUFFER_SIZE - print_buffer_pos,
-                 " \n|  %s  |  \t\t%s\t\t    |  \t\t%s\t\t       |  %6u\t|  %6u\t|  %6s\t|  \x1B[32m%17s\x1B[0m    |  %8u     |  %10u     |",
-                 time_str, src_ip, dst_ip, src_port, dst_port, protocol_str, type_str, bw, pkt_counter);
-      }
-      else if ((unsigned char)extracted_check_header[0] == 0x62)
-      {
-        // snprintf(print_buffer + print_buffer_pos, PRINT_BUFFER_SIZE - print_buffer_pos,
-        //          " \n|  %s  |  %s  | %s  |  %6u\t|  %6u\t|  %6s\t|  %17s    |  %8u     |  %8u     |",
-        //          time_str, src_ip, dst_ip, src_port, dst_port, protocol_str, type_str, bw, pkt_counter);
-        snprintf(print_buffer + print_buffer_pos, PRINT_BUFFER_SIZE - print_buffer_pos,
-                 " \n|  %s  |  %s  | %s  |  %6u\t|  %6u\t|  %6s\t|  \x1B[32m%17s\x1B[0m    |  %8u     |  %10u     |",
-                 time_str, src_ip, dst_ip, src_port, dst_port, protocol_str, type_str, bw, pkt_counter);
-      }
-
-      print_buffer_pos += strlen(print_buffer + print_buffer_pos);
-    }
-    packet_count++;
-    // count++;
-  }
 }
 
 void enqueue_packet(unsigned char *packet, int size)
 {
-  pthread_mutex_lock(&packet_queue.mutex);
-  memcpy(packet_queue.packets[packet_queue.rear], packet, size);
-  packet_queue.rear = (packet_queue.rear + 1) % PACKET_QUEUE_SIZE;
-  pthread_cond_signal(&packet_queue.cond);
-  pthread_mutex_unlock(&packet_queue.mutex);
+    pthread_mutex_lock(&packet_queue.mutex);
+    memcpy(packet_queue.packets[packet_queue.rear], packet, size);
+    packet_queue.rear = (packet_queue.rear + 1) % PACKET_QUEUE_SIZE;
+    pthread_cond_signal(&packet_queue.cond);
+    pthread_mutex_unlock(&packet_queue.mutex);
 }
 
 //
 void *packet_queue_processing_thread(void *arg)
 {
-  while (1)
-  {
-    pthread_mutex_lock(&packet_queue.mutex);
-    while (packet_queue.front == packet_queue.rear)
+    while (1)
     {
-      pthread_cond_wait(&packet_queue.cond, &packet_queue.mutex);
-    }
-    unsigned char *packet = packet_queue.packets[packet_queue.front];
-    int size = BUFFER_SIZE; // Assuming all packets have the same size
-    packet_queue.front = (packet_queue.front + 1) % PACKET_QUEUE_SIZE;
-    pthread_mutex_unlock(&packet_queue.mutex);
+        pthread_mutex_lock(&packet_queue.mutex);
+        while (packet_queue.front == packet_queue.rear)
+        {
+            pthread_cond_wait(&packet_queue.cond, &packet_queue.mutex);
+        }
+        unsigned char *packet = packet_queue.packets[packet_queue.front];
+        int size = BUFFER_SIZE; // Assuming all packets have the same size
+        packet_queue.front = (packet_queue.front + 1) % PACKET_QUEUE_SIZE;
+        pthread_mutex_unlock(&packet_queue.mutex);
 
-    // X? l  packet
-    process_packet(packet, size);
-  }
-  return NULL;
+        // X? l  packet
+        process_packet(packet, size);
+    }
+    return NULL;
 }
 
 void *lcd_thread_function(void *arg)
 {
-  while (1)
-  {
-
-    if (!is_idle2)
+    while (1)
     {
-      pthread_mutex_lock(&lcd_queue.mutex);
-      // snprintf(lcd_queue.messages[lcd_queue.rear], 255, "ACRONICS SOLUTIONS");
-      lcd_queue.rear = (lcd_queue.rear + 1) % QUEUE_SIZE;
-      pthread_cond_signal(&lcd_queue.cond);
-      pthread_mutex_unlock(&lcd_queue.mutex);
-    }
 
-    pthread_mutex_lock(&lcd_queue.mutex);
+        if (!is_idle2)
+        {
+            pthread_mutex_lock(&lcd_queue.mutex);
+            // snprintf(lcd_queue.messages[lcd_queue.rear], 255, "ACRONICS SOLUTIONS");
+            lcd_queue.rear = (lcd_queue.rear + 1) % QUEUE_SIZE;
+            pthread_cond_signal(&lcd_queue.cond);
+            pthread_mutex_unlock(&lcd_queue.mutex);
+        }
 
-    while (lcd_queue.front == lcd_queue.rear)
-    {
-      pthread_cond_wait(&lcd_queue.cond, &lcd_queue.mutex);
-    }
-
-    char message[255];
-    snprintf(message, 255, "%s", lcd_queue.messages[lcd_queue.front]);
-    lcd_queue.front = (lcd_queue.front + 1) % QUEUE_SIZE;
-    pthread_mutex_unlock(&lcd_queue.mutex);
-    pthread_mutex_lock(&lcd_mutex);
-    // //printf("\n aa: %s", message);
-    if (show_disconnected_message)
-    {
-      ClrLcd();
-      lcdLoc(LINE1);
-      typeString("  DISCONNECTED");
-    }
-    else
-    {
-      if (is_idle)
-      {
         pthread_mutex_lock(&lcd_queue.mutex);
-        lcd_queue.front = lcd_queue.rear = 0;
+
+        while (lcd_queue.front == lcd_queue.rear)
+        {
+            pthread_cond_wait(&lcd_queue.cond, &lcd_queue.mutex);
+        }
+
+        char message[255];
+        snprintf(message, 255, "%s", lcd_queue.messages[lcd_queue.front]);
+        lcd_queue.front = (lcd_queue.front + 1) % QUEUE_SIZE;
         pthread_mutex_unlock(&lcd_queue.mutex);
-        scroll_text1("ACRONICS SOLUTIONS", "ACS Sysnet-Def v1.0", 150);
-      }
-      else
-      {
-        char bw1_with_space[20];
-        snprintf(bw1_with_space, sizeof(bw1_with_space), "  %s", bw1);
-        scroll_text1(message, bw1_with_space, 100);
-      }
+        pthread_mutex_lock(&lcd_mutex);
+        // //printf("\n aa: %s", message);
+        if (show_disconnected_message)
+        {
+            ClrLcd();
+            lcdLoc(LINE1);
+            typeString("  DISCONNECTED");
+        }
+        else
+        {
+            if (is_idle)
+            {
+                pthread_mutex_lock(&lcd_queue.mutex);
+                lcd_queue.front = lcd_queue.rear = 0;
+                pthread_mutex_unlock(&lcd_queue.mutex);
+                scroll_text1("ACRONICS SOLUTIONS", "ACS Sysnet-Def v1.0", 150);
+            }
+            else
+            {
+                char bw1_with_space[20];
+                snprintf(bw1_with_space, sizeof(bw1_with_space), "  %s", bw1);
+                scroll_text1(message, bw1_with_space, 100);
+            }
+        }
+        pthread_mutex_unlock(&lcd_mutex);
+
+        // memory_check_thread_function();
+        usleep(200000);
     }
-    pthread_mutex_unlock(&lcd_mutex);
 
-    // memory_check_thread_function();
-    usleep(200000);
-  }
-
-  return NULL;
+    return NULL;
 }
 
 void scroll_text(const char *text, int delay_ms)
 {
-  int len = strlen(text);
-  char buffer[255] = {0};
-  while (1)
-  {
-    for (int pos = 0; pos <= len; pos++)
+    int len = strlen(text);
+    char buffer[255] = {0};
+    while (1)
     {
-      ClrLcd();
-      for (int i = 0; i < 16; i++)
-      {
-        int text_index = i + pos;
-        if (text_index >= 0 && text_index < len)
+        for (int pos = 0; pos <= len; pos++)
         {
-          buffer[i] = text[text_index];
+            ClrLcd();
+            for (int i = 0; i < 16; i++)
+            {
+                int text_index = i + pos;
+                if (text_index >= 0 && text_index < len)
+                {
+                    buffer[i] = text[text_index];
+                }
+                else
+                {
+                    buffer[i] = ' ';
+                }
+            }
+            lcdLoc(LINE1);
+            typeString(buffer);
+            delay(delay_ms);
+            ClrLcd();
         }
-        else
+        if (stop_scrolling)
         {
-          buffer[i] = ' ';
+            break;
         }
-      }
-      lcdLoc(LINE1);
-      typeString(buffer);
-      delay(delay_ms);
-      ClrLcd();
     }
-    if (stop_scrolling)
-    {
-      break;
-    }
-  }
 }
 
 void update_lcd(const char *message)
 {
-  ClrLcd();
-  lcdLoc(LINE1);
-  // lcdLoc(LINE2);
-  typeString(message);
+    ClrLcd();
+    lcdLoc(LINE1);
+    // lcdLoc(LINE2);
+    typeString(message);
 }
 
 void get_current_date(char *date_str)
 {
-  time_t rawtime;
-  struct tm *timeinfo;
-  time(&rawtime);
-  timeinfo = localtime(&rawtime);
-  strftime(date_str, 11, "%Y-%m-%d", timeinfo);
+    time_t rawtime;
+    struct tm *timeinfo;
+    time(&rawtime);
+    timeinfo = localtime(&rawtime);
+    strftime(date_str, 11, "%Y-%m-%d", timeinfo);
 }
 
 void scroll_text1(const char *text1, const char *text2, int delay_ms)
 {
-  int len1 = strlen(text1);
-  int len2 = strlen(text2);
-  char buffer1[255] = {0};
-  char buffer2[255] = {0};
+    int len1 = strlen(text1);
+    int len2 = strlen(text2);
+    char buffer1[255] = {0};
+    char buffer2[255] = {0};
 
-  while (1)
-  {
-    for (int pos = 0; pos <= len1; pos++)
+    while (1)
     {
-      ClrLcd();
-      for (int i = 0; i < 16; i++)
-      {
-        int text_index = i + pos;
-        if (text_index >= 0 && text_index < len1)
+        for (int pos = 0; pos <= len1; pos++)
         {
-          buffer1[i] = text1[text_index];
-        }
-        else
-        {
-          buffer1[i] = ' ';
-        }
-      }
-      lcdLoc(LINE1);
-      typeString(buffer1);
+            ClrLcd();
+            for (int i = 0; i < 16; i++)
+            {
+                int text_index = i + pos;
+                if (text_index >= 0 && text_index < len1)
+                {
+                    buffer1[i] = text1[text_index];
+                }
+                else
+                {
+                    buffer1[i] = ' ';
+                }
+            }
+            lcdLoc(LINE1);
+            typeString(buffer1);
 
-      //
-      for (int i = 0; i < 16; i++)
-      {
-        int text_index = i + pos;
-        if (text_index >= 0 && text_index < len2)
-        {
-          buffer2[i] = text2[text_index];
-        }
-        else
-        {
-          buffer2[i] = ' ';
-        }
-      }
-      lcdLoc(LINE2);
-      typeString(buffer2);
+            //
+            for (int i = 0; i < 16; i++)
+            {
+                int text_index = i + pos;
+                if (text_index >= 0 && text_index < len2)
+                {
+                    buffer2[i] = text2[text_index];
+                }
+                else
+                {
+                    buffer2[i] = ' ';
+                }
+            }
+            lcdLoc(LINE2);
+            typeString(buffer2);
 
-      delay(delay_ms);
-      ClrLcd();
+            delay(delay_ms);
+            ClrLcd();
+        }
+        if (stop_scrolling)
+        {
+            break;
+        }
     }
-    if (stop_scrolling)
-    {
-      break;
-    }
-  }
 }
 
 // void remove_old_logs(void)
@@ -4944,220 +8589,220 @@ void scroll_text1(const char *text1, const char *text2, int delay_ms)
 // }
 int open_and_check_dir(const char *dir_path)
 {
-  DIR *dir;
-  struct dirent *entry;
-  int is_empty = 1;
+    DIR *dir;
+    struct dirent *entry;
+    int is_empty = 1;
 
-  dir = opendir(dir_path);
-  if (dir == NULL)
-  {
-    perror("opendir error");
-    return -1;
-  }
-  while ((entry = readdir(dir)) != NULL)
-  {
-    if (entry->d_name[0] == '.' && (entry->d_name[1] == '\0' || (entry->d_name[1] == '.' && entry->d_name[2] == '\0')))
+    dir = opendir(dir_path);
+    if (dir == NULL)
     {
-      continue;
+        perror("opendir error");
+        return -1;
     }
-    is_empty = 0;
-    break;
-  }
-  closedir(dir);
-  return is_empty;
+    while ((entry = readdir(dir)) != NULL)
+    {
+        if (entry->d_name[0] == '.' && (entry->d_name[1] == '\0' || (entry->d_name[1] == '.' && entry->d_name[2] == '\0')))
+        {
+            continue;
+        }
+        is_empty = 0;
+        break;
+    }
+    closedir(dir);
+    return is_empty;
 }
 //
 
 void *memory_check_thread_function(void *arg)
 {
-  struct statvfs stat1;
-  while (1)
-  {
-    check_connect_eth();
-    if (statvfs("/", &stat1) != 0)
+    struct statvfs stat1;
+    while (1)
     {
-      perror("statvfs error");
-      pthread_exit(NULL);
-    }
-
-    unsigned long total_space = stat1.f_blocks * stat1.f_frsize;
-    unsigned long used_space = (stat1.f_blocks - stat1.f_bfree) * stat1.f_frsize;
-    float memory_usage = (float)used_space / total_space * 100;
-
-    // IF USER >= MEMORY
-    if (memory_usage >= Threshold_SD)
-    {
-
-      int check_empty_dir = open_and_check_dir(LOG_NORMAL_DIR);
-      if (check_empty_dir == 1)
-      {
-        empty_log_normal = true;
-      }
-      else if (check_empty_dir == 0)
-      {
-        empty_log_normal = false;
-      }
-
-      if (auto_delete_logs)
-      {
-
-        pthread_mutex_lock(&log_mutex);
-        if (!empty_log_normal)
+        check_connect_eth();
+        if (statvfs("/", &stat1) != 0)
         {
-          DIR *dir = opendir(LOG_NORMAL_DIR);
-          struct dirent *entry;
-          time_t oldest_time = time(NULL);
-          char oldest_file[256] = {0};
-          int file_count = 0;
-          while ((entry = readdir(dir)) != NULL)
-          {
-            if (entry->d_type == DT_REG)
-            {
-              file_count++;
-              char file_path[256];
-              sprintf(file_path, "%s/%s", LOG_NORMAL_DIR, entry->d_name);
-              struct stat file_stat;
-              stat(file_path, &file_stat);
-              if (file_stat.st_mtime < oldest_time)
-              {
-                oldest_time = file_stat.st_mtime;
-                strcpy(oldest_file, file_path);
-              }
-            }
-          }
-          closedir(dir);
-
-          if (file_count > 0 && oldest_file[0] != '\0')
-          {
-            printf("Deleted oldest file: %s\n", oldest_file);
-            unlink(oldest_file);
-          }
-          else if (file_count == 0)
-          {
-            empty_log_normal = true;
-          }
+            perror("statvfs error");
+            pthread_exit(NULL);
         }
 
-        else
+        unsigned long total_space = stat1.f_blocks * stat1.f_frsize;
+        unsigned long used_space = (stat1.f_blocks - stat1.f_bfree) * stat1.f_frsize;
+        float memory_usage = (float)used_space / total_space * 100;
+
+        // IF USER >= MEMORY
+        if (memory_usage >= Threshold_SD)
         {
-          DIR *dir = opendir(LOG_FLOOD_DIR);
-          struct dirent *entry;
-          time_t oldest_time = time(NULL);
-          char oldest_file[256] = {0};
-          int file_count = 0;
-          while ((entry = readdir(dir)) != NULL)
-          {
-            if (entry->d_type == DT_REG)
+
+            int check_empty_dir = open_and_check_dir(LOG_NORMAL_DIR);
+            if (check_empty_dir == 1)
             {
-              file_count++;
-              char file_path[256];
-              sprintf(file_path, "%s/%s", LOG_FLOOD_DIR, entry->d_name);
-              struct stat file_stat;
-              stat(file_path, &file_stat);
-              if (file_stat.st_mtime < oldest_time)
-              {
-                oldest_time = file_stat.st_mtime;
-                strcpy(oldest_file, file_path);
-              }
+                empty_log_normal = true;
             }
-          }
-          closedir(dir);
-
-          if (file_count > 1 && oldest_file[0] != '\0')
-          {
-            printf("Deleted oldest file: %s\n", oldest_file);
-            unlink(oldest_file);
-          }
-          else if (file_count == 1)
-          {
-
-            if (current_log_file_flood != NULL)
+            else if (check_empty_dir == 0)
             {
-              fclose(current_log_file_flood);
-              current_log_file_flood = NULL;
-              close_flood_log = true;
+                empty_log_normal = false;
             }
 
-            full_sd = true;
-          }
-        }
-        pthread_mutex_unlock(&log_mutex);
-      }
-      else
-      {
+            if (auto_delete_logs)
+            {
 
-        if (current_log_file_flood != NULL)
-        {
-          fclose(current_log_file_flood);
-          current_log_file_flood = NULL;
+                pthread_mutex_lock(&log_mutex);
+                if (!empty_log_normal)
+                {
+                    DIR *dir = opendir(LOG_NORMAL_DIR);
+                    struct dirent *entry;
+                    time_t oldest_time = time(NULL);
+                    char oldest_file[256] = {0};
+                    int file_count = 0;
+                    while ((entry = readdir(dir)) != NULL)
+                    {
+                        if (entry->d_type == DT_REG)
+                        {
+                            file_count++;
+                            char file_path[256];
+                            sprintf(file_path, "%s/%s", LOG_NORMAL_DIR, entry->d_name);
+                            struct stat file_stat;
+                            stat(file_path, &file_stat);
+                            if (file_stat.st_mtime < oldest_time)
+                            {
+                                oldest_time = file_stat.st_mtime;
+                                strcpy(oldest_file, file_path);
+                            }
+                        }
+                    }
+                    closedir(dir);
+
+                    if (file_count > 0 && oldest_file[0] != '\0')
+                    {
+                        // printf("Deleted oldest file: %s\n", oldest_file);
+                        unlink(oldest_file);
+                    }
+                    else if (file_count == 0)
+                    {
+                        empty_log_normal = true;
+                    }
+                }
+
+                else
+                {
+                    DIR *dir = opendir(LOG_FLOOD_DIR);
+                    struct dirent *entry;
+                    time_t oldest_time = time(NULL);
+                    char oldest_file[256] = {0};
+                    int file_count = 0;
+                    while ((entry = readdir(dir)) != NULL)
+                    {
+                        if (entry->d_type == DT_REG)
+                        {
+                            file_count++;
+                            char file_path[256];
+                            sprintf(file_path, "%s/%s", LOG_FLOOD_DIR, entry->d_name);
+                            struct stat file_stat;
+                            stat(file_path, &file_stat);
+                            if (file_stat.st_mtime < oldest_time)
+                            {
+                                oldest_time = file_stat.st_mtime;
+                                strcpy(oldest_file, file_path);
+                            }
+                        }
+                    }
+                    closedir(dir);
+
+                    if (file_count > 1 && oldest_file[0] != '\0')
+                    {
+                        // printf("Deleted oldest file: %s\n", oldest_file);
+                        unlink(oldest_file);
+                    }
+                    else if (file_count == 1)
+                    {
+
+                        if (current_log_file_flood != NULL)
+                        {
+                            fclose(current_log_file_flood);
+                            current_log_file_flood = NULL;
+                            close_flood_log = true;
+                        }
+
+                        full_sd = true;
+                    }
+                }
+                pthread_mutex_unlock(&log_mutex);
+            }
+            else
+            {
+
+                if (current_log_file_flood != NULL)
+                {
+                    fclose(current_log_file_flood);
+                    current_log_file_flood = NULL;
+                }
+                if (current_log_file_normal != NULL)
+                {
+                    fclose(current_log_file_normal);
+                    current_log_file_normal = NULL;
+                }
+                close_flood_log = true;
+                close_normal_log = true;
+                full_sd = true;
+            }
+            // stop_writing = true;
         }
-        if (current_log_file_normal != NULL)
+
+        // IF USE < MEMORY
+        if (memory_usage < Threshold_SD)
         {
-          fclose(current_log_file_normal);
-          current_log_file_normal = NULL;
+            if (empty_log_normal)
+            {
+                char new_log_file1[32];
+                char current_date1[11];
+                get_current_date(current_date1);
+                time_t now = time(NULL);
+                struct tm *timeinfo = localtime(&now);
+                char time_str[9];
+                strftime(time_str, sizeof(time_str), "%H-%M-%S", timeinfo);
+                sprintf(new_log_file1, "%s/%s_%s.log", LOG_NORMAL_DIR, current_date1, time_str);
+                strcpy(name_logfile_normal, new_log_file1);
+                if (current_log_file_normal != NULL)
+                {
+                    fclose(current_log_file_normal);
+                }
+                current_log_file_normal = fopen(new_log_file1, "a");
+                // if (current_log_file_normal == NULL)
+                // {
+                //   perror("fopen error");
+                //   return;
+                // }
+                empty_log_normal = false;
+                close_normal_log = false;
+            }
+
+            //     full_sd2 = false;
+            if (close_flood_log)
+            {
+                current_log_file_flood = fopen(name_logfile_flood, "a");
+                if (current_log_file_flood == NULL || current_log_file_normal == NULL)
+                {
+                    perror("Error opening log file");
+                    pthread_exit(NULL);
+                }
+                close_flood_log = false;
+            }
+            if (close_normal_log)
+            {
+                current_log_file_normal = fopen(name_logfile_normal, "a");
+                if (current_log_file_flood == NULL || current_log_file_normal == NULL)
+                {
+                    perror("Error opening log file");
+                    pthread_exit(NULL);
+                }
+                close_normal_log = false;
+            }
+            full_sd = false;
+            // stop_writing = false;
         }
-        close_flood_log = true;
-        close_normal_log = true;
-        full_sd = true;
-      }
-      // stop_writing = true;
+        sleep(2);
     }
-
-    // IF USE < MEMORY
-    if (memory_usage < Threshold_SD)
-    {
-      if (empty_log_normal)
-      {
-        char new_log_file1[32];
-        char current_date1[11];
-        get_current_date(current_date1);
-        time_t now = time(NULL);
-        struct tm *timeinfo = localtime(&now);
-        char time_str[9];
-        strftime(time_str, sizeof(time_str), "%H-%M-%S", timeinfo);
-        sprintf(new_log_file1, "%s/%s_%s.log", LOG_NORMAL_DIR, current_date1, time_str);
-        strcpy(name_logfile_normal, new_log_file1);
-        if (current_log_file_normal != NULL)
-        {
-          fclose(current_log_file_normal);
-        }
-        current_log_file_normal = fopen(new_log_file1, "a");
-        // if (current_log_file_normal == NULL)
-        // {
-        //   perror("fopen error");
-        //   return;
-        // }
-        empty_log_normal = false;
-        close_normal_log = false;
-      }
-
-      //     full_sd2 = false;
-      if (close_flood_log)
-      {
-        current_log_file_flood = fopen(name_logfile_flood, "a");
-        if (current_log_file_flood == NULL || current_log_file_normal == NULL)
-        {
-          perror("Error opening log file");
-          pthread_exit(NULL);
-        }
-        close_flood_log = false;
-      }
-      if (close_normal_log)
-      {
-        current_log_file_normal = fopen(name_logfile_normal, "a");
-        if (current_log_file_flood == NULL || current_log_file_normal == NULL)
-        {
-          perror("Error opening log file");
-          pthread_exit(NULL);
-        }
-        close_normal_log = false;
-      }
-      full_sd = false;
-      // stop_writing = false;
-    }
-    sleep(2);
-  }
-  pthread_exit(NULL);
+    pthread_exit(NULL);
 }
 
 // void *log_buffer_thread(void *arg)
@@ -5179,520 +8824,3771 @@ void *memory_check_thread_function(void *arg)
 
 void handle_signal(int sig)
 {
-  char key;
-  if (sig == SIGTSTP)
-  {
+    if (sig == SIGTSTP) // Ctrl+Z
+    {
+        printf("\nRestarting...\n");
+        sleep(2);
+        printf("\nRestarted!\n");
+        send_reset(serial_port);
+        sleep(1);
+        exit(1);
+    }
+    else if (sig == SIGINT) // Ctrl+C
+    {
+        printf("\n[INFO] Caught Ctrl+C, cleaning up...\n");
 
-    printf("\nRestarting...\n");
-    sleep(2);
-    printf("\nRestarted!\n");
-    send_reset(serial_port);
-    sleep(1);
-    exit(1);
-  }
+        if (hash_table)
+        {
+            g_hash_table_destroy(hash_table);
+            hash_table = NULL;
+        }
+        if (queue)
+        {
+            g_queue_free(queue);
+            queue = NULL;
+        }
+
+        exit(0);
+    }
 }
 
 void send_reset(int serial_port)
 {
-  char key = 03;
-  char enter = '\r';
-  write(serial_port, &key, sizeof(key));
-  usleep(100000);
-  write(serial_port, &enter, sizeof(enter));
-  usleep(1000000);
+    char key = 03;
+    char enter = '\r';
+    write(serial_port, &key, sizeof(key));
+    usleep(100000);
+    write(serial_port, &enter, sizeof(enter));
+    usleep(1000000);
 }
 
 void get_custom_datetime(char *date_str)
 {
-  time_t rawtime;
-  struct tm *timeinfo;
-  time(&rawtime);
-  timeinfo = localtime(&rawtime);
-  strftime(date_str, 17, "%y%m%d%H%M%S", timeinfo);
+    time_t rawtime;
+    struct tm *timeinfo;
+    time(&rawtime);
+    timeinfo = localtime(&rawtime);
+    strftime(date_str, 17, "%y%m%d%H%M%S", timeinfo);
 }
 
 void send_time(int serial_port)
 {
-  char enter = '\r';
-  char date_str[17];
-  get_custom_datetime(date_str);
+    char enter = '\r';
+    char date_str[17];
+    get_custom_datetime(date_str);
 
-  int n = strlen(date_str);
-  for (int i = 0; i < n; i++)
-  {
-    char data = date_str[i];
-    send_data(serial_port, &data, sizeof(data));
-    // printf("data :%c\n",data);
-    usleep(500000);
-  }
-  write(serial_port, &enter, sizeof(enter));
+    int n = strlen(date_str);
+    for (int i = 0; i < n; i++)
+    {
+        char data = date_str[i];
+        send_data(serial_port, &data, sizeof(data));
+        // printf("data :%c\n",data);
+        usleep(500000);
+    }
+    write(serial_port, &enter, sizeof(enter));
 }
 
 void check_connect_eth()
 {
-  int sockfd;
-  struct ifreq ifr;
+    int sockfd;
+    struct ifreq ifr;
 
-  // while (1)
-  // {
-  sockfd = socket(AF_INET, SOCK_DGRAM, 0);
-  if (sockfd == -1)
-  {
-    perror("socket");
-    pthread_exit(NULL);
-  }
-  memset(&ifr, 0, sizeof(ifr));
-  strncpy(ifr.ifr_name, "eth0", IFNAMSIZ - 1);
-  if (ioctl(sockfd, SIOCGIFFLAGS, &ifr) < 0)
-  {
-    perror("ioctl");
+    // while (1)
+    // {
+    sockfd = socket(AF_INET, SOCK_DGRAM, 0);
+    if (sockfd == -1)
+    {
+        perror("socket");
+        pthread_exit(NULL);
+    }
+    memset(&ifr, 0, sizeof(ifr));
+    strncpy(ifr.ifr_name, "eth0", IFNAMSIZ - 1);
+    if (ioctl(sockfd, SIOCGIFFLAGS, &ifr) < 0)
+    {
+        perror("ioctl");
+        close(sockfd);
+        pthread_exit(NULL);
+    }
+    bool connected = (ifr.ifr_flags & IFF_RUNNING) != 0;
+    pthread_mutex_lock(&lcd_mutex);
+    if (connected && show_disconnected_message)
+    {
+
+        show_disconnected_message = false;
+    }
+    else if (!connected)
+    {
+        show_disconnected_message = true;
+    }
+    pthread_mutex_unlock(&lcd_mutex);
+
     close(sockfd);
-    pthread_exit(NULL);
-  }
-  bool connected = (ifr.ifr_flags & IFF_RUNNING) != 0;
-  pthread_mutex_lock(&lcd_mutex);
-  if (connected && show_disconnected_message)
-  {
-
-    show_disconnected_message = false;
-  }
-  else if (!connected)
-  {
-    show_disconnected_message = true;
-  }
-  pthread_mutex_unlock(&lcd_mutex);
-
-  close(sockfd);
 }
 
 //
 void previous_mode_fc()
 {
-  FILE *file = fopen(previous_mode, "w");
-  if (file == NULL)
-  {
-    printf("Cannot open file %s\n", previous_mode);
-    exit(1);
-  }
-  fprintf(file, "%c\n", '2');
+    FILE *file = fopen(previous_mode, "w");
+    if (file == NULL)
+    {
+        printf("Cannot open file %s\n", previous_mode);
+        exit(1);
+    }
+    fprintf(file, "%c\n", '2');
 
-  fclose(file);
+    fclose(file);
 }
 
 // Creat file log save HTTP ip table
 void create_http_filelog(const char *filename)
 {
 
-  struct stat buffer;
-  if (stat(filename, &buffer) != 0)
-  {
-    FILE *file = fopen(filename, "w");
-    if (file == NULL)
+    struct stat buffer;
+    if (stat(filename, &buffer) != 0)
     {
-      perror("Err create file http log");
-      exit(EXIT_FAILURE);
+        FILE *file = fopen(filename, "w");
+        if (file == NULL)
+        {
+            perror("Err create file http log");
+            exit(EXIT_FAILURE);
+        }
+        fclose(file);
     }
-    fclose(file);
-  }
-  else
-  {
-  }
+    else
+    {
+    }
 }
 
 // Load file log to hash table
 void load_ips_from_file(const char *filename)
 {
-  FILE *file = fopen(filename, "r");
-  if (!file)
-    return;
+    FILE *file = fopen(filename, "r");
+    if (!file)
+        return;
 
-  char ip[MAX_IP_LEN];
-  while (fgets(ip, sizeof(ip), file))
-  {
-    ip[strcspn(ip, "\n")] = '\0';
-    g_hash_table_add(ip_table, g_strdup(ip));
-  }
-  fclose(file);
+    char ip[MAX_IP_LEN];
+    while (fgets(ip, sizeof(ip), file))
+    {
+        ip[strcspn(ip, "\n")] = '\0';
+        g_hash_table_add(ip_table, g_strdup(ip));
+    }
+    fclose(file);
 }
 
 // Add ip to Filelog
 void flush_batch_to_file(const char *filename)
 {
-  if (g_queue_is_empty(batch_queue))
-    return;
+    if (g_queue_is_empty(batch_queue))
+        return;
 
-  FILE *file = fopen(filename, "a");
-  if (!file)
-  {
-    perror("Open file error");
-    return;
-  }
+    FILE *file = fopen(filename, "a");
+    if (!file)
+    {
+        perror("Open file error");
+        return;
+    }
 
-  while (!g_queue_is_empty(batch_queue))
-  {
-    char *ip = g_queue_pop_head(batch_queue);
-    fprintf(file, "%s\n", ip);
-    g_free(ip);
-  }
+    while (!g_queue_is_empty(batch_queue))
+    {
+        char *ip = g_queue_pop_head(batch_queue);
+        fprintf(file, "%s\n", ip);
+        g_free(ip);
+    }
 
-  fclose(file);
+    fclose(file);
 }
 
 // Check ip http
 void process_ip(const char *filename, const char *ip)
 {
-  if (g_hash_table_size(ip_table) > MAX_IPS)
-  {
-    // printf("Äáº¡t giá»›i háº¡n %d IP, khÃ´ng lÆ°u thÃªm.\n", MAX_IPS);
-    return;
-  }
-  // Check trung ip
-  if (g_hash_table_contains(ip_table, ip))
-  {
-    return;
-  }
+    if (g_hash_table_size(ip_table) > MAX_IPS)
+    {
+        // printf(" ?t gi?i h?n %d IP, kh ng luu th m.\n", MAX_IPS);
+        return;
+    }
+    // Check trung ip
+    if (g_hash_table_contains(ip_table, ip))
+    {
+        return;
+    }
 
-  // add ip hash
-  g_hash_table_add(ip_table, g_strdup(ip));
-  g_queue_push_tail(batch_queue, g_strdup(ip));
+    // add ip hash
+    g_hash_table_add(ip_table, g_strdup(ip));
+    g_queue_push_tail(batch_queue, g_strdup(ip));
 
-  if (g_queue_get_length(batch_queue) >= BATCH_SIZE)
-  {
-    flush_batch_to_file(filename);
-  }
+    if (g_queue_get_length(batch_queue) >= BATCH_SIZE)
+    {
+        flush_batch_to_file(filename);
+    }
 }
 
 // Send time sync in Core
 void send_data_sync_time(int serial_port)
 {
-  char keyphay = ',';
-  char key_enter = '\r';
+    char keyphay = ',';
+    char key_enter = '\r';
 
-  while (1)
-  {
-    bool flag = false;
-    int i = 0;
-    write(serial_port, &keyphay, sizeof(keyphay));
-    usleep(10000);
-    write(serial_port, &key_enter, sizeof(key_enter));
-    usleep(1000000);
-    send_time(serial_port);
     while (1)
     {
-      char *data2 = receive_data(serial_port);
-      if ((strchr(data2, 'S') != NULL))
-      {
-        flag = true;
-        break;
-      }
-      i++;
-      if (i == 10)
-      {
-        break;
-      }
+        bool flag = false;
+        int i = 0;
+        write(serial_port, &keyphay, sizeof(keyphay));
+        usleep(10000);
+        write(serial_port, &key_enter, sizeof(key_enter));
+        usleep(1000000);
+        send_time(serial_port);
+        while (1)
+        {
+            char *data2 = receive_data(serial_port);
+            if ((strchr(data2, 'S') != NULL))
+            {
+                flag = true;
+                break;
+            }
+            i++;
+            if (i == 10)
+            {
+                break;
+            }
+        }
+        if (flag == true)
+        {
+            break;
+        }
+        sleep(3);
     }
-    if (flag == true)
-    {
-      break;
-    }
-    sleep(3);
-  }
 }
 
 // Send data http ip via core when start
 void send_http_ipv4_start(int serial_port, const char *filename)
 {
-  FILE *file = fopen(filename, "r");
-  fseek(file, 0, SEEK_END);
-  long file_size = ftell(file);
-  rewind(file);
+    FILE *file = fopen(filename, "r");
+    fseek(file, 0, SEEK_END);
+    long file_size = ftell(file);
+    rewind(file);
 
-  if (file_size == 0)
-  {
-    fclose(file);
-    return;
-  }
-
-  char enter = '\r';
-  char keycham = '.';
-
-  write(serial_port, &keycham, sizeof(keycham));
-  usleep(1000);
-  write(serial_port, &enter, sizeof(enter));
-  usleep(10000);
-  send_ips_via_uart(LOGFILE_HTTP_IPv4);
-  while (1)
-  {
-    char *data1 = receive_data(serial_port);
-    printf("\nReceived message: %s\n", data1);
-    if ((strchr(data1, 'Y') != NULL))
+    if (file_size == 0)
     {
-      printf("\nSend HTTP_TABLE_IPV4 done\n");
-      break;
+        fclose(file);
+        return;
     }
-  }
+
+    char enter = '\r';
+    char keycham = '.';
+
+    write(serial_port, &keycham, sizeof(keycham));
+    usleep(1000);
+    write(serial_port, &enter, sizeof(enter));
+    usleep(10000);
+    send_ips_via_uart(LOGFILE_HTTP_IPv4);
+    while (1)
+    {
+        char *data1 = receive_data(serial_port);
+        printf("\nReceived message: %s\n", data1);
+        if ((strchr(data1, 'Y') != NULL))
+        {
+            printf("\nSend HTTP_TABLE_IPV4 done\n");
+            break;
+        }
+    }
 }
 
 // Send data http ip via core when start
 void send_http_ipv6_start(int serial_port, const char *filename)
 {
-  FILE *file = fopen(filename, "r");
-  fseek(file, 0, SEEK_END);
-  long file_size = ftell(file);
-  rewind(file);
+    FILE *file = fopen(filename, "r");
+    fseek(file, 0, SEEK_END);
+    long file_size = ftell(file);
+    rewind(file);
 
-  if (file_size == 0)
-  {
-    fclose(file);
-    return;
-  }
-
-  char enter = '\r';
-  char keynhaynguoc = '`';
-
-  write(serial_port, &keynhaynguoc, sizeof(keynhaynguoc));
-  usleep(1000);
-  write(serial_port, &enter, sizeof(enter));
-  usleep(10000);
-  send_ips_via_uart(LOGFILE_HTTP_IPv6);
-  while (1)
-  {
-    char *data1 = receive_data(serial_port);
-    printf("\nReceived message2: %s\n", data1);
-    if ((strchr(data1, 'Y') != NULL))
+    if (file_size == 0)
     {
-      printf("\nSend HTTP_TABLE_IPV6 done\n");
-      break;
+        fclose(file);
+        return;
     }
-  }
-}
 
+    char enter = '\r';
+    char keynhaynguoc = '`';
+
+    write(serial_port, &keynhaynguoc, sizeof(keynhaynguoc));
+    usleep(1000);
+    write(serial_port, &enter, sizeof(enter));
+    usleep(10000);
+    send_ips_via_uart(LOGFILE_HTTP_IPv6);
+    while (1)
+    {
+        char *data1 = receive_data(serial_port);
+        printf("\nReceived message2: %s\n", data1);
+        if ((strchr(data1, 'Y') != NULL))
+        {
+            printf("\nSend HTTP_TABLE_IPV6 done\n");
+            break;
+        }
+    }
+}
 // Process data in file, and add to buffer
 void uart_send(const char *data, int serial_port)
 {
-  char enter = '\r';
-  int n = strlen(data);
-  for (int i = 0; i < n; i++)
-  {
-    char data1 = data[i];
-    send_data(serial_port, &data1, sizeof(data1));
-    usleep(100);
-  }
-  write(serial_port, &enter, sizeof(enter));
-  printf("Sending via UART: %s\n", data);
+    char enter = '\r';
+    int n = strlen(data);
+    for (int i = 0; i < n; i++)
+    {
+        char data1 = data[i];
+        send_data(serial_port, &data1, sizeof(data1));
+        usleep(100);
+    }
+    write(serial_port, &enter, sizeof(enter));
+    printf("Sending via UART: %s\n", data);
 }
 
 // Send data http via uart
 void send_ips_via_uart(const char *filename)
 {
-  char buffer[BUFFER_SIZE_SEND_IP_VIA_UART] = "";
-  char ip[MAX_IP_LEN];
+    char buffer[BUFFER_SIZE_SEND_IP_VIA_UART] = "";
+    char ip[MAX_IP_LEN];
 
-  FILE *file = fopen(filename, "r");
-  if (!file)
-  {
-    perror("Open file error");
-    return;
-  }
-  while (fgets(ip, sizeof(ip), file))
-  {
-    ip[strcspn(ip, "\n")] = '\0';
-    if (strlen(buffer) + strlen(ip) + 2 > BUFFER_SIZE_SEND_IP_VIA_UART)
+    FILE *file = fopen(filename, "r");
+    if (!file)
     {
-      fprintf(stderr, "Full buffer\n");
-      fclose(file);
-      return;
+        perror("Open file error");
+        return;
     }
-    strcat(buffer, ip);
-    strcat(buffer, "$");
-  }
-  fclose(file);
-  size_t len = strlen(buffer);
-  if (len > 0 && buffer[len - 1] == '$')
-  {
-    buffer[len - 1] = '\0';
-  }
+    while (fgets(ip, sizeof(ip), file))
+    {
+        ip[strcspn(ip, "\n")] = '\0';
+        if (strlen(buffer) + strlen(ip) + 2 > BUFFER_SIZE_SEND_IP_VIA_UART)
+        {
+            fprintf(stderr, "Full buffer\n");
+            fclose(file);
+            return;
+        }
+        strcat(buffer, ip);
+        strcat(buffer, "$");
+    }
+    fclose(file);
+    size_t len = strlen(buffer);
+    if (len > 0 && buffer[len - 1] == '$')
+    {
+        buffer[len - 1] = '\0';
+    }
 
-  uart_send(buffer, serial_port);
+    uart_send(buffer, serial_port);
 }
 
 // run function
 void *run(void *arg)
 {
-  wiringPiSetup();
-  lcd_init(LCD_ADDR);
-  ClrLcd();
-  pthread_mutex_t mutex1;
+    wiringPiSetup();
+    lcd_init(LCD_ADDR);
+    ClrLcd();
+    pthread_mutex_t mutex1;
 
-  pthread_mutex_init(&mutex1, NULL);
-  pthread_mutex_init(&log_mutex, NULL);
-  pthread_mutex_init(&lcd_mutex, NULL);
-  pthread_mutex_init(&packet_queue.mutex, NULL);
-  pthread_cond_init(&packet_queue.cond, NULL);
-  packet_queue.front = packet_queue.rear = 0;
-  lcd_queue.front = lcd_queue.rear = 0;
-  pthread_mutex_init(&lcd_queue.mutex, NULL);
-  pthread_cond_init(&lcd_queue.cond, NULL);
+    pthread_mutex_init(&mutex1, NULL);
+    pthread_mutex_init(&log_mutex, NULL);
+    pthread_mutex_init(&lcd_mutex, NULL);
+    pthread_mutex_init(&packet_queue.mutex, NULL);
+    pthread_cond_init(&packet_queue.cond, NULL);
+    packet_queue.front = packet_queue.rear = 0;
+    lcd_queue.front = lcd_queue.rear = 0;
+    pthread_mutex_init(&lcd_queue.mutex, NULL);
+    pthread_cond_init(&lcd_queue.cond, NULL);
 
-  // Create threads
-  pthread_t lcd_thread;
-  pthread_create(&lcd_thread, NULL, lcd_thread_function, NULL);
+    // Create threads
+    pthread_t lcd_thread;
+    pthread_create(&lcd_thread, NULL, lcd_thread_function, NULL);
 
-  pthread_t memory_check_thread;
-  pthread_create(&memory_check_thread, NULL, memory_check_thread_function, NULL);
+    pthread_t memory_check_thread;
+    pthread_create(&memory_check_thread, NULL, memory_check_thread_function, NULL);
 
-  pthread_t packet_queue_processing_thread_id;
-  pthread_create(&packet_queue_processing_thread_id, NULL, packet_queue_processing_thread, NULL);
+    pthread_t packet_queue_processing_thread_id;
+    pthread_create(&packet_queue_processing_thread_id, NULL, packet_queue_processing_thread, NULL);
 
-  // Create thread for log buffer
-  // pthread_t log_buffer_thread_id;
-  // pthread_create(&log_buffer_thread_id, NULL, log_buffer_thread, NULL);
+    // Create thread for log buffer
+    // pthread_t log_buffer_thread_id;
+    // pthread_create(&log_buffer_thread_id, NULL, log_buffer_thread, NULL);
 
-  int sock_raw = socket(AF_PACKET, SOCK_RAW, htons(ETH_P_ALL));
-  if (sock_raw < 0)
-  {
-    perror("Socket Error");
-    exit(1);
-  }
-  // Set socket to non-blocking
-  int flags = fcntl(sock_raw, F_GETFL, 0);
-  if (flags == -1)
-  {
-    perror("fcntl(F_GETFL)");
-    exit(1);
-  }
-  if (fcntl(sock_raw, F_SETFL, flags | O_NONBLOCK) == -1)
-  {
-    perror("fcntl(F_SETFL)");
-    exit(1);
-  }
-  // Configure interface in promiscuous mode
-  struct ifreq ifr;
-  memset(&ifr, 0, sizeof(ifr));
-  strncpy(ifr.ifr_name, "eth0", IFNAMSIZ - 1);
-  if (ioctl(sock_raw, SIOCGIFFLAGS, &ifr) == -1)
-  {
-    perror("ioctl error");
-    close(sock_raw);
-    exit(1);
-  }
-  ifr.ifr_flags |= IFF_PROMISC;
-  if (ioctl(sock_raw, SIOCSIFFLAGS, &ifr) == -1)
-  {
-    perror("ioctl error");
-    close(sock_raw);
-    exit(1);
-  }
-  unsigned char *buffer = (unsigned char *)malloc(BUFFER_SIZE);
-  if (buffer == NULL)
-  {
-    perror("Failed to allocate memory");
-    exit(1);
-  }
-  struct sockaddr saddr;
-  int saddr_len = sizeof(saddr);
-
-  create_new_log_file();
-  while (1)
-  {
-    int data_size = recvfrom(sock_raw, buffer, BUFFER_SIZE, 0, &saddr, (socklen_t *)&saddr_len);
-    if (data_size > 0)
+    int sock_raw = socket(AF_PACKET, SOCK_RAW, htons(ETH_P_ALL));
+    if (sock_raw < 0)
     {
-      stop_scrolling = 1;
-      struct ethhdr *eth = (struct ethhdr *)buffer;
-      if ((memcmp(eth->h_dest, target_mac_attack, 6) == 0))
-      {
-        detect_attack = true;
-        is_idle2 = true;
-        last_packet_time = time(NULL);
-        enqueue_packet(buffer, data_size);
-        count_tong++;
-      }
-      else if ((memcmp(eth->h_dest, target_mac, 6) == 0))
-      {
-        enqueue_packet(buffer, data_size);
-      }
-      else
-      {
-        is_idle2 = false;
-      }
+        perror("Socket Error");
+        exit(1);
     }
-    else if (data_size == -1 && errno != EAGAIN)
+    // Set socket to non-blocking
+    int flags = fcntl(sock_raw, F_GETFL, 0);
+    if (flags == -1)
     {
-      perror("Recvfrom Error");
-      exit(1);
+        perror("fcntl(F_GETFL)");
+        exit(1);
     }
-    time_t current_time = time(NULL);
-    if (current_time - last_packet_time > 2)
+    if (fcntl(sock_raw, F_SETFL, flags | O_NONBLOCK) == -1)
     {
-      detect_attack = false;
-      stop_scrolling = 1;
-      is_idle = true;
+        perror("fcntl(F_SETFL)");
+        exit(1);
+    }
+    // Configure interface in promiscuous mode
+    struct ifreq ifr;
+    memset(&ifr, 0, sizeof(ifr));
+    strncpy(ifr.ifr_name, "eth0", IFNAMSIZ - 1);
+    if (ioctl(sock_raw, SIOCGIFFLAGS, &ifr) == -1)
+    {
+        perror("ioctl error");
+        close(sock_raw);
+        exit(1);
+    }
+    ifr.ifr_flags |= IFF_PROMISC;
+    if (ioctl(sock_raw, SIOCSIFFLAGS, &ifr) == -1)
+    {
+        perror("ioctl error");
+        close(sock_raw);
+        exit(1);
+    }
+    unsigned char *buffer = (unsigned char *)malloc(BUFFER_SIZE);
+    if (buffer == NULL)
+    {
+        perror("Failed to allocate memory");
+        exit(1);
+    }
+    struct sockaddr saddr;
+    int saddr_len = sizeof(saddr);
+
+    create_new_log_file();
+    while (1)
+    {
+        int data_size = recvfrom(sock_raw, buffer, BUFFER_SIZE, 0, &saddr, (socklen_t *)&saddr_len);
+        if (data_size > 0)
+        {
+            stop_scrolling = 1;
+            struct ethhdr *eth = (struct ethhdr *)buffer;
+            if ((memcmp(eth->h_dest, target_mac_attack, 6) == 0))
+            {
+                detect_attack = true;
+                is_idle2 = true;
+                last_packet_time = time(NULL);
+                enqueue_packet(buffer, data_size);
+                count_tong++;
+            }
+            else if ((memcmp(eth->h_dest, target_mac, 6) == 0))
+            {
+                enqueue_packet(buffer, data_size);
+            }
+            else
+            {
+                is_idle2 = false;
+            }
+        }
+        else if (data_size == -1 && errno != EAGAIN)
+        {
+            perror("Recvfrom Error");
+            exit(1);
+        }
+        time_t current_time = time(NULL);
+        if (current_time - last_packet_time > 2)
+        {
+            detect_attack = false;
+            stop_scrolling = 1;
+            is_idle = true;
+        }
+        else
+        {
+            is_idle = false;
+        }
+    }
+
+    // Clean up resources
+    close(sock_raw);
+    free(buffer);
+    // free(buffer_size);
+    pthread_mutex_destroy(&log_mutex);
+    pthread_mutex_destroy(&lcd_queue.mutex);
+    pthread_cond_destroy(&lcd_queue.cond);
+}
+
+void Display_table_2(int port)
+{
+    sqlite3 *db;
+    sqlite3_stmt *stmt;
+    int rc;
+
+    char target_iface[8];
+    sprintf(target_iface, "eth%d", port);
+
+    rc = sqlite3_open(DB_PATH, &db);
+    if (rc)
+    {
+        printf("Can't open database: %s\n", sqlite3_errmsg(db));
+        return;
+    }
+
+    const char *sql = "SELECT rowid, DefenseProfileUsingTime FROM DefenseProfiles WHERE DefenseProfileUsingTime IS NOT NULL";
+    rc = sqlite3_prepare_v2(db, sql, -1, &stmt, NULL);
+    if (rc != SQLITE_OK)
+    {
+        printf("Failed to prepare: %s\n", sqlite3_errmsg(db));
+        sqlite3_close(db);
+        return;
+    }
+
+    typedef struct
+    {
+        char iface[8];
+        char start_time[20];
+        int rowid;
+    } ProfileInfo;
+
+    ProfileInfo latest = {"", "", -1};
+    while (sqlite3_step(stmt) == SQLITE_ROW)
+    {
+        int rowid = sqlite3_column_int(stmt, 0);
+        const char *json_text = (const char *)sqlite3_column_text(stmt, 1);
+
+        cJSON *root = cJSON_Parse(json_text);
+        if (!root || !cJSON_IsArray(root))
+        {
+            if (root)
+                cJSON_Delete(root);
+            continue;
+        }
+
+        int arr_size = cJSON_GetArraySize(root);
+        for (int index = 0; index < arr_size; ++index)
+        {
+            cJSON *entry = cJSON_GetArrayItem(root, index);
+            if (!entry)
+                continue;
+
+            cJSON *iface_obj = cJSON_GetObjectItem(entry, "interface");
+            cJSON *start_obj = cJSON_GetObjectItem(entry, "start");
+            const char *iface = iface_obj && cJSON_IsString(iface_obj) ? iface_obj->valuestring : NULL;
+            const char *start = start_obj && cJSON_IsString(start_obj) ? start_obj->valuestring : NULL;
+
+            if (iface && start && strcmp(iface, target_iface) == 0)
+            {
+                if (strlen(latest.start_time) == 0 || strcmp(start, latest.start_time) > 0)
+                {
+                    strcpy(latest.iface, iface);
+                    strcpy(latest.start_time, start);
+                    latest.rowid = rowid;
+                }
+            }
+        }
+        cJSON_Delete(root);
+    }
+
+    sqlite3_finalize(stmt);
+
+    if (latest.rowid != -1)
+    {
+        char query[128];
+        sprintf(query, "SELECT * FROM DefenseProfiles WHERE rowid = %d", latest.rowid);
+        rc = sqlite3_prepare_v2(db, query, -1, &stmt, NULL);
+        if (rc == SQLITE_OK && sqlite3_step(stmt) == SQLITE_ROW)
+        {
+            // printf("\nInterface: %s (start: %s)\n", latest.iface, latest.start_time);
+            // printf("ID: %d, UserId: %d\n", sqlite3_column_int(stmt, 0), sqlite3_column_int(stmt, 1));
+            printf("\n profile_name: %s\n", sqlite3_column_text(stmt, 2));
+
+            time_t now = time(NULL);
+            struct tm *timeinfo = localtime(&now);
+            printf("\n ============================================================================================================================================================================================================+\n");
+            printf(" ------------------------------------------------------------------------------------ System Configuration --------------------------------------------------------------------------------------------------+\n");
+            printf(" ---------------+--------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------+\n");
+            printf("     DISPLAY    | Company                : Acronics Solutions                                                                                                                                                |\n");
+            printf("\t\t| Device                 : DDoS Defender                                                                                                                                                     |\n");
+            printf("\t\t| Model                  : Bandwidth 1Gbps                                                                                                                                                   |\n");
+            printf("\t\t| Version                : 1.0                                                                                                                                                               |\n");
+            printf("\t\t| Current date and time  : %02dh.%02dm.%02ds  %02d.%02d.%04d                                                                                                                                           |\n",
+                   timeinfo->tm_hour, timeinfo->tm_min, timeinfo->tm_sec,
+                   timeinfo->tm_mday, timeinfo->tm_mon + 1, timeinfo->tm_year + 1900);
+            int DetectionTime = sqlite3_column_int(stmt, 9);
+            int EnableDefender = sqlite3_column_int(stmt, 10);
+            int ICMPFloodEnable = sqlite3_column_int(stmt, 11);
+            int ICMPFloodThreshold = sqlite3_column_int(stmt, 12);
+            int ICMPFloodRate = sqlite3_column_int(stmt, 13);
+            int SYNFloodEnable = sqlite3_column_int(stmt, 14);
+            int SYNFloodSYNThreshold = sqlite3_column_int(stmt, 15);
+            int SYNFloodACKThreshold = sqlite3_column_int(stmt, 16);
+            int SYNFloodWhiteListTimeOut = sqlite3_column_int(stmt, 17);
+            int UDPFloodEnable = sqlite3_column_int(stmt, 18);
+            int UDPFloodThreshold = sqlite3_column_int(stmt, 19);
+            int UDPFloodRate = sqlite3_column_int(stmt, 20);
+            int DNSFloodEnable = sqlite3_column_int(stmt, 21);
+            int DNSFloodThreshold = sqlite3_column_int(stmt, 22);
+            int LandAttackEnable = sqlite3_column_int(stmt, 23);
+            int IPSecIKEEnable = sqlite3_column_int(stmt, 24);
+            int IPSecIKEThreshold = sqlite3_column_int(stmt, 25);
+            int TCPFragmentEnable = sqlite3_column_int(stmt, 26);
+            int UDPFragmentEnable = sqlite3_column_int(stmt, 27);
+            int HTTPFloodEnable = sqlite3_column_int(stmt, 28);
+            int HTTPSFloodEnable = sqlite3_column_int(stmt, 29);
+
+            printf("\t\t| +==========================================================================================================================================================================================+\n");
+            printf("\t\t| | DDoS Defender status            :  %s.                                                                                                                                                  |\n", EnableDefender ? "ON" : "OFF");
+            printf("\t\t| +==========================================================================================================================================================================================+\n");
+            printf("\t\t| | SYN Flood | LAND ATTACK |  UDP Flood  |  DNS Amplification  |  ICMP Flood  | IPSec IKE Flood  | TCP Fragmentation Flood  | UDP Fragmentation Flood  |  HTTP GET Flood  | HTTPS GET Flood |\n");
+            printf("\t\t| +------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------+\n");
+            printf("\t\t| | %8s  |   %8s  |   %8s  |      %8s       |  %8s    |   %8s       |         %8s         |         %8s         |     %8s     |     %8s    |\n",
+                   SYNFloodEnable ? "Enable" : "Disable",
+                   LandAttackEnable ? "Enable" : "Disable",
+                   UDPFloodEnable ? "Enable" : "Disable",
+                   DNSFloodEnable ? "Enable" : "Disable",
+                   ICMPFloodEnable ? "Enable" : "Disable",
+                   IPSecIKEEnable ? "Enable" : "Disable",
+                   TCPFragmentEnable ? "Enable" : "Disable",
+                   UDPFragmentEnable ? "Enable" : "Disable",
+                   HTTPFloodEnable ? "Enable" : "Disable",
+                   HTTPSFloodEnable ? "Enable" : "Disable");
+            printf("\t\t| +------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------\n");
+            printf("\t\t| +==============================================================+==============+\n");
+            printf("\t\t| |                    Configured Parameters                     |     Valid    |\n");
+            printf("\t\t| +==============================================================+==============+\n");
+            printf("\t\t| | Attack detection time (seconds):                             |  %-10d  |\n", DetectionTime);
+            printf("\t\t| +==============================================================+==============+\n");
+            printf("\t\t| | SYN Flood attack detection throughput (PPS):                 |  %-10d  |\n", SYNFloodSYNThreshold);
+            printf("\t\t| +--------------------------------------------------------------+--------------+\n");
+            printf("\t\t| | ACK Flood attack detection throughput (PPS):                 |  %-10d  |\n", SYNFloodACKThreshold);
+            printf("\t\t| +--------------------------------------------------------------+--------------+\n");
+            printf("\t\t| | Delete information white list time (seconds):                |  %-10d  |\n", SYNFloodWhiteListTimeOut);
+            printf("\t\t| +==============================================================+==============+\n");
+            printf("\t\t| | UDP Flood attack detection throughput (PPS):                 |  %-10d  |\n", UDPFloodThreshold);
+            printf("\t\t| +--------------------------------------------------------------+--------------+\n");
+            printf("\t\t| | Valid UDP packet throughput allowed (PPS):                   |  %-10d  |\n", UDPFloodRate);
+            printf("\t\t| +==============================================================+==============+\n");
+            printf("\t\t| | DNS Amplification attack detection throughput (PPS):         |  %-10d  |\n", DNSFloodThreshold);
+            printf("\t\t| +==============================================================+==============+\n");
+            printf("\t\t| | ICMP Flood attack detection throughput (PPS):                |  %-10d  |\n", ICMPFloodThreshold);
+            printf("\t\t| +--------------------------------------------------------------+--------------+\n");
+            printf("\t\t| | Valid ICMP packet throughput allowed (PPS):                  |  %-10d  |\n", ICMPFloodRate);
+            printf("\t\t| +==============================================================+==============+\n");
+            printf("\t\t| | IPSec Flood attack detection throughput (PPS):               |  %-10d  |\n", IPSecIKEThreshold);
+            printf("\t\t| +==============================================================+==============+\n");
+            printf("----------------+--------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------\n");
+        }
+        else
+        {
+            printf("error profile rowid = %d\n", latest.rowid);
+        }
+        sqlite3_finalize(stmt);
     }
     else
     {
-      is_idle = false;
+        printf("errror interface %s\n", target_iface);
     }
-  }
+    sqlite3_close(db);
+}
+///////////////////////////////UPDATE///////////////////////////////////////
+void UpdateDefenseProfileField(int port, const char *field, int value)
+{
+    sqlite3 *db;
+    int rc = sqlite3_open(DB_PATH, &db);
+    if (rc)
+    {
+        printf("Can't open database: %s\n", sqlite3_errmsg(db));
+        return;
+    }
 
-  // Clean up resources
-  close(sock_raw);
-  free(buffer);
-  // free(buffer_size);
-  pthread_mutex_destroy(&log_mutex);
-  pthread_mutex_destroy(&lcd_queue.mutex);
-  pthread_cond_destroy(&lcd_queue.cond);
+    // T m rowid m?i nh?t cho port n y
+    char target_iface[8];
+    sprintf(target_iface, "eth%d", port);
+
+    char sql_find[256];
+    sprintf(sql_find, "SELECT rowid, DefenseProfileUsingTime FROM DefenseProfiles WHERE DefenseProfileUsingTime IS NOT NULL");
+    sqlite3_stmt *stmt;
+    rc = sqlite3_prepare_v2(db, sql_find, -1, &stmt, NULL);
+    if (rc != SQLITE_OK)
+    {
+        printf("Failed to prepare: %s\n", sqlite3_errmsg(db));
+        sqlite3_close(db);
+        return;
+    }
+
+    int latest_rowid = -1;
+    char latest_time[32] = "";
+    while (sqlite3_step(stmt) == SQLITE_ROW)
+    {
+        int rowid = sqlite3_column_int(stmt, 0);
+        const char *json_text = (const char *)sqlite3_column_text(stmt, 1);
+        cJSON *root = cJSON_Parse(json_text);
+        if (!root || !cJSON_IsArray(root))
+        {
+            if (root)
+                cJSON_Delete(root);
+            continue;
+        }
+        int arr_size = cJSON_GetArraySize(root);
+        for (int i = 0; i < arr_size; ++i)
+        {
+            cJSON *entry = cJSON_GetArrayItem(root, i);
+            cJSON *iface_obj = cJSON_GetObjectItem(entry, "interface");
+            cJSON *start_obj = cJSON_GetObjectItem(entry, "start");
+            const char *iface = iface_obj && cJSON_IsString(iface_obj) ? iface_obj->valuestring : NULL;
+            const char *start = start_obj && cJSON_IsString(start_obj) ? start_obj->valuestring : NULL;
+            if (iface && start && strcmp(iface, target_iface) == 0)
+            {
+                if (strlen(latest_time) == 0 || strcmp(start, latest_time) > 0)
+                {
+                    strcpy(latest_time, start);
+                    latest_rowid = rowid;
+                }
+            }
+        }
+        cJSON_Delete(root);
+    }
+    sqlite3_finalize(stmt);
+
+    if (latest_rowid == -1)
+    {
+        printf("No profile found for %s\n", target_iface);
+        sqlite3_close(db);
+        return;
+    }
+
+    // Update tru?ng d? li?u
+    char sql_update[256];
+    sprintf(sql_update, "UPDATE DefenseProfiles SET %s = %d WHERE rowid = %d", field, value, latest_rowid);
+    rc = sqlite3_exec(db, sql_update, 0, 0, NULL);
+    if (rc != SQLITE_OK)
+    {
+        printf("Failed to update: %s\n", sqlite3_errmsg(db));
+    }
+    else
+    {
+        printf("Updated %s for %s to %d\n", field, target_iface, value);
+    }
+    sqlite3_close(db);
 }
 
-// Main C
+void new_menu(int serial_port)
+{
+start:
+    system("clear");
+    display_logo1();
+    char key = 0;
+    char enter = '\r';
+    printf("\r\n *************************************************************************************************************************************************************************************************************");
+    printf("\r\n");
+    printf("\r\n ============================================================================================================================================================================================================+");
+    printf("\r\n ==> New Menu Selected                                                                                                                                                                                       |");
+    printf("\r\n");
+    printf(" ===============+===========+================================================================================================================================================================================+\r\n");
+    printf("    DISPLAY     |           |                                                                                                                                                                                |\r\n");
+    printf("\t\t| Key Enter | Please choose 1 option below:                                                                                                                                                  |\r\n");
+    printf("\t\t+-----------+--------------------------------------------------------------------------------------------------------------------------------------------------------------------------------+\r\n");
+    printf("\t\t|     1.    | Setting RTC.                                                                                                                                                                   |\r\n");
+    printf("\t\t+-----------+--------------------------------------------------------------------------------------------------------------------------------------------------------------------------------+\r\n");
+    printf("\t\t|     2.    | Port 1 Settings                                                                                                                                                                |\r\n");
+    printf("\t\t+-----------+--------------------------------------------------------------------------------------------------------------------------------------------------------------------------------+\r\n");
+    printf("\t\t|     3.    | Port 2 Settings                                                                                                                                                                |\r\n");
+    printf("\t\t+-----------+--------------------------------------------------------------------------------------------------------------------------------------------------------------------------------+\r\n");
+    printf("\t\t|     4.    | Port 3 Settings                                                                                                                                                                |\r\n");
+    printf("\t\t+-----------+--------------------------------------------------------------------------------------------------------------------------------------------------------------------------------+\r\n");
+    printf("\t\t|     5.    | Port 4 Settings                                                                                                                                                                |\r\n");
+    printf("\t\t+-----------+--------------------------------------------------------------------------------------------------------------------------------------------------------------------------------+\r\n");
+    printf("\t\t|     6.    | Port Mirroring Settings.                                                                                                                                                       |\r\n");
+    printf("\t\t|           | 	->(Info: Configure port mirroring for network monitoring).                                                                                                                   |\r\n");
+    printf("\t\t+-----------+--------------------------------------------------------------------------------------------------------------------------------------------------------------------------------+\r\n");
+    printf("\t\t|     7.    | Setting attack detection time.                                                                                                                                                 |\r\n");
+    printf("\t\t|           | 	->(Info: The default value is: 1 second).                                                                                                                                    |\r\n");
+    printf("\t\t+-----------+--------------------------------------------------------------------------------------------------------------------------------------------------------------------------------+\r\n");
+    printf("\t\t|     8.    | Add VPN server name or address to legitimate VPN list.                                                                                                                         |\r\n");
+    printf("\t\t|     9.    | Remove the VPN server name or address from the legal VPN list.                                                                                                                 |\r\n");
+    printf("\t\t|     A.    | Add VPN server name or address IPv6 to legitimate VPN list.                                                                                                                    |\r\n");
+    printf("\t\t|     B.    | Remove the VPN server name or address IPv6 from the legal VPN list.                                                                                                            |\r\n");
+    printf("\t\t+-----------+--------------------------------------------------------------------------------------------------------------------------------------------------------------------------------+\r\n");
+    printf("\t\t|     Z.    | Exit.                                                                                                                                                                          |\r\n");
+    printf("----------------+-----------+--------------------------------------------------------------------------------------------------------------------------------------------------------------------------------+\r\n");
+    printf("    SETTING     | Your choice: ");
+
+    while (1)
+    {
+        scanf(" %c", &key);
+        if (key == '1' || key == '2' || key == '3' || key == '4' || key == '5' || key == '6' || key == '7' ||
+            key == '8' || key == '9' || key == 'A' || key == 'a' || key == 'B' || key == 'b' || key == 'Z' || key == 'z')
+        {
+            break;
+        }
+        if (key != '1' && key != '2' && key != '3' && key != '4' && key != '5' && key != '6' && key != '7' &&
+            key != '8' && key != '9' && key != 'A' && key != 'a' && key != 'B' && key != 'b' && key != 'Z' && key != 'z')
+        {
+            printf("\r     SETTING    | --> Your choice: ");
+        }
+    }
+
+    usleep(500000);
+    if (key == '1')
+    {
+        system("clear");
+        display_logo1();
+        SetDateTime(serial_port);
+        return;
+    }
+    else if (key == '2')
+    {
+        current_port = 1;
+        system("clear");
+        display_logo1();
+        printf("\r\n ==> Port 1 Configuration\n");
+        reconfig(serial_port);
+        return;
+    }
+    else if (key == '3')
+    {
+        current_port = 2;
+        system("clear");
+        printf("\r\n ==> Port 2 Configuration\n");
+        reconfig(serial_port);
+        return;
+    }
+    else if (key == '4')
+    {
+        current_port = 3;
+        system("clear");
+
+        printf("\r\n ==> Port 3 Configuration\n");
+        reconfig(serial_port);
+        return;
+    }
+    else if (key == '5')
+    {
+        current_port = 4;
+        display_logo1();
+        printf("\r\n ==> Port 4 Configuration\n");
+        reconfig(serial_port);
+        return;
+    }
+    else if (key == '6')
+    {
+        system("clear");
+        display_logo1();
+        port_mirroring_menu(serial_port);
+        return;
+    }
+    else if (key == '7')
+    {
+        system("clear");
+        display_logo1();
+        display_table(serial_port);
+        SetTimeflood(serial_port);
+        return;
+    }
+    else if (key == '8')
+    {
+        system("clear");
+        display_logo1();
+        Display_IPv4_vpn_table();
+        AddIPv4VPN(serial_port);
+        return;
+    }
+    else if (key == '9')
+    {
+        system("clear");
+        display_logo1();
+        Display_IPv4_vpn_table();
+        RemoveIPv4VPN(serial_port);
+        return;
+    }
+    else if (key == 'A' || key == 'a')
+    {
+        system("clear");
+        display_logo1();
+        // display_table(serial_port);
+        Display_IPv6_vpn_table();
+        AddIPv6VPN(serial_port);
+        return;
+    }
+    else if (key == 'B' || key == 'b')
+    {
+        system("clear");
+        display_logo1();
+        Display_IPv6_vpn_table();
+        RemoveIPv6VPN(serial_port);
+        return;
+    }
+    else if (key == 'Z' || key == 'z')
+    {
+        system("clear");
+        display_logo1();
+        ReturnMode2(serial_port);
+    }
+}
+void wrap_field(const char *prefix, const char *content, int width)
+{
+    int len = strlen(content);
+    int i = 0;
+    while (i < len)
+    {
+        printf("%s%-*.*s\n", prefix, width, width, content + i);
+        i += width;
+    }
+}
+
+void extract_json_values(const char *json, char *out, int out_size)
+{
+    int len = strlen(json);
+    int out_idx = 0;
+    int in_quotes = 0;
+    int is_key = 1;
+
+    for (int i = 0; i < len && out_idx < out_size - 1; i++)
+    {
+        if (json[i] == '"')
+        {
+            in_quotes = !in_quotes;
+            continue;
+        }
+
+        if (in_quotes && !is_key)
+        {
+            out[out_idx++] = json[i];
+        }
+
+        if (!in_quotes && json[i] == ':')
+        {
+            is_key = 0;
+        }
+
+        if (!in_quotes && json[i] == ',')
+        {
+            out[out_idx++] = ',';
+            out[out_idx++] = ' ';
+            is_key = 1;
+        }
+
+        if (!in_quotes && json[i] == '}')
+        {
+            break;
+        }
+    }
+
+    out[out_idx] = '\0';
+}
+
+void clean_json_array_string(const char *input, char *output, int out_size)
+{
+    int out_idx = 0;
+    for (int i = 0; input[i] != '\0' && out_idx < out_size - 1; i++)
+    {
+        char c = input[i];
+        if (c == '[' || c == ']' || c == '"')
+            continue;
+        output[out_idx++] = c;
+    }
+    output[out_idx] = '\0';
+}
+
+void display_port_mirroring_config_from_db(int serial_port, int show_prompt)
+{
+    int max_width_type = 50;
+    int max_width_value = 62;
+    int idx = 1;
+    //   // In ph?n ti?p theo n?u MirrorType ho?c Value d i
+    // int type_len = strlen(cleaned_type);
+    // int value_len = strlen(extracted_values);
+    int line = 1;
+    sqlite3 *db;
+
+    sqlite3_stmt *stmt;
+    int rc = sqlite3_open(DB_PATH, &db);
+    sqlite3_busy_timeout(db, 2000);
+
+    if (rc)
+    {
+        printf("\n cannot open database: %s\n", sqlite3_errmsg(db));
+        return;
+    }
+
+    const char *sql =
+        "SELECT di.InterfaceId, di.InterfaceIsMirroring, di.InterfaceName, "
+        "mi.InterfaceName AS MonitorInterfaceName, "
+        "di.InterfaceMirrorSetting, di.MirrorType, di.Value "
+        "FROM DeviceInterfaces di "
+        "LEFT JOIN DeviceInterfaces mi ON di.InterfaceToMonitorInterfaceId = mi.InterfaceId";
+
+    rc = sqlite3_prepare_v2(db, sql, -1, &stmt, NULL);
+    if (rc != SQLITE_OK)
+    {
+        printf("\nError query: %s\n", sqlite3_errmsg(db));
+        sqlite3_close(db);
+        return;
+    }
+
+    printf("\n=============================================================================================================================================================================================================+\n");
+    printf("| %-3s | %-15s | %-10s | %-22s | %-22s | %-50s | %-62s |\n",
+           "No", "InterfaceName", "Mirroring", "Monitor Interface ID", "MirrorSetting", "MirrorType", "Value");
+    printf("|=====|=================|============|========================|========================|====================================================|================================================================|\n");
+
+    while (sqlite3_step(stmt) == SQLITE_ROW)
+    {
+        int mirroring = sqlite3_column_int(stmt, 1);
+        const unsigned char *interface_name = sqlite3_column_text(stmt, 2);
+        const unsigned char *monitor_name = sqlite3_column_text(stmt, 3);
+        const unsigned char *setting = sqlite3_column_text(stmt, 4);
+        const unsigned char *type = sqlite3_column_text(stmt, 5);
+        const unsigned char *value = sqlite3_column_text(stmt, 6);
+
+        const char *mirroring_str = mirroring ? "Active" : "Inactive";
+        const char *interface_name_str = interface_name ? (const char *)interface_name : "";
+        const char *monitor_name_str = monitor_name ? (const char *)monitor_name : "N/A";
+        const char *setting_str = setting ? (const char *)setting : "";
+        char cleaned_type[512] = "";
+        if (type)
+            clean_json_array_string((const char *)type, cleaned_type, sizeof(cleaned_type));
+        else
+            strcpy(cleaned_type, "");
+
+        const char *value_str = value ? (const char *)value : "";
+
+        char extracted_values[512] = "";
+        if (value_str && strlen(value_str) > 0)
+            extract_json_values(value_str, extracted_values, sizeof(extracted_values));
+        printf("| %-3d | %-15s | %-10s | %-22s | %-22s |", idx++, interface_name_str, mirroring_str, monitor_name_str, setting_str);
+        // In ph?n d?u ti n c?a MirrorType
+        printf(" %-*.*s |", max_width_type, max_width_type, cleaned_type);
+
+        printf(" %-*.*s |\n", max_width_value, max_width_value, extracted_values);
+
+        // In ph?n ti?p theo n?u MirrorType ho?c Value d i
+        int type_len = strlen(cleaned_type);
+        int value_len = strlen(extracted_values);
+        // int line = 1;
+        while (line * max_width_type < type_len || line * max_width_value < value_len)
+        {
+            printf("| %-3s | %-15s | %-10s | %-22s | %-22s |", "", "", "", "", "");
+
+            if (line * max_width_type < type_len)
+                printf(" %-*.*s |", max_width_type, max_width_type, cleaned_type + line * max_width_type);
+            else
+                printf(" %-*s |", max_width_type, "");
+
+            if (line * max_width_value < value_len)
+                printf(" %-*.*s |\n", max_width_value, max_width_value, extracted_values + line * max_width_value);
+            else
+                printf(" %-*s |\n", max_width_value, "");
+
+            line++;
+        }
+        printf("|-----+-----------------+------------+------------------------+------------------------+----------------------------------------------------+----------------------------------------------------------------|\n");
+    }
+    // printf("Press Enter to return to menu...\n");
+
+    if (show_prompt)
+    {
+        printf("Press Enter to return to menu...");
+    }
+
+    sqlite3_finalize(stmt);
+    sqlite3_close(db);
+}
+
+void Update_port_mirroring(int serial_port)
+{
+    char port_name[32];
+    system("clear");
+    display_logo1();
+    printf("\nCurrent Port Mirroring Configurations:\n");
+    display_port_mirroring_config_from_db(serial_port, 0);
+
+    printf("\nEnter InterfaceName to update (e.g. eth1) or press 'exit' return previous menu :");
+    scanf("%31s", port_name);
+    if (strcmp(port_name, "eth5") == 0)
+    {
+        printf("Interface 'eth5' is not allowed to be selected for update.\n");
+        printf("Press Enter to return to the previous menu...");
+        getchar(); //  ? d?c d?u Enter c n l?i trong buffer
+        getchar();
+        system("clear");
+        display_logo1();
+        port_mirroring_menu(serial_port); // Quay l?i menu ch nh ho?c menu port mirroring
+        return;
+    }
+
+    // N?u ngu?i d ng nh?p 'exit' th  quay v? menu ch clearnh
+    if (strcmp(port_name, "exit") == 0)
+    {
+        printf("Returning to main menu...\n");
+        getchar(); // Clear buffer sau scanf
+        system("clear");
+        display_logo1();
+        port_mirroring_menu(serial_port);
+    }
+    // Ki?m tra port c  t?n t?i kh ng
+    sqlite3 *db;
+    int rc = sqlite3_open(DB_PATH, &db);
+    sqlite3_busy_timeout(db, 2000);
+    if (rc)
+    {
+        printf("Cannot open database: %s\n", sqlite3_errmsg(db));
+        return;
+    }
+    const char *sql = "SELECT InterfaceIsMirroring, InterfaceMirrorSetting, MirrorType, Value FROM DeviceInterfaces WHERE InterfaceName=? AND InterfaceIsMirroring=1";
+    sqlite3_stmt *stmt;
+    rc = sqlite3_prepare_v2(db, sql, -1, &stmt, NULL);
+    if (rc != SQLITE_OK)
+    {
+        printf("SQL error: %s\n", sqlite3_errmsg(db));
+        sqlite3_close(db);
+        return;
+    }
+    sqlite3_bind_text(stmt, 1, port_name, -1, SQLITE_STATIC);
+    rc = sqlite3_step(stmt);
+    if (rc != SQLITE_ROW)
+    {
+        system("clear");
+        printf("No mirroring configuration found for interface '%s'.\n", port_name);
+        printf("You must add a mirroring configuration before updating.\n");
+        printf("No configuration found for %s.\n", port_name);
+        sqlite3_finalize(stmt);
+        sqlite3_close(db);
+        printf("Press Enter to return to menu...");
+        getchar();
+        getchar();
+        system("clear");
+        display_logo1();
+        return;
+    }
+
+    // L?y d? li?u cu
+    PortMirroringConfig cfg = {0};
+    strcpy(cfg.interface_name, port_name);
+    cfg.is_mirroring = sqlite3_column_int(stmt, 0);
+    const unsigned char *mirror_setting = sqlite3_column_text(stmt, 1);
+    const unsigned char *mirror_type = sqlite3_column_text(stmt, 2);
+    const unsigned char *value = sqlite3_column_text(stmt, 3);
+    if (mirror_setting)
+        strcpy(cfg.mirror_setting, (const char *)mirror_setting);
+    if (mirror_type)
+        strcpy(cfg.mirror_type, (const char *)mirror_type);
+    if (value)
+        strcpy(cfg.value, (const char *)value);
+
+    sqlite3_finalize(stmt);
+    sqlite3_close(db);
+
+    printf("\nUpdating configuration for %s...\n", port_name);
+
+    // Parse value JSON cu th nh map key-value d? c?p nh?t l?i gi  tr? m?i nh?t
+    cJSON *json_old = NULL;
+    if (cfg.value[0])
+    {
+        json_old = cJSON_Parse(cfg.value);
+    }
+    // T?o struct luu gi  tr? cu?i c ng cho t?ng tru?ng
+    char last_dest_mac[18] = "";
+    char last_src_mac[18] = "";
+    char last_dest_ip[40] = "";
+    char last_src_ip[40] = "";
+    char last_dest_port[6] = "";
+    char last_src_port[6] = "";
+    char last_protocol[16] = "";
+
+    if (json_old)
+    {
+        cJSON *item;
+        if ((item = cJSON_GetObjectItemCaseSensitive(json_old, "DestMac")) && cJSON_IsString(item))
+            strncpy(last_dest_mac, item->valuestring, sizeof(last_dest_mac));
+        if ((item = cJSON_GetObjectItemCaseSensitive(json_old, "SourceMac")) && cJSON_IsString(item))
+            strncpy(last_src_mac, item->valuestring, sizeof(last_src_mac));
+        if ((item = cJSON_GetObjectItemCaseSensitive(json_old, "DestIPv4")) && cJSON_IsString(item))
+            strncpy(last_dest_ip, item->valuestring, sizeof(last_dest_ip));
+        if ((item = cJSON_GetObjectItemCaseSensitive(json_old, "SourceIPv4")) && cJSON_IsString(item))
+            strncpy(last_src_ip, item->valuestring, sizeof(last_src_ip));
+        if ((item = cJSON_GetObjectItemCaseSensitive(json_old, "DestIPv6")) && cJSON_IsString(item) && strlen(item->valuestring) > 0)
+            strncpy(last_dest_ip, item->valuestring, sizeof(last_dest_ip));
+        if ((item = cJSON_GetObjectItemCaseSensitive(json_old, "SourceIPv6")) && cJSON_IsString(item) && strlen(item->valuestring) > 0)
+            strncpy(last_src_ip, item->valuestring, sizeof(last_src_ip));
+        if ((item = cJSON_GetObjectItemCaseSensitive(json_old, "DestPort")) && cJSON_IsString(item))
+            strncpy(last_dest_port, item->valuestring, sizeof(last_dest_port));
+        if ((item = cJSON_GetObjectItemCaseSensitive(json_old, "SourcePort")) && cJSON_IsString(item))
+            strncpy(last_src_port, item->valuestring, sizeof(last_src_port));
+        if ((item = cJSON_GetObjectItemCaseSensitive(json_old, "Protocol")) && cJSON_IsString(item))
+            strncpy(last_protocol, item->valuestring, sizeof(last_protocol));
+        cJSON_Delete(json_old);
+    }
+
+    PortMirroringConfig cfg_update = cfg;
+    // G n l?i c c tru?ng d  c  v o bi?n t?m d? khi v o ConfigTypePacket s? hi?n th? d ng
+    strcpy(cfg_update.value, cfg.value);
+    strcpy(cfg_update.mirror_type, cfg.mirror_type);
+    // ConfigTypePacket(serial_port, &cfg_update);
+    system("clear");
+    display_logo1();
+    Select_traffic_mirroring_mode(serial_port, &cfg_update);
+
+    // Sau khi c?u h nh xong, parse l?i value m?i d? l?y gi  tr? m?i nh?t
+    cJSON *json_new = NULL;
+    if (cfg_update.value[0])
+    {
+        json_new = cJSON_Parse(cfg_update.value);
+    }
+    // N?u tru?ng n o kh ng c  trong value m?i th  gi? l?i gi  tr? cu
+    if (json_new)
+    {
+        cJSON *item;
+        if (!(item = cJSON_GetObjectItemCaseSensitive(json_new, "DestMac")) && last_dest_mac[0])
+            cJSON_AddStringToObject(json_new, "DestMac", last_dest_mac);
+        if (!(item = cJSON_GetObjectItemCaseSensitive(json_new, "SourceMac")) && last_src_mac[0])
+            cJSON_AddStringToObject(json_new, "SourceMac", last_src_mac);
+        if (!(item = cJSON_GetObjectItemCaseSensitive(json_new, "DestIPv4")) && last_dest_ip[0])
+            cJSON_AddStringToObject(json_new, "DestIPv4", last_dest_ip);
+        if (!(item = cJSON_GetObjectItemCaseSensitive(json_new, "SourceIPv4")) && last_src_ip[0])
+            cJSON_AddStringToObject(json_new, "SourceIPv4", last_src_ip);
+        if (!(item = cJSON_GetObjectItemCaseSensitive(json_new, "DestPort")) && last_dest_port[0])
+            cJSON_AddStringToObject(json_new, "DestPort", last_dest_port);
+        if (!(item = cJSON_GetObjectItemCaseSensitive(json_new, "SourcePort")) && last_src_port[0])
+            cJSON_AddStringToObject(json_new, "SourcePort", last_src_port);
+        if (!(item = cJSON_GetObjectItemCaseSensitive(json_new, "Protocol")) && last_protocol[0])
+            cJSON_AddStringToObject(json_new, "Protocol", last_protocol);
+
+        // Ghi l?i value m?i d  merge d? c c tru?ng
+        char *new_value_str = cJSON_PrintUnformatted(json_new);
+        strncpy(cfg_update.value, new_value_str, sizeof(cfg_update.value) - 1);
+        free(new_value_str);
+        cJSON_Delete(json_new);
+    }
+    // Luu l?i v o DB
+    save_port_mirroring_to_db(&cfg_update);
+    getchar();
+    getchar();
+    system("clear");
+    display_logo1();
+}
+
+void port_mirroring_menu(int serial_port)
+{
+start:
+    char key = 0;
+    printf("\r\n *************************************************************************************************************************************************************************************************************");
+    printf("\r\n");
+    printf("\r\n ============================================================================================================================================================================================================+");
+    printf("\r\n ==> Port Mirroring Settings                                                                                                                                                                                 |");
+    printf("\r\n");
+    printf(" ===============+===========+================================================================================================================================================================================+\r\n");
+    printf("    DISPLAY     |           |                                                                                                                                                                                |\r\n");
+    printf("\t\t| Key Enter | Please choose 1 option below:                                                                                                                                                  |\r\n");
+    printf("\t\t+-----------+--------------------------------------------------------------------------------------------------------------------------------------------------------------------------------+\r\n");
+    printf("\t\t|     1.    | Display Port Mirroring Configuration.                                                                                                                                          |\r\n");
+    printf("\t\t+-----------+--------------------------------------------------------------------------------------------------------------------------------------------------------------------------------+\r\n");
+    printf("\t\t|     2.    | Add Port Mirroring Configuration.                                                                                                                                              |\r\n");
+    printf("\t\t+-----------+--------------------------------------------------------------------------------------------------------------------------------------------------------------------------------+\r\n");
+    printf("\t\t|     3.    | Update Port Mirroring.                                                                                                                                                         |\r\n");
+    printf("\t\t+-----------+--------------------------------------------------------------------------------------------------------------------------------------------------------------------------------+\r\n");
+    printf("\t\t|     4.    | Delete Port Mirroring Configuration.                                                                                                                                           |\r\n");
+    printf("\t\t+-----------+--------------------------------------------------------------------------------------------------------------------------------------------------------------------------------+\r\n");
+    printf("\t\t|     5.    | Back to Previous Menu.                                                                                                                                                         |\r\n");
+    printf("----------------+-----------+--------------------------------------------------------------------------------------------------------------------------------------------------------------------------------+\r\n");
+    printf("    SETTING     | Your choice: ");
+
+    while (1)
+    {
+        scanf("%c", &key);
+        if (key == '1' || key == '2' || key == '3' || key == '4' || key == '5')
+        {
+            break;
+        }
+        if (key != '1' && key != '2' && key != '3' && key != '4' && key != '5')
+        {
+            printf("\r     SETTING    | --> Your choice: ");
+        }
+    }
+
+    usleep(500000);
+    if (key == '1')
+    {
+        system("clear");
+        display_logo1();
+        display_port_mirroring_config_from_db(serial_port, 1);
+        getchar();
+        getchar();
+        system("clear");
+        display_logo1();
+        goto start;
+    }
+    else if (key == '2')
+    {
+        system("clear");
+        display_logo1();
+        Add_port_mirroring(serial_port);
+        printf("\nAdding Port Mirroring Configuration...\n");
+        goto start;
+    }
+    else if (key == '3')
+    {
+        system("clear");
+        display_logo1();
+        Update_port_mirroring(serial_port);
+        printf("\nDeleting Port Mirroring Configuration...\n");
+        goto start;
+    }
+    else if (key == '4')
+    {
+        system("clear");
+        display_logo1();
+        Delete_port_mirroring(serial_port);
+        goto start;
+    }
+    else if (key == '5')
+    {
+        system("clear");
+        // display_logo1();
+        new_menu(serial_port);
+    }
+}
+void Delete_port_mirroring(int serial_port)
+{
+    while (1)
+    {
+        char port_name[32];
+        system("clear");
+        display_logo1();
+        printf("\nCurrent Port Mirroring Configurations:\n");
+        display_port_mirroring_config_from_db(serial_port, 0);
+        printf("\nEnter InterfaceName to delete mirroring config (e.g. eth1), or type 'exit' to return: ");
+        scanf("%31s", port_name);
+        getchar(); // Clear newline kh?i stdin
+
+        if (strcmp(port_name, "exit") == 0)
+        {
+            printf("Returning to main menu...\n");
+            system("clear");
+            display_logo1();
+            return;
+        }
+
+        sqlite3 *db;
+        int rc = sqlite3_open(DB_PATH, &db);
+        sqlite3_busy_timeout(db, 2000);
+        if (rc)
+        {
+            printf("Cannot open database: %s\n", sqlite3_errmsg(db));
+            return;
+        }
+
+        const char *update_sql =
+            "UPDATE DeviceInterfaces SET "
+            "InterfaceIsMirroring=0, InterfaceToMonitorInterfaceId=NULL, InterfaceMirrorSetting=NULL, MirrorType=NULL, Value=NULL "
+            "WHERE InterfaceName=?";
+
+        sqlite3_stmt *stmt;
+        rc = sqlite3_prepare_v2(db, update_sql, -1, &stmt, NULL);
+        if (rc != SQLITE_OK)
+        {
+            printf("SQL error: %s\n", sqlite3_errmsg(db));
+            sqlite3_close(db);
+            return;
+        }
+
+        sqlite3_bind_text(stmt, 1, port_name, -1, SQLITE_STATIC);
+        rc = sqlite3_step(stmt);
+
+        if (rc == SQLITE_DONE && sqlite3_changes(db) > 0)
+        {
+            printf("Deleted mirroring configuration for %s successfully!\n", port_name);
+
+            // G?i l?nh t?t port mirroring qua UART
+            int port_num = 0;
+            if (sscanf(port_name, "eth%d", &port_num) == 1 && port_num > 0)
+            {
+                char key_08 = 0x08;
+                char enter = '\r';
+                char keyX = 'X';
+                char port_key = '0' + port_num;
+                char value_key = '0'; // '0' d? t?t mirroring
+
+                write(serial_port, &key_08, sizeof(key_08));
+                usleep(1000);
+                write(serial_port, &enter, sizeof(enter));
+                usleep(1000);
+                write(serial_port, &keyX, sizeof(keyX));
+                usleep(100000);
+                write(serial_port, &port_key, sizeof(port_key));
+                usleep(10000);
+                write(serial_port, &value_key, sizeof(value_key));
+                usleep(10000);
+            }
+
+            sqlite3_finalize(stmt);
+            sqlite3_close(db);
+            break;
+        }
+        else
+        {
+            printf("No mirroring configuration found for %s or failed to delete.\n", port_name);
+            sqlite3_finalize(stmt);
+            sqlite3_close(db);
+            printf("Please try again or type 'exit' to return.\n");
+            getchar();
+        }
+    }
+    printf("Press Enter to return to menu...");
+    getchar();
+    system("clear");
+    display_logo1();
+    port_mirroring_menu(serial_port);
+}
+void Add_port_mirroring(int serial_port)
+{
+    system("clear");
+    display_logo1();
+
+    PortMirroringConfig cfg = {0};
+    cfg.is_mirroring = 1;
+
+    int choice = 0;
+    char valid_ports[] = {1, 2, 3, 4, 6, 7, 8};
+    char num_ports = sizeof(valid_ports) / sizeof(valid_ports[0]);
+
+    // Menu ch?n c?ng
+    printf("\r\n ============================================================================================================================================================================================================+");
+    printf("\r\n   CONFIGURE    |           |                                                                                                                                                                                |\r\n");
+    printf("=============================================================================================================================================================================================================+\r\n");
+    printf("\t\t| Key Enter | MONITORED PORT SELECTION                                                                                                                                                       |\r\n");
+    printf("\t\t+-----------+--------------------------------------------------------------------------------------------------------------------------------------------------------------------------------+\r\n");
+
+    for (int i = 0; i < num_ports; i++)
+    {
+        printf("\t\t|     %d.    | eth%d                                                                                                                                                                           |\r\n", i + 1, valid_ports[i]);
+        printf("\t\t+-----------+--------------------------------------------------------------------------------------------------------------------------------------------------------------------------------+\r\n");
+    }
+
+    printf("\t\t|     %d.    | Exit.                                                                                                                                                                          |\r\n", num_ports + 1);
+    printf(" ===============+=============================================================================================================================================================================================+\r\n");
+    printf("\nSETTING       |  Enter your choice [1-%d]: ", num_ports + 1);
+
+    if (scanf("%d", &choice) != 1)
+    {
+        printf("\nInvalid input! Please enter a number between 1 and %d.\n", num_ports + 1);
+        while (getchar() != '\n');
+        Add_port_mirroring(serial_port);
+        return;
+    }
+
+    if (choice == num_ports + 1)
+    {
+        system("clear");
+        display_logo1();
+        port_mirroring_menu(serial_port);
+        return;
+    }
+
+    if (choice < 1 || choice > num_ports)
+    {
+        printf("\nChoice out of valid range! Please try again.\n");
+        Add_port_mirroring(serial_port);
+        return;
+    }
+
+    int selected_port = valid_ports[choice - 1];
+    sprintf(cfg.interface_name, "eth%d", selected_port);
+    cfg.monitor_target_id = -1;
+
+    printf("\nYou selected interface: %s\n", cfg.interface_name);
+
+    Select_traffic_mirroring_mode(serial_port, &cfg);
+}
+
+void Select_traffic_mirroring_mode(int serial_port, PortMirroringConfig *cfg)
+{
+    system("clear");
+    display_logo1();
+    char key1 = '1';
+    char key2 = '2';
+    char key3 = '3';
+    // char mode = 0;
+    printf("\r\n ============================================================================================================================================================================================================+\r\n");
+    printf("\r\n                   TRAFFIC MIRRORING MODE SETTINGS                                                                                                                                                           |");
+    printf("\r\n ============================================================================================================================================================================================================+");
+    printf("\r\n TRAFFIC MODE   |           |                                                                                                                                                                                |");
+    printf("\r\n ===============+===========+================================================================================================================================================================================+\r\n");
+    printf("\t\t|     1.    | INGRESS.                                                                                                                                                                       |\r\n");
+    printf("\t\t ---------------------+----------------------------------------------------------------------------------------------------------------------------------------------------------------------+\r\n");
+    printf("\t\t|     2.    | EGRESS.                                                                                                                                                                        |\r\n");
+    printf("\t\t ---------------------+----------------------------------------------------------------------------------------------------------------------------------------------------------------------+\r\n");
+    printf("\t\t|     3.    | INGRESS & EGRESS.                                                                                                                                                              |\r\n");
+    printf("\t\t+-----------+--------------------------------------------------------------------------------------------------------------------------------------------------------------------------------+\r\n");
+    printf("\t\t|     4.    | Exit.                                                                                                                                                                          |\r\n");
+    printf("\t\t =====================+======================================================================================================================================================================+\r\n");
+    printf("\t\t|  SETTING  | Enter your choice [1/2/3]: ");
+    char mode = 0;
+    scanf(" %c", &mode);
+
+    char *value = NULL;
+    switch (mode)
+    {
+    case '1':
+        strcpy(cfg->mirror_setting, "Ingress");
+        // printf("Sent OK: key1 = %c (Ingress)\n", key1);
+        break;
+    case '2':
+        strcpy(cfg->mirror_setting, "Egress");
+        // printf("Sent OK: key2 = %c (Egress)\n", key2);
+        break;
+    case '3':
+        strcpy(cfg->mirror_setting, "Ingress and Egress");
+        // printf("Sent OK: key3 = %c (Ingress and Egress)\n", key3);
+        break;
+    case '4':
+        system("clear");
+        // Add_port_mirroring(serial_port);
+        return;
+    default:
+        printf("\nInvalid mode selected!\n");
+        return;
+    }
+    usleep(100000);
+    ConfigTypePacket(serial_port, cfg);
+}
+// H m ti?n  ch: X a tru?ng kh?i m?ng n?u d  t?n t?i
+void remove_field(char type_fields[][32], char value_fields[][40], int *field_count, const char *field_name)
+{
+    for (int i = 0; i < *field_count; ++i)
+    {
+        if (strcmp(type_fields[i], field_name) == 0)
+        {
+            // D?ch c c ph?n t? sau l n
+            for (int j = i; j < *field_count - 1; ++j)
+            {
+                strcpy(type_fields[j], type_fields[j + 1]);
+                strcpy(value_fields[j], value_fields[j + 1]);
+            }
+            (*field_count)--;
+            break;
+        }
+    }
+}
+
+void ConfigTypePacket(int serial_port, PortMirroringConfig *cfg)
+{
+    cfg->monitor_target_id = 5;
+
+    char dest_mac[18] = "";
+    char src_mac[18] = "";
+    char dest_ip[40] = "";
+    char src_ip[40] = "";
+    char dest_port[6] = "";
+    char src_port[6] = "";
+    int protocol = -1;
+    int flag_dest_mac = 0, flag_src_mac = 0, flag_dest_ip = 0;
+    int flag_src_ip = 0, flag_dest_port = 0, flag_src_port = 0;
+    int flag_protocol = 0;
+    char choice;
+    char type_fields[7][32] = {0};
+    char value_fields[7][40] = {0};
+    int field_count = 0;
+
+    char mirror_type[128] = "";
+    char value[256] = "";
+    system("clear");
+    display_logo1();
+    printf("\r\n ============================================================================================================================================================================================================+");
+    printf("\r\n ==> Packet Filtering Configuration Menu                                                                                                                                                                     |");
+    printf("\r\n ============================================================================================================================================================================================================+");
+    printf("\r\n    DISPLAY     |           |                                                                                                                                                                                |");
+    printf("\r\n ===============+===========+================================================================================================================================================================================+\r\n");
+    printf("\t\t|     1.    | Destination MAC.                                                                                                                                                               |\r\n");
+    printf("\t\t+-----------+--------------------------------------------------------------------------------------------------------------------------------------------------------------------------------+\r\n");
+    printf("\t\t|     2.    | Source MAC.                                                                                                                                                                    |\r\n");
+    printf("\t\t+-----------+--------------------------------------------------------------------------------------------------------------------------------------------------------------------------------+\r\n");
+    printf("\t\t|     3.    | Destination IP.                                                                                                                                                                |\r\n");
+    printf("\t\t+-----------+--------------------------------------------------------------------------------------------------------------------------------------------------------------------------------+\r\n");
+    printf("\t\t|     4.    | Source IP.                                                                                                                                                                     |\r\n");
+    printf("\t\t+-----------+--------------------------------------------------------------------------------------------------------------------------------------------------------------------------------+\r\n");
+    printf("\t\t|     5.    | Destination Port.                                                                                                                                                              |\r\n");
+    printf("\t\t+-----------+--------------------------------------------------------------------------------------------------------------------------------------------------------------------------------+\r\n");
+    printf("\t\t|     6.    | Source Port.                                                                                                                                                                  |\r\n");
+    printf("\t\t+-----------+--------------------------------------------------------------------------------------------------------------------------------------------------------------------------------+\r\n");
+    printf("\t\t|     7.    | Protocol.                                                                                                                                                                      |\r\n");
+    printf("\t\t+-----------+--------------------------------------------------------------------------------------------------------------------------------------------------------------------------------+\r\n");
+    printf("\t\t|     8.    | Save.                                                                                                                                                                          |\r\n");
+    printf("\t\t+-----------+--------------------------------------------------------------------------------------------------------------------------------------------------------------------------------+\r\n");
+    printf("\t\t|     9.    | Exit.                                                                                                                                                                          |\r\n");
+    printf("\t\t+-----------+--------------------------------------------------------------------------------------------------------------------------------------------------------------------------------+\r\n");
+
+    if (cfg->mirror_type[0] && cfg->value[0])
+    {
+        char type_buf[128];
+        strncpy(type_buf, cfg->mirror_type, sizeof(type_buf));
+        char *p = type_buf;
+        while (*p)
+        {
+            if (*p == '[' || *p == ']' || *p == '"')
+                *p = ' ';
+            p++;
+        }
+        char *type_token = strtok(type_buf, ",");
+        cJSON *json = cJSON_Parse(cfg->value);
+        while (type_token && field_count < 7)
+        {
+            while (*type_token == ' ')
+                type_token++;
+            char *end = type_token + strlen(type_token) - 1;
+            while (end > type_token && *end == ' ')
+            {
+                *end = 0;
+                end--;
+            }
+            strncpy(type_fields[field_count], type_token, sizeof(type_fields[field_count]));
+
+            char key[32] = "";
+            if (strcmp(type_token, "Dest Mac") == 0)
+                strcpy(key, "DestMac");
+            else if (strcmp(type_token, "Source Mac") == 0)
+                strcpy(key, "SourceMac");
+            else if (strcmp(type_token, "Dest IP") == 0)
+                strcpy(key, "DestIPv4");
+            else if (strcmp(type_token, "Source IP") == 0)
+                strcpy(key, "SourceIPv4");
+            else if (strcmp(type_token, "Dest Port") == 0)
+                strcpy(key, "DestPort");
+            else if (strcmp(type_token, "Source Port") == 0)
+                strcpy(key, "SourcePort");
+            else if (strcmp(type_token, "Protocol") == 0)
+                strcpy(key, "Protocol");
+            else
+                strncpy(key, type_token, sizeof(key) - 1);
+
+            cJSON *item = cJSON_GetObjectItemCaseSensitive(json, key);
+            if (item && cJSON_IsString(item))
+            {
+                strncpy(value_fields[field_count], item->valuestring, sizeof(value_fields[field_count]));
+            }
+            else
+            {
+                value_fields[field_count][0] = '\0';
+            }
+            field_count++;
+            type_token = strtok(NULL, ",");
+        }
+        cJSON_Delete(json);
+    }
+
+    while (1)
+    {
+        printf("+-----------+----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------+\n");
+        if (flag_dest_mac)
+            printf("| - Destination MAC     |  %s\n", dest_mac);
+        if (flag_src_mac)
+            printf("| - Source MAC          |  %s\n", src_mac);
+        if (flag_dest_ip)
+            printf("| - Destination IP      |  %s\n", dest_ip);
+        if (flag_src_ip)
+            printf("| - Source IP           |  %s\n", src_ip);
+        if (flag_dest_port)
+            printf("| - Destination Port    |  %s\n", dest_port);
+        if (flag_src_port)
+            printf("| - Source Port         |  %s\n", src_port);
+        if (flag_protocol)
+            printf("| - Protocol            |  %d\n", protocol);
+        printf("+-----------+----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------+\n");
+
+        printf("Your choice: ");
+        scanf(" %c", &choice);
+
+        if (choice == '1')
+        {
+            InputDestMAC(dest_mac);
+            if (strlen(dest_mac) > 0)
+            {
+                remove_field(type_fields, value_fields, &field_count, "Dest Mac");
+                strcpy(type_fields[field_count], "Dest Mac");
+                strcpy(value_fields[field_count], dest_mac);
+                field_count++;
+                flag_dest_mac = 1;
+            }
+            getchar();
+        }
+        else if (choice == '2')
+        {
+            InputSourceMAC(src_mac);
+            if (strlen(src_mac) > 0)
+            {
+                remove_field(type_fields, value_fields, &field_count, "Source Mac");
+                strcpy(type_fields[field_count], "Source Mac");
+                strcpy(value_fields[field_count], src_mac);
+                field_count++;
+                flag_src_mac = 1;
+            }
+            getchar();
+        }
+        else if (choice == '3')
+        {
+            char ip_type = InputDestIP(dest_ip);
+            if (strlen(dest_ip) > 0)
+            {
+                remove_field(type_fields, value_fields, &field_count, "Dest IP");
+                strcpy(type_fields[field_count], "Dest IP");
+                strcpy(value_fields[field_count], dest_ip);
+                field_count++;
+                flag_dest_ip = 1;
+            }
+            getchar();
+        }
+        else if (choice == '4')
+        {
+            char ip_type = InputSourceIP(src_ip);
+            if (strlen(src_ip) > 0)
+            {
+                remove_field(type_fields, value_fields, &field_count, "Source IP");
+                strcpy(type_fields[field_count], "Source IP");
+                strcpy(value_fields[field_count], src_ip);
+                field_count++;
+                flag_src_ip = 1;
+            }
+            getchar();
+        }
+        else if (choice == '5')
+        {
+            InputDestPort(dest_port);
+            if (strlen(dest_port) > 0)
+            {
+                remove_field(type_fields, value_fields, &field_count, "Dest Port");
+                strcpy(type_fields[field_count], "Dest Port");
+                strcpy(value_fields[field_count], dest_port);
+                field_count++;
+                flag_dest_port = 1;
+            }
+            getchar();
+        }
+        else if (choice == '6')
+        {
+            InputSourcePort(src_port);
+            if (strlen(src_port) > 0)
+            {
+                remove_field(type_fields, value_fields, &field_count, "Source Port");
+                strcpy(type_fields[field_count], "Source Port");
+                strcpy(value_fields[field_count], src_port);
+                field_count++;
+                flag_src_port = 1;
+            }
+            getchar();
+        }
+        else if (choice == '7')
+        {
+            char protocol_str[16] = "";
+            InputProtocol(&protocol, protocol_str);
+            remove_field(type_fields, value_fields, &field_count, "Protocol");
+            strcpy(type_fields[field_count], "Protocol");
+            strcpy(value_fields[field_count], protocol_str);
+            field_count++;
+            flag_protocol = 1;
+            getchar();
+        }
+        else if (choice == '8')
+        {
+            char *resp = NULL;
+            int port_num = 1;
+            if (cfg->interface_name[3] >= '0' && cfg->interface_name[3] <= '9')
+                port_num = cfg->interface_name[3] - '0';
+            char port_key = '0' + port_num;
+            char key_08 = 0x08;
+            char enter = '\r';
+            char keyX = 'X';
+            char value_key = '1';
+
+            write(serial_port, &key_08, sizeof(key_08));
+            usleep(500000);
+            write(serial_port, &enter, sizeof(enter));
+            usleep(500000);
+            write(serial_port, &keyX, sizeof(keyX));
+            usleep(500000);
+            write(serial_port, &port_key, sizeof(port_key));
+            usleep(500000);
+            write(serial_port, &value_key, sizeof(value_key));
+            usleep(500000);
+            resp = receive_data(serial_port);
+            printf("UART response: %s\n", resp);
+            if (resp && (strchr(resp, 'Y') || strstr(resp, "OK")))
+            {
+                printf("OK!\n");
+            }
+            else if (resp && (strchr(resp, 'N') || strstr(resp, "ERROR")))
+            {
+                printf("NO\n");
+            }
+            // 2. Set mirroring mode (keyK)
+            char keyK = 'K';
+            write(serial_port, &key_08, sizeof(key_08));
+            usleep(500000);
+            write(serial_port, &enter, sizeof(enter));
+            usleep(50000);
+            write(serial_port, &keyK, sizeof(keyK));
+            usleep(500000);
+            write(serial_port, &port_key, sizeof(port_key));
+            usleep(500000);
+            char key_mode = 0;
+            if (strcmp(cfg->mirror_setting, "Ingress") == 0)
+                key_mode = '1';
+            else if (strcmp(cfg->mirror_setting, "Egress") == 0)
+                key_mode = '2';
+            else if (strcmp(cfg->mirror_setting, "Ingress and Egress") == 0)
+                key_mode = '3';
+            if (key_mode)
+            {
+                write(serial_port, &key_mode, sizeof(key_mode));
+                usleep(100000);
+                resp = receive_data(serial_port);
+                printf("UART mode mirror response: %s\n", resp);
+                if (resp && (strchr(resp, 'Y') || strstr(resp, "OK")))
+                {
+                    printf("OK!\n");
+                }
+                else if (resp && (strchr(resp, 'N') || strstr(resp, "ERROR")))
+                {
+                    printf("NO\n");
+                }
+            }
+
+            for (int i = 0; i < field_count; ++i)
+            {
+                if (strcmp(type_fields[i], "Dest Mac") == 0)
+                {
+                    char keyB = 'B';
+                    write(serial_port, &key_08, sizeof(key_08));
+                    usleep(1000);
+                    write(serial_port, &enter, sizeof(enter));
+                    usleep(1000);
+                    write(serial_port, &keyB, sizeof(keyB));
+                    usleep(1000);
+                    write(serial_port, &port_key, sizeof(port_key));
+                    usleep(1000);
+                    for (int j = 0; j < strlen(value_fields[i]); j++)
+                    {
+                        char data = value_fields[i][j];
+                        send_data(serial_port, &data, sizeof(data));
+
+                        usleep(100000);
+                    }
+                    write(serial_port, &enter, sizeof(enter));
+                    // receive_data(serial_port);
+                    resp = receive_data(serial_port);
+                    printf("UART response: %s\n", resp);
+                    if (resp && (strchr(resp, 'Y') || strstr(resp, "OK")))
+                    {
+                        printf("OK!\n");
+                    }
+                    else if (resp && (strchr(resp, 'N') || strstr(resp, "ERROR")))
+                    {
+                        printf("NO\n");
+                    }
+                }
+                else if (strcmp(type_fields[i], "Source Mac") == 0)
+                {
+                    char keyA = 'A';
+                    write(serial_port, &key_08, sizeof(key_08));
+                    usleep(1000);
+                    write(serial_port, &enter, sizeof(enter));
+                    usleep(1000);
+                    write(serial_port, &keyA, sizeof(keyA));
+                    usleep(1000);
+                    write(serial_port, &port_key, sizeof(port_key));
+                    usleep(1000);
+                    for (int j = 0; j < strlen(value_fields[i]); j++)
+                    {
+                        char data = value_fields[i][j];
+                        send_data(serial_port, &data, sizeof(data));
+                        usleep(100000);
+                    }
+                    write(serial_port, &enter, 1);
+                    // receive_data(serial_port);
+                    resp = receive_data(serial_port);
+                    printf("UART response SrcMAC: %s\n", resp);
+                    if (resp && (strchr(resp, 'Y') || strstr(resp, "OK")))
+                    {
+                        printf("OK!\n");
+                    }
+                    else if (resp && (strchr(resp, 'N') || strstr(resp, "ERROR")))
+                    {
+                        printf("NO\n");
+                    }
+                }
+                else if (strcmp(type_fields[i], "Dest IP") == 0)
+                {
+                    char keyD = 'D', keyF = 'F';
+                    char key_func = strchr(value_fields[i], ':') ? keyF : keyD;
+                    write(serial_port, &key_08, sizeof(key_08));
+                    usleep(50000);
+                    write(serial_port, &enter, sizeof(enter));
+                    usleep(50000);
+                    write(serial_port, &key_func, sizeof(key_func));
+                    usleep(50000);
+                    write(serial_port, &port_key, sizeof(port_key));
+                    usleep(50000);
+                    for (int j = 0; j < strlen(value_fields[i]); j++)
+                    {
+                        char data = value_fields[i][j];
+                        send_data(serial_port, &data, sizeof(data));
+                        usleep(100000);
+                    }
+                    write(serial_port, &enter, sizeof(enter));
+                    // receive_data(serial_port);
+                    resp = receive_data(serial_port);
+                    printf("UART response DstIP: %s\n", resp);
+                    if (resp && (strchr(resp, 'Y') || strstr(resp, "OK")))
+                    {
+                        printf("OK!\n");
+                    }
+                    else if (resp && (strchr(resp, 'N') || strstr(resp, "ERROR")))
+                    {
+                        printf("NO\n");
+                    }
+                }
+                else if (strcmp(type_fields[i], "Source IP") == 0)
+                {
+                    char keyC = 'C', keyE = 'E';
+                    char key_func = strchr(value_fields[i], ':') ? keyE : keyC;
+                    write(serial_port, &key_08, sizeof(key_08));
+                    usleep(50000);
+                    write(serial_port, &enter, sizeof(enter));
+                    usleep(50000);
+                    write(serial_port, &key_func, sizeof(key_func));
+                    usleep(50000);
+                    write(serial_port, &port_key, sizeof(port_key));
+                    usleep(50000);
+
+                    // G?i gi  tr? Source IP
+                    for (int j = 0; j < strlen(value_fields[i]); j++)
+                    {
+                        char data = value_fields[i][j];
+                        send_data(serial_port, &data, sizeof(data));
+                        usleep(100000);
+                    }
+                    write(serial_port, &enter, sizeof(enter));
+                    usleep(200000); // Th m delay nh? d? thi?t b? tr? l?i
+
+                    // Ch? g?i receive_data sau khi d  g?i xong gi  tr? v  enter
+                    resp = receive_data(serial_port);
+                    printf("UART response SrcIP: %s\n", resp);
+                    if (resp && (strchr(resp, 'Y') || strstr(resp, "OK")))
+                    {
+                        printf("OK!\n");
+                    }
+                    else if (resp && (strchr(resp, 'N') || strstr(resp, "ERROR")))
+                    {
+                        printf("NO\n");
+                    }
+                }
+                else if (strcmp(type_fields[i], "Dest Port") == 0)
+                {
+                    char keyG = 'G';
+                    write(serial_port, &key_08, sizeof(key_08));
+                    usleep(50000);
+                    write(serial_port, &enter, sizeof(enter));
+                    usleep(50000);
+                    write(serial_port, &keyG, sizeof(keyG));
+                    usleep(50000);
+                    write(serial_port, &port_key, sizeof(port_key));
+                    usleep(50000);
+                    for (int j = 0; j < strlen(value_fields[i]); j++)
+                    {
+                        char data = value_fields[i][j];
+                        send_data(serial_port, &data, sizeof(data));
+                        usleep(100000);
+                    }
+                    write(serial_port, &enter, sizeof(enter));
+                    // receive_data(serial_port);
+                    resp = receive_data(serial_port);
+                    printf("UART response DstPort: %s\n", resp);
+                    if (resp && (strchr(resp, 'Y') || strstr(resp, "OK")))
+                    {
+                        printf("OK  !\n");
+                    }
+                    else if (resp && (strchr(resp, 'N') || strstr(resp, "ERROR")))
+                    {
+                        printf("NO\n");
+                    }
+                }
+                else if (strcmp(type_fields[i], "Protocol") == 0)
+                {
+                    char keyI = 'I';
+                    write(serial_port, &key_08, sizeof(key_08));
+                    usleep(50000);
+                    write(serial_port, &enter, sizeof(enter));
+                    usleep(50000);
+                    write(serial_port, &keyI, sizeof(keyI));
+                    usleep(50000);
+                    write(serial_port, &port_key, sizeof(port_key));
+                    usleep(10000);
+                    char proto_key = 0;
+                    if (strcmp(value_fields[i], "TCP") == 0)
+                        proto_key = '1';
+                    else if (strcmp(value_fields[i], "UDP") == 0)
+                        proto_key = '2';
+                    else if (strcmp(value_fields[i], "ICMP") == 0)
+                        proto_key = '3';
+                    if (proto_key)
+                        write(serial_port, &proto_key, sizeof(proto_key));
+                    usleep(100000);
+                    // write(serial_port, &enter, sizeof(enter));
+                    // receive_data(serial_port);
+                    resp = receive_data(serial_port);
+                    printf("UART_2 response Protocol: %s\n", resp);
+                    if (resp && (strchr(resp, 'Y') || strstr(resp, "OK")))
+                    {
+                        printf("OK!\n");
+                    }
+                    else if (resp && (strchr(resp, 'N') || strstr(resp, "ERROR")))
+                    {
+                        printf("NO\n");
+                    }
+                }
+                // Source Port: n?u c?n g?i UART, b? sung t?i d y
+            }
+
+            // Luu c?u h nh v o DB nhu cu
+            mirror_type[0] = '\0';
+            value[0] = '\0';
+            strcat(mirror_type, "[");
+            strcat(value, "{");
+            for (int i = 0; i < field_count; ++i)
+            {
+                strcat(mirror_type, "\"");
+                strcat(mirror_type, type_fields[i]);
+                strcat(mirror_type, "\"");
+                if (i < field_count - 1)
+                    strcat(mirror_type, ",");
+
+                char key[32] = {0};
+                if (strcmp(type_fields[i], "Dest Mac") == 0)
+                    strcpy(key, "DestMac");
+                else if (strcmp(type_fields[i], "Source Mac") == 0)
+                    strcpy(key, "SourceMac");
+                else if (strcmp(type_fields[i], "Dest IP") == 0)
+                    strcpy(key, strchr(value_fields[i], ':') ? "DestIPv6" : "DestIPv4");
+                else if (strcmp(type_fields[i], "Source IP") == 0)
+                    strcpy(key, strchr(value_fields[i], ':') ? "SourceIPv6" : "SourceIPv4");
+                else if (strcmp(type_fields[i], "Dest Port") == 0)
+                    strcpy(key, "DestPort");
+                else if (strcmp(type_fields[i], "Source Port") == 0)
+                    strcpy(key, "SourcePort");
+                else if (strcmp(type_fields[i], "Protocol") == 0)
+                    strcpy(key, "Protocol");
+                else
+                    strcpy(key, type_fields[i]);
+
+                strcat(value, "\"");
+                strcat(value, key);
+                strcat(value, "\":\"");
+                strcat(value, value_fields[i]);
+                strcat(value, "\"");
+                if (i < field_count - 1)
+                    strcat(value, ",");
+            }
+            strcat(mirror_type, "]");
+            strcat(value, "}");
+
+            strcpy(cfg->mirror_type, mirror_type);
+            strcpy(cfg->value, value);
+
+            system("clear");
+            display_logo1();
+            printf("\n+--------------------------------------------------------------+\n");
+            printf("\n|  Saving Packet Filtering Configuration...                   |\n");
+            printf("+--------------------------------------------------------------+\n");
+            save_port_mirroring_to_db(cfg);
+            break;
+        }
+        else if (choice == '9')
+        {
+            system("clear");
+            display_logo1();
+            Select_traffic_mirroring_mode(serial_port, cfg);
+            return;
+        }
+        else
+        {
+            printf("Invalid selection! Please try again.\n");
+        }
+    }
+
+    system("clear");
+    new_menu(serial_port);
+}
+
+void InputDestMAC(char *mac)
+{
+    printf("\nEnter Destination MAC (format XX:XX:XX:XX:XX:XX): ");
+    scanf("\n%17s", mac);
+    while (!is_valid_mac_address(mac))
+    {
+        printf("Invalid MAC address! Please re-enter: ");
+        scanf("%17s", mac);
+    }
+}
+
+char InputSourceIP(char *ip)
+{
+    struct in6_addr addr6;
+    int valid = 0;
+    char ip_type = 0;
+    while (!valid)
+    {
+        printf("Enter Source IP (IPv4 or IPv6): ");
+        scanf("%39s", ip);
+        if (validate_ip_address(ip)) // IPv4
+        {
+            valid = 1;
+            ip_type = '4';
+        }
+        else if (inet_pton(AF_INET6, ip, &addr6) == 1) // IPv6
+        {
+            valid = 1;
+            ip_type = '6';
+        }
+        else
+        {
+            printf("Invalid IP address. Please re-enter:\n");
+        }
+    }
+    return ip_type;
+}
+
+void InputSourceMAC(char *mac)
+{
+    printf("Enter Source MAC (format XX:XX:XX:XX:XX:XX): ");
+    scanf("%17s", mac);
+    while (!is_valid_mac_address(mac))
+    {
+        // printf("Invalid MAC address! Please re-enter: ");
+        scanf("%17s", mac);
+    }
+}
+void InputDestPort(char *port)
+{
+    printf("Enter Destination Port: ");
+    scanf("%5s", port);
+}
+void InputSourcePort(char *port)
+{
+    printf("Enter Destination Port: ");
+    scanf("%5s", port);
+}
+
+char InputDestIP(char *ip)
+{
+    struct in6_addr addr6;
+    int valid = 0;
+    char ip_type = 0;
+    while (!valid)
+    {
+        printf("Enter Destination IP (IPv4 or IPv6): ");
+        scanf("%39s", ip);
+        if (validate_ip_address(ip)) // IPv4
+        {
+            valid = 1;
+            ip_type = '4';
+        }
+        else if (inet_pton(AF_INET6, ip, &addr6) == 1) // IPv6
+        {
+            valid = 1;
+            ip_type = '6';
+        }
+        else
+        {
+            printf("Invalid IP address. Please re-enter:\n");
+        }
+    }
+    return ip_type;
+}
+void InputProtocol(int *protocol, char *protocol_str)
+{
+    char choice;
+    printf("Select Protocol:\n");
+    printf("  [1] Any\n");
+    printf("  [2] TCP\n");
+    printf("  [3] UDP\n");
+    printf("  [4] ICMP\n");
+    printf("  [5] SCTP\n");
+    printf("  [6] GRE\n");
+    printf("  [7] ESP\n");
+    printf("  [8] AH\n");
+    printf("  [9] IPIP\n");
+    printf("  [A] ICMPv6\n");
+    printf("  [B] IGMP\n");
+    printf("  [C] IPSec (custom)\n");
+    printf("  [D] L2TP (custom)\n");
+    printf("  [E] PPTP (custom)\n");
+    scanf(" %c", &choice);
+
+    switch (choice)
+    {
+    case '1':
+        *protocol = 0;
+        strcpy(protocol_str, "Any");
+        break;
+    case '2':
+        *protocol = 6;
+        strcpy(protocol_str, "TCP");
+        break;
+    case '3':
+        *protocol = 17;
+        strcpy(protocol_str, "UDP");
+        break;
+    case '4':
+        *protocol = 1;
+        strcpy(protocol_str, "ICMP");
+        break;
+    case '5':
+        *protocol = 132;
+        strcpy(protocol_str, "SCTP");
+        break;
+    case '6':
+        *protocol = 47;
+        strcpy(protocol_str, "GRE");
+        break;
+    case '7':
+        *protocol = 50;
+        strcpy(protocol_str, "ESP");
+        break;
+    case '8':
+        *protocol = 51;
+        strcpy(protocol_str, "AH");
+        break;
+    case '9':
+        *protocol = 4;
+        strcpy(protocol_str, "IPIP");
+        break;
+    case 'A':
+    case 'a':
+        *protocol = 58;
+        strcpy(protocol_str, "ICMPv6");
+        break;
+    case 'B':
+    case 'b':
+        *protocol = 2;
+        strcpy(protocol_str, "IGMP");
+        break;
+    case 'C':
+    case 'c':
+        printf("Enter custom protocol number for IPSec: ");
+        scanf("%d", protocol);
+        strcpy(protocol_str, "IPSec");
+        break;
+    case 'D':
+    case 'd':
+        printf("Enter custom protocol number for L2TP: ");
+        scanf("%d", protocol);
+        strcpy(protocol_str, "L2TP");
+        break;
+    case 'E':
+    case 'e':
+        printf("Enter custom protocol number for PPTP: ");
+        scanf("%d", protocol);
+        strcpy(protocol_str, "PPTP");
+        break;
+    default:
+        printf("Invalid choice. Defaulting to TCP.\n");
+        *protocol = 6;
+        strcpy(protocol_str, "TCP");
+    }
+}
+
+void save_port_mirroring_to_db(const PortMirroringConfig *cfg)
+{
+    sqlite3 *db;
+    int rc = sqlite3_open(DB_PATH, &db);
+    sqlite3_busy_timeout(db, 2000);
+    if (rc)
+    {
+        printf("Cannot open database: %s\n", sqlite3_errmsg(db));
+        return;
+    }
+
+    const char *update_sql =
+        "UPDATE DeviceInterfaces SET "
+        "InterfaceIsMirroring=?, InterfaceToMonitorInterfaceId=?, InterfaceMirrorSetting=?, MirrorType=?, Value=? "
+        "WHERE InterfaceName=?";
+
+    sqlite3_stmt *stmt;
+    rc = sqlite3_prepare_v2(db, update_sql, -1, &stmt, NULL);
+    if (rc != SQLITE_OK)
+    {
+        printf("SQL error: %s\n", sqlite3_errmsg(db));
+        sqlite3_close(db);
+        return;
+    }
+
+    sqlite3_bind_int(stmt, 1, cfg->is_mirroring);
+    sqlite3_bind_int(stmt, 2, cfg->monitor_target_id);
+    sqlite3_bind_text(stmt, 3, cfg->mirror_setting, -1, SQLITE_STATIC);
+    sqlite3_bind_text(stmt, 4, cfg->mirror_type, -1, SQLITE_STATIC);
+    sqlite3_bind_text(stmt, 5, cfg->value, -1, SQLITE_STATIC);
+    sqlite3_bind_text(stmt, 6, cfg->interface_name, -1, SQLITE_STATIC);
+
+    rc = sqlite3_step(stmt);
+    int rows_affected = sqlite3_changes(db);
+    sqlite3_finalize(stmt);
+
+    if (rows_affected == 0)
+    {
+        // N?u chua c , th  INSERT m?i
+        FILE *file = fopen(CONFIG_FILE_PORT, "w");
+        if (file != NULL)
+        {
+            fprintf(file, "%d", current_port);
+            fclose(file);
+        }
+    }
+}
+
+//////////////////////////////////////////ĐỒNG BỘ PORT////////////////////////////////////////////////////////////////////////////
+// HÃ m gá»­i lá»‡nh SYN enable/disable
+static void send_syn_enable_disable(int serial_port, int port, int value, int enable,
+                                    char *ID, char *Value, char *buffer)
+{
+    printf(" SYN Enable: %d \n", enable);
+    char key = key6_1;
+    write(serial_port, &key, sizeof(key));
+    usleep(100000);
+    char ent = enter_1;
+    write(serial_port, &ent, sizeof(ent));
+    usleep(100000);
+    char port_char = '1' + (port - 1);
+    write(serial_port, &port_char, sizeof(port_char));
+    usleep(100000);
+    if (enable == 1)
+    {
+        char key_y = keyY_1;
+        write(serial_port, &key_y, sizeof(key_y));
+        usleep(1000000);
+        write(serial_port, &ent, sizeof(ent));
+    }
+    else
+    {
+        char key_n = keyN_1;
+        write(serial_port, &key_n, sizeof(key_n));
+        usleep(1000000);
+        write(serial_port, &ent, sizeof(ent));
+    }
+    write(serial_port, &ent, sizeof(ent));
+    usleep(1000000);
+    // CHECK
+    int t = 0;
+    while (1)
+    {
+        char *data1 = receive_data(serial_port);
+        printf("\nReceived message: %s\n", data1);
+        if ((strchr(data1, 'Y') != NULL))
+        {
+            strcat(buffer, ID);
+            strcat(buffer, "$");
+            strcat(buffer, Value);
+            strcat(buffer, "$OK$");
+            // printf("\nSYN_EN_DIS done\n");
+            break;
+        }
+        else if ((strchr(data1, 'N') != NULL) || (t == 10))
+        {
+            strcat(buffer, ID);
+            strcat(buffer, "$");
+            strcat(buffer, Value);
+            strcat(buffer, "$ERROR$");
+            // printf("\nSYN_EN_DIS error\n");
+            break;
+        }
+        t++;
+    }
+}
+
+// HÃ m gá»­i lá»‡nh SYN threshold
+static void send_syn_threshold(int serial_port, int port, int value, int enable,
+                               char *ID, char *Value, char *buffer)
+
+{
+    // printf("  SYN Threshold: %d cho port %d\n", value, port);
+    printf("  SYN Threshold: %d\n", value);
+
+    char key = key7_1;
+    write(serial_port, &key, sizeof(key));
+    usleep(100000);
+    char ent = enter_1;
+    write(serial_port, &ent, sizeof(ent));
+    usleep(100000);
+
+    char port_char = '1' + (port - 1);
+    write(serial_port, &port_char, sizeof(port_char));
+    usleep(100000);
+
+    char value_str[16];
+    snprintf(value_str, sizeof(value_str), "%d", value);
+    int n = strlen(value_str);
+    for (int i = 0; i < n; i++)
+    {
+        char data = value_str[i];
+        write(serial_port, &data, sizeof(data));
+        usleep(100000);
+    }
+    write(serial_port, &ent, sizeof(ent));
+    usleep(1000000);
+
+    // CHECK
+    int t = 0; // dùng kiểu int nếu t nhận giá trị từ getchar() hoặc read()
+    while (1)
+    {
+        char *data1 = receive_data(serial_port);
+        printf("\nReceived message: %s\n", data1);
+
+        if (strchr(data1, 'Y') != NULL)
+        {
+            strcat(buffer, ID);
+            strcat(buffer, "$");
+            strcat(buffer, Value);
+            strcat(buffer, "$OK$");
+            // printf("\nACK_THR done\n");
+            usleep(100000);
+            break;
+        }
+        else if ((strchr(data1, 'N') != NULL) || (t == 9))
+        {
+            strcat(buffer, ID);
+            strcat(buffer, "$");
+            strcat(buffer, Value);
+            strcat(buffer, "$ERROR$");
+            // printf("\nACK_THR error\n");
+            break;
+        }
+        t++;
+        usleep(100000); // chờ 100ms rồi thử đọc lại
+    }
+}
+
+static void send_ack_threshold(int serial_port, int port, int value, int enable,
+                               char *ID, char *Value, char *buffer)
+{
+    printf("   ACK Threshold: %d \n", value);
+
+    char key = key8_1;
+    write(serial_port, &key, sizeof(key));
+    usleep(100000);
+    char ent = enter_1;
+    write(serial_port, &ent, sizeof(ent));
+    usleep(100000);
+
+    // Gửi số port
+    char port_char = '1' + (port - 1);
+    write(serial_port, &port_char, sizeof(port_char));
+    usleep(100000);
+
+    // Gửi giá trị threshold (theo từng ký tự)
+    char value_str[16];
+    snprintf(value_str, sizeof(value_str), "%d", value);
+    int n = strlen(value_str);
+    for (int i = 0; i < n; i++)
+    {
+        char data = value_str[i];
+        write(serial_port, &data, sizeof(data));
+        usleep(100000);
+    }
+    write(serial_port, &ent, sizeof(ent));
+    usleep(1000000);
+
+    // CHECK
+    int t = 0;
+    while (1)
+    {
+        char *data1 = receive_data(serial_port);
+        printf("\nReceived message: %s\n", data1);
+
+        if (strchr(data1, 'Y') != NULL)
+        {
+            strcat(buffer, ID);
+            strcat(buffer, "$");
+            strcat(buffer, Value);
+            strcat(buffer, "$OK$");
+            // printf("\nACK_THR done\n");
+            usleep(100000);
+            break;
+        }
+        else if ((strchr(data1, 'N') != NULL) || (t == 9))
+        {
+            strcat(buffer, ID);
+            strcat(buffer, "$");
+            strcat(buffer, Value);
+            strcat(buffer, "$ERROR$");
+            // printf("\nACK_THR error\n");
+            break;
+        }
+        t++;
+        usleep(100000); // chờ 100ms rồi thử đọc lại
+    }
+}
+
+// HÃ m gá»­i lá»‡nh UDP threshold
+static void send_udp_threshold(int serial_port, int port, int value, int enable,
+                               char *ID, char *Value, char *buffer)
+{
+    printf("  UDP Threshold: %d \n", value);
+
+    char key = keyC_1;
+    write(serial_port, &key, sizeof(key));
+    usleep(100000);
+    char ent = enter_1;
+    write(serial_port, &ent, sizeof(ent));
+    usleep(100000);
+
+    char port_char = '1' + (port - 1);
+    write(serial_port, &port_char, sizeof(port_char));
+    usleep(100000);
+
+    char value_str[16];
+    snprintf(value_str, sizeof(value_str), "%d", value);
+    int n = strlen(value_str);
+    for (int i = 0; i < n; i++)
+    {
+        char data = value_str[i];
+        write(serial_port, &data, sizeof(data));
+        usleep(100000);
+    }
+    write(serial_port, &ent, sizeof(ent));
+    usleep(1000000);
+    // === Kiểm tra phản hồi ===
+    int t = 0;
+    while (1)
+    {
+        char *data1 = receive_data(serial_port);
+        printf("\nReceived message: %s\n", data1);
+
+        if (strchr(data1, 'Y') != NULL)
+        {
+            strcat(buffer, ID);
+            strcat(buffer, "$");
+            strcat(buffer, Value);
+            strcat(buffer, "$OK$");
+            // printf("\nACK_THR done\n");
+            usleep(100000);
+            break;
+        }
+        else if ((strchr(data1, 'N') != NULL) || (t == 9))
+        {
+            strcat(buffer, ID);
+            strcat(buffer, "$");
+            strcat(buffer, Value);
+            strcat(buffer, "$ERROR$");
+            /// printf("\nACK_THR error\n");
+            break;
+        }
+        t++;
+        usleep(100000); // chờ 100ms rồi thử đọc lại
+    }
+}
+
+// HÃ m gá»­i lá»‡nh UDP threshold per second
+static void send_udp_threshold_ps(int serial_port, int port, int value, int enable,
+                                  char *ID, char *Value, char *buffer)
+
+{
+    printf("  UDP Rate: %d \n", value, port);
+
+    char key = keyD_1;
+    write(serial_port, &key, sizeof(key));
+    usleep(100000);
+    char ent = enter_1;
+    write(serial_port, &ent, sizeof(ent));
+    usleep(100000);
+
+    char port_char = '1' + (port - 1);
+    write(serial_port, &port_char, sizeof(port_char));
+    usleep(100000);
+
+    char value_str[16];
+    snprintf(value_str, sizeof(value_str), "%d", value);
+    int n = strlen(value_str);
+    for (int i = 0; i < n; i++)
+    {
+        char data = value_str[i];
+        write(serial_port, &data, sizeof(data));
+        usleep(100000);
+    }
+    write(serial_port, &ent, sizeof(ent));
+    usleep(1000000);
+    // CHECK
+    int t = 0;
+    while (1)
+    {
+        char *data1 = receive_data(serial_port);
+        printf("\nReceived message: %s\n", data1);
+
+        if (strchr(data1, 'Y') != NULL)
+        {
+            strcat(buffer, ID);
+            strcat(buffer, "$");
+            strcat(buffer, Value);
+            strcat(buffer, "$OK$");
+            // printf("\nACK_THR done\n");
+            usleep(100000);
+            break;
+        }
+        else if ((strchr(data1, 'N') != NULL) || (t == 9))
+        {
+            strcat(buffer, ID);
+            strcat(buffer, "$");
+            strcat(buffer, Value);
+            strcat(buffer, "$ERROR$");
+            // printf("\nACK_THR error\n");
+            break;
+        }
+        t++;
+        usleep(100000); // chờ 100ms rồi thử đọc lại
+    }
+}
+
+// HÃ m gá»­i lá»‡nh DNS threshold
+static void send_dns_threshold(int serial_port, int port, int value, int enable,
+                               char *ID, char *Value, char *buffer)
+{
+    printf(" DNS Threshold: %d\n", value, port);
+
+    char key = keyF_1;
+    write(serial_port, &key, sizeof(key));
+    usleep(100000);
+    char ent = enter_1;
+    write(serial_port, &ent, sizeof(ent));
+    usleep(100000);
+
+    char port_char = '1' + (port - 1);
+    write(serial_port, &port_char, sizeof(port_char));
+    usleep(100000);
+
+    char value_str[16];
+    snprintf(value_str, sizeof(value_str), "%d", value);
+    int n = strlen(value_str);
+    for (int i = 0; i < n; i++)
+    {
+        char data = value_str[i];
+        write(serial_port, &data, sizeof(data));
+        usleep(100000);
+    }
+    write(serial_port, &ent, sizeof(ent));
+    usleep(1000000);
+    // CHECK
+    int t = 0;
+    while (1)
+    {
+        char *data1 = receive_data(serial_port);
+        printf("\nReceived message: %s\n", data1);
+
+        if (strchr(data1, 'Y') != NULL)
+        {
+            strcat(buffer, ID);
+            strcat(buffer, "$");
+            strcat(buffer, Value);
+            strcat(buffer, "$OK$");
+            // printf("\nACK_THR done\n");
+            usleep(100000);
+            break;
+        }
+        else if ((strchr(data1, 'N') != NULL) || (t == 9))
+        {
+            strcat(buffer, ID);
+            strcat(buffer, "$");
+            strcat(buffer, Value);
+            strcat(buffer, "$ERROR$");
+            // printf("\nACK_THR error\n");
+            break;
+        }
+        t++;
+        usleep(100000); // ch? 100ms r?i th? ??c l?i
+    }
+}
+
+// HÃ m gá»­i lá»‡nh ICMP threshold
+static void send_icmp_threshold(int serial_port, int port, int value, int enable, char *ID, char *Value, char *buffer)
+
+{
+    printf("ICMP Threshold: %d\n", value, port);
+
+    char key = keyH_1;
+    write(serial_port, &key, sizeof(key));
+    usleep(100000);
+    char ent = enter_1;
+    write(serial_port, &ent, sizeof(ent));
+    usleep(100000);
+
+    char port_char = '1' + (port - 1);
+    write(serial_port, &port_char, sizeof(port_char));
+    usleep(100000);
+
+    char value_str[16];
+    snprintf(value_str, sizeof(value_str), "%d", value);
+    int n = strlen(value_str);
+    for (int i = 0; i < n; i++)
+    {
+        char data = value_str[i];
+        write(serial_port, &data, sizeof(data));
+        usleep(100000);
+    }
+    write(serial_port, &ent, sizeof(ent));
+    usleep(1000000);
+    // CHECK
+    int t = 0;
+    while (1)
+    {
+        char *data1 = receive_data(serial_port);
+        printf("\nReceived message: %s\n", data1);
+
+        if (strchr(data1, 'Y') != NULL)
+        {
+            strcat(buffer, ID);
+            strcat(buffer, "$");
+            strcat(buffer, Value);
+            strcat(buffer, "$OK$");
+            // printf("\nACK_THR done\n");
+            usleep(100000);
+            break;
+        }
+        else if ((strchr(data1, 'N') != NULL) || (t == 9))
+        {
+            strcat(buffer, ID);
+            strcat(buffer, "$");
+            strcat(buffer, Value);
+            strcat(buffer, "$ERROR$");
+            // printf("\nACK_THR error\n");
+            break;
+        }
+        t++;
+        usleep(100000); // ch? 100ms r?i th? ??c l?i
+    }
+}
+
+// HÃ m gá»­i lá»‡nh ICMP threshold per second
+static void send_icmp_threshold_ps(int serial_port, int port, int value, int enable,
+                                   char *ID, char *Value, char *buffer)
+{
+    printf("ICMP Rate: %d\n", value, port);
+
+    char key = keyI_1;
+    write(serial_port, &key, sizeof(key));
+    usleep(100000);
+    char ent = enter_1;
+    write(serial_port, &ent, sizeof(ent));
+    usleep(100000);
+
+    char port_char = '1' + (port - 1);
+    write(serial_port, &port_char, sizeof(port_char));
+    usleep(100000);
+
+    char value_str[16];
+    snprintf(value_str, sizeof(value_str), "%d", value);
+    int n = strlen(value_str);
+    for (int i = 0; i < n; i++)
+    {
+        char data = value_str[i];
+        write(serial_port, &data, sizeof(data));
+        usleep(100000);
+    }
+    write(serial_port, &ent, sizeof(ent));
+    usleep(1000000);
+    // CHECK
+    int t = 0; // dùng kiểu int nếu t nhận giá trị từ getchar() hoặc read()
+    while (1)
+    {
+        char *data1 = receive_data(serial_port);
+        printf("\nReceived message: %s\n", data1);
+        if ((strchr(data1, 'Y') != NULL))
+        {
+            strcat(buffer, ID);
+            strcat(buffer, "$");
+            strcat(buffer, Value);
+            strcat(buffer, "$OK$");
+            // printf("\nSYN_EN_DIS done\n");
+            break;
+        }
+        else if ((strchr(data1, 'N') != NULL) || (t == 10))
+        {
+            strcat(buffer, ID);
+            strcat(buffer, "$");
+            strcat(buffer, Value);
+            strcat(buffer, "$ERROR$");
+            // printf("\nSYN_EN_DIS error\n");
+            break;
+        }
+        t++;
+    }
+}
+
+// HÃ m gá»­i lá»‡nh IPSec IKE threshold
+static void send_ike_threshold(int serial_port, int port, int value, int enable,
+                               char *ID, char *Value, char *buffer)
+{
+    printf("  IPSec IKE Threshold: %d \n", value, port);
+
+    char key = keyK_1;
+    write(serial_port, &key, sizeof(key));
+    usleep(100000);
+    char ent = enter_1;
+    write(serial_port, &ent, sizeof(ent));
+    usleep(100000);
+
+    char port_char = '1' + (port - 1);
+    write(serial_port, &port_char, sizeof(port_char));
+    usleep(100000);
+
+    char value_str[16];
+    snprintf(value_str, sizeof(value_str), "%d", value);
+    int n = strlen(value_str);
+    for (int i = 0; i < n; i++)
+    {
+        char data = value_str[i];
+        write(serial_port, &data, sizeof(data));
+        usleep(100000);
+    }
+    write(serial_port, &ent, sizeof(ent));
+    usleep(1000000);
+    // CHECK
+    int t = 0;
+    while (1)
+    {
+        char *data1 = receive_data(serial_port);
+        printf("\nReceived message: %s\n", data1);
+        if ((strchr(data1, 'Y') != NULL))
+        {
+            strcat(buffer, ID);
+            strcat(buffer, "$");
+            strcat(buffer, Value);
+            strcat(buffer, "$OK$");
+            // printf("\nSYN_EN_DIS done\n");
+            break;
+        }
+        else if ((strchr(data1, 'N') != NULL) || (t == 10))
+        {
+            strcat(buffer, ID);
+            strcat(buffer, "$");
+            strcat(buffer, Value);
+            strcat(buffer, "$ERROR$");
+            // printf("\nSYN_EN_DIS error\n");
+            break;
+        }
+        t++;
+    }
+}
+
+// HÃ m gá»­i lá»‡nh LAND enable/disable
+static void send_land_enable_disable(int serial_port, int port, int value, int enable,
+                                     char *ID, char *Value, char *buffer)
+{
+    printf("  LAND Enable: %d \n", enable, port);
+
+    char key = keyA_1;
+    write(serial_port, &key, sizeof(key));
+    usleep(100000);
+    char ent = enter_1;
+    write(serial_port, &ent, sizeof(ent));
+    usleep(100000);
+
+    char port_char = '1' + (port - 1);
+    write(serial_port, &port_char, sizeof(port_char));
+    usleep(100000);
+
+    if (enable == 1)
+    {
+        char key_y = keyY_1;
+        write(serial_port, &key_y, sizeof(key_y));
+        usleep(1000000);
+        write(serial_port, &ent, sizeof(ent));
+    }
+    else
+    {
+        char key_n = keyN_1;
+        write(serial_port, &key_n, sizeof(key_n));
+        usleep(1000000);
+        write(serial_port, &ent, sizeof(ent));
+    }
+    write(serial_port, &ent, sizeof(ent));
+    usleep(1000000);
+    // CHECK
+    int t = 0;
+    while (1)
+    {
+        char *data1 = receive_data(serial_port);
+        printf("\nReceived message: %s\n", data1);
+        if ((strchr(data1, 'Y') != NULL))
+        {
+            strcat(buffer, ID);
+            strcat(buffer, "$");
+            strcat(buffer, Value);
+            strcat(buffer, "$OK$");
+            // printf("\nSYN_EN_DIS done\n");
+            break;
+        }
+        else if ((strchr(data1, 'N') != NULL) || (t == 10))
+        {
+            strcat(buffer, ID);
+            strcat(buffer, "$");
+            strcat(buffer, Value);
+            strcat(buffer, "$ERROR$");
+            // printf("\nSYN_EN_DIS error\n");
+            break;
+        }
+        t++;
+    }
+}
+
+// HÃ m gá»­i lá»‡nh UDP enable/disable
+static void send_udp_enable_disable(int serial_port, int port, int value, int enable,
+                                    char *ID, char *Value, char *buffer)
+{
+    printf(" UDP Enable: %d \n", enable, port);
+    char key = keyB_1;
+    write(serial_port, &key, sizeof(key));
+    usleep(100000);
+    char ent = enter_1;
+    write(serial_port, &ent, sizeof(ent));
+    usleep(100000);
+
+    char port_char = '1' + (port - 1);
+    write(serial_port, &port_char, sizeof(port_char));
+    usleep(100000);
+
+    if (enable == 1)
+    {
+        char key_y = keyY_1;
+        write(serial_port, &key_y, sizeof(key_y));
+        usleep(10000);
+        write(serial_port, &ent, sizeof(ent));
+    }
+    else
+    {
+        char key_n = keyN_1;
+        write(serial_port, &key_n, sizeof(key_n));
+        usleep(10000);
+        write(serial_port, &ent, sizeof(ent));
+    }
+    usleep(1000000);
+    // CHECK
+    int t = 0;
+    while (1)
+    {
+        char *data1 = receive_data(serial_port);
+        printf("\nReceived message: %s\n", data1);
+        if ((strchr(data1, 'Y') != NULL))
+        {
+            strcat(buffer, ID);
+            strcat(buffer, "$");
+            strcat(buffer, Value);
+            strcat(buffer, "$OK$");
+            // printf("\nSYN_EN_DIS done\n");
+            break;
+        }
+        else if ((strchr(data1, 'N') != NULL) || (t == 10))
+        {
+            strcat(buffer, ID);
+            strcat(buffer, "$");
+            strcat(buffer, Value);
+            strcat(buffer, "$ERROR$");
+            // printf("\nSYN_EN_DIS error\n");
+            break;
+        }
+        t++;
+    }
+}
+
+// HÃ m gá»­i lá»‡nh DNS enable/disable
+static void send_dns_enable_disable(int serial_port, int port, int value, int enable,
+                                    char *ID, char *Value, char *buffer)
+{
+    printf(" DNS Enable: %d\n", enable, port);
+
+    char key = keyE_1;
+    write(serial_port, &key, sizeof(key));
+    usleep(100000);
+    char ent = enter_1;
+    write(serial_port, &ent, sizeof(ent));
+    usleep(100000);
+
+    char port_char = '1' + (port - 1);
+    write(serial_port, &port_char, sizeof(port_char));
+    usleep(100000);
+
+    if (enable == 1)
+    {
+        char key_y = keyY_1;
+        write(serial_port, &key_y, sizeof(key_y));
+        usleep(1000000);
+        write(serial_port, &ent, sizeof(ent));
+    }
+    else
+    {
+        char key_n = keyN_1;
+        write(serial_port, &key_n, sizeof(key_n));
+        usleep(1000000);
+        write(serial_port, &ent, sizeof(ent));
+    }
+    write(serial_port, &ent, sizeof(ent));
+    usleep(1000000);
+    // CHECK
+    int t = 0;
+    while (1)
+    {
+        char *data1 = receive_data(serial_port);
+        printf("\nReceived message: %s\n", data1);
+        if ((strchr(data1, 'Y') != NULL))
+        {
+            strcat(buffer, ID);
+            strcat(buffer, "$");
+            strcat(buffer, Value);
+            strcat(buffer, "$OK$");
+            // printf("\nSYN_EN_DIS done\n");
+            break;
+        }
+        else if ((strchr(data1, 'N') != NULL) || (t == 10))
+        {
+            strcat(buffer, ID);
+            strcat(buffer, "$");
+            strcat(buffer, Value);
+            strcat(buffer, "$ERROR$");
+            // printf("\nSYN_EN_DIS error\n");
+            break;
+        }
+        t++;
+    }
+}
+
+// HÃ m gá»­i lá»‡nh ICMP enable/disable
+static void send_icmp_enable_disable(int serial_port, int port, int value, int enable,
+                                     char *ID, char *Value, char *buffer)
+{
+    printf(" ICMP Enable: %d \n", enable, port);
+
+    char key = keyG_1;
+    write(serial_port, &key, sizeof(key));
+    usleep(100000);
+    char ent = enter_1;
+    write(serial_port, &ent, sizeof(ent));
+    usleep(100000);
+
+    char port_char = '1' + (port - 1);
+    write(serial_port, &port_char, sizeof(port_char));
+    usleep(100000);
+
+    if (enable == 1)
+    {
+        char key_y = keyY_1;
+        write(serial_port, &key_y, sizeof(key_y));
+        usleep(1000000);
+        write(serial_port, &ent, sizeof(ent));
+    }
+    else
+    {
+        char key_n = keyN_1;
+        write(serial_port, &key_n, sizeof(key_n));
+        usleep(1000000);
+        write(serial_port, &ent, sizeof(ent));
+    }
+    write(serial_port, &ent, sizeof(ent));
+    usleep(1000000);
+    // CHECK
+    int t = 0;
+    while (1)
+    {
+        char *data1 = receive_data(serial_port);
+        printf("\nReceived message: %s\n", data1);
+        if ((strchr(data1, 'Y') != NULL))
+        {
+            strcat(buffer, ID);
+            strcat(buffer, "$");
+            strcat(buffer, Value);
+            strcat(buffer, "$OK$");
+            // printf("\nSYN_EN_DIS done\n");
+            break;
+        }
+        else if ((strchr(data1, 'N') != NULL) || (t == 10))
+        {
+            strcat(buffer, ID);
+            strcat(buffer, "$");
+            strcat(buffer, Value);
+            strcat(buffer, "$ERROR$");
+            // printf("\nSYN_EN_DIS error\n");
+            break;
+        }
+        t++;
+    }
+}
+
+// HÃ m gá»­i lá»‡nh IPSec IKE enable/disable
+static void send_ike_enable_disable(int serial_port, int port, int value, int enable,
+                                    char *ID, char *Value, char *buffer)
+{
+    printf(" IPSec IKE Enable: %d\n", enable, port);
+
+    char key = keyJ_1;
+    write(serial_port, &key, sizeof(key));
+    usleep(100000);
+    char ent = enter_1;
+    write(serial_port, &ent, sizeof(ent));
+    usleep(100000);
+
+    char port_char = '1' + (port - 1);
+    write(serial_port, &port_char, sizeof(port_char));
+    usleep(100000);
+
+    if (enable == 1)
+    {
+        char key_y = keyY_1;
+        write(serial_port, &key_y, sizeof(key_y));
+        usleep(1000000);
+        write(serial_port, &ent, sizeof(ent));
+    }
+    else
+    {
+        char key_n = keyN_1;
+        write(serial_port, &key_n, sizeof(key_n));
+        usleep(1000000);
+        write(serial_port, &ent, sizeof(ent));
+    }
+    write(serial_port, &ent, sizeof(ent));
+    usleep(1000000);
+    // CHECK
+    int t = 0;
+    while (1)
+    {
+        char *data1 = receive_data(serial_port);
+        printf("\nReceived message: %s\n", data1);
+        if ((strchr(data1, 'Y') != NULL))
+        {
+            strcat(buffer, ID);
+            strcat(buffer, "$");
+            strcat(buffer, Value);
+            strcat(buffer, "$OK$");
+            // printf("\nSYN_EN_DIS done\n");
+            break;
+        }
+        else if ((strchr(data1, 'N') != NULL) || (t == 10))
+        {
+            strcat(buffer, ID);
+            strcat(buffer, "$");
+            strcat(buffer, Value);
+            strcat(buffer, "$ERROR$");
+            // printf("\nSYN_EN_DIS error\n");
+            break;
+        }
+        t++;
+    }
+}
+
+// HÃ m gá»­i lá»‡nh TCP Fragment enable/disable
+static void send_tcpfrag_enable_disable(int serial_port, int port, int value, int enable,
+                                        char *ID, char *Value, char *buffer)
+{
+    printf("TCP Fragment Enable: %d \n", enable, port);
+
+    char key = keyN_1;
+    write(serial_port, &key, sizeof(key));
+    usleep(100000);
+    char ent = enter_1;
+    write(serial_port, &ent, sizeof(ent));
+    usleep(100000);
+
+    char port_char = '1' + (port - 1);
+    write(serial_port, &port_char, sizeof(port_char));
+    usleep(100000);
+
+    if (enable == 1)
+    {
+        char key_y = keyY_1;
+        write(serial_port, &key_y, sizeof(key_y));
+        usleep(1000000);
+        write(serial_port, &ent, sizeof(ent));
+    }
+    else
+    {
+        char key_n = keyN_1;
+        write(serial_port, &key_n, sizeof(key_n));
+        usleep(1000000);
+        write(serial_port, &ent, sizeof(ent));
+    }
+    write(serial_port, &ent, sizeof(ent));
+    usleep(1000000);
+    // CHECK
+    int t = 0;
+    while (1)
+    {
+        char *data1 = receive_data(serial_port);
+        printf("\nReceived message: %s\n", data1);
+        if ((strchr(data1, 'Y') != NULL))
+        {
+            strcat(buffer, ID);
+            strcat(buffer, "$");
+            strcat(buffer, Value);
+            strcat(buffer, "$OK$");
+            // printf("\nSYN_EN_DIS done\n");
+            break;
+        }
+        else if ((strchr(data1, 'N') != NULL) || (t == 10))
+        {
+            strcat(buffer, ID);
+            strcat(buffer, "$");
+            strcat(buffer, Value);
+            strcat(buffer, "$ERROR$");
+            // printf("\nSYN_EN_DIS error\n");
+            break;
+        }
+        t++;
+    }
+}
+
+// HÃ m gá»­i lá»‡nh UDP Fragment enable/disable
+static void send_udpfrag_enable_disable(int serial_port, int port, int value, int enable,
+                                        char *ID, char *Value, char *buffer)
+{
+    printf(" UDP Fragment Enable: %d \n", enable, port);
+
+    char key = keyO_1;
+    write(serial_port, &key, sizeof(key));
+    usleep(100000);
+    char ent = enter_1;
+    write(serial_port, &ent, sizeof(ent));
+    usleep(100000);
+
+    char port_char = '1' + (port - 1);
+    write(serial_port, &port_char, sizeof(port_char));
+    usleep(100000);
+
+    if (enable == 1)
+    {
+        char key_y = keyY_1;
+        write(serial_port, &key_y, sizeof(key_y));
+        usleep(1000000);
+        write(serial_port, &ent, sizeof(ent));
+    }
+    else
+    {
+        char key_n = keyN_1;
+        write(serial_port, &key_n, sizeof(key_n));
+        usleep(1000000);
+        write(serial_port, &ent, sizeof(ent));
+    }
+    write(serial_port, &ent, sizeof(ent));
+    usleep(1000000);
+    // CHECK
+    int t = 0;
+    while (1)
+    {
+        char *data1 = receive_data(serial_port);
+        printf("\nReceived message: %s\n", data1);
+        if ((strchr(data1, 'Y') != NULL))
+        {
+            strcat(buffer, ID);
+            strcat(buffer, "$");
+            strcat(buffer, Value);
+            strcat(buffer, "$OK$");
+            // printf("\nSYN_EN_DIS done\n");
+            break;
+        }
+        else if ((strchr(data1, 'N') != NULL) || (t == 10))
+        {
+            strcat(buffer, ID);
+            strcat(buffer, "$");
+            strcat(buffer, Value);
+            strcat(buffer, "$ERROR$");
+            // printf("\nSYN_EN_DIS error\n");
+            break;
+        }
+        t++;
+    }
+}
+
+// HÃ m gá»­i lá»‡nh HTTP enable/disable
+static void send_http_enable_disable(int serial_port, int port, int value, int enable,
+                                     char *ID, char *Value, char *buffer)
+{
+    printf(" HTTP Enable: %d \n", enable, port);
+
+    char key = keyP_1;
+    write(serial_port, &key, sizeof(key));
+    usleep(100000);
+    char ent = enter_1;
+    write(serial_port, &ent, sizeof(ent));
+    usleep(100000);
+
+    char port_char = '1' + (port - 1);
+    write(serial_port, &port_char, sizeof(port_char));
+    usleep(100000);
+
+    if (enable == 1)
+    {
+        char key_y = keyY_1;
+        write(serial_port, &key_y, sizeof(key_y));
+        usleep(1000000);
+        write(serial_port, &ent, sizeof(ent));
+    }
+    else
+    {
+        char key_n = keyN_1;
+        write(serial_port, &key_n, sizeof(key_n));
+        usleep(1000000);
+        write(serial_port, &ent, sizeof(ent));
+    }
+    write(serial_port, &ent, sizeof(ent));
+    usleep(1000000);
+    // CHECK
+    int t = 0;
+    while (1)
+    {
+        char *data1 = receive_data(serial_port);
+        printf("\nReceived message: %s\n", data1);
+        if ((strchr(data1, 'Y') != NULL))
+        {
+            strcat(buffer, ID);
+            strcat(buffer, "$");
+            strcat(buffer, Value);
+            strcat(buffer, "$OK$");
+            // printf("\nSYN_EN_DIS done\n");
+            break;
+        }
+        else if ((strchr(data1, 'N') != NULL) || (t == 10))
+        {
+            strcat(buffer, ID);
+            strcat(buffer, "$");
+            strcat(buffer, Value);
+            strcat(buffer, "$ERROR$");
+            // printf("\nSYN_EN_DIS error\n");
+            break;
+        }
+        t++;
+    }
+}
+
+// HÃ m gá»­i lá»‡nh HTTPS enable/disable
+static void send_https_enable_disable(int serial_port, int port, int value, int enable,
+                                      char *ID, char *Value, char *buffer)
+{
+    printf(" HTTPS Enable: %d \n", enable, port);
+
+    char key_mode = keyFF_1;
+    write(serial_port, &key_mode, sizeof(key_mode));
+    usleep(100000);
+    char ent = enter_1;
+    write(serial_port, &ent, sizeof(ent));
+    usleep(100000);
+
+    char port_char = '1' + (port - 1);
+    write(serial_port, &port_char, sizeof(port_char));
+    usleep(100000);
+
+    if (enable == 1)
+    {
+        char key_y = keyY_1;
+        write(serial_port, &key_y, sizeof(key_y));
+        usleep(1000000);
+        write(serial_port, &ent, sizeof(ent));
+    }
+    else
+    {
+        char key_n = keyN_1;
+        write(serial_port, &key_n, sizeof(key_n));
+        usleep(1000000);
+        write(serial_port, &ent, sizeof(ent));
+    }
+    write(serial_port, &ent, sizeof(ent));
+    usleep(1000000);
+    // CHECK
+    int t = 0;
+    while (1)
+    {
+        char *data1 = receive_data(serial_port);
+        printf("\nReceived message: %s\n", data1);
+        if ((strchr(data1, 'Y') != NULL))
+        {
+            strcat(buffer, ID);
+            strcat(buffer, "$");
+            strcat(buffer, Value);
+            strcat(buffer, "$OK$");
+            // printf("\nSYN_EN_DIS done\n");
+            break;
+        }
+        else if ((strchr(data1, 'N') != NULL) || (t == 10))
+        {
+            strcat(buffer, ID);
+            strcat(buffer, "$");
+            strcat(buffer, Value);
+            strcat(buffer, "$ERROR$");
+            // printf("\nSYN_EN_DIS error\n");
+            break;
+        }
+        t++;
+    }
+}
+
+// HÃ m gá»­i lá»‡nh Whitelist timeout
+static void send_whitelist_timeout(int serial_port, int port, int value, int enable,
+                                   char *ID, char *Value, char *buffer)
+{
+    printf("  Whitelist Timeout: %d \n", value, port);
+
+    char key = key9_1;
+    write(serial_port, &key, sizeof(key));
+    usleep(100000);
+    char ent = enter_1;
+    write(serial_port, &ent, sizeof(ent));
+    usleep(100000);
+
+    char value_str[16];
+    snprintf(value_str, sizeof(value_str), "%d", value);
+    int n = strlen(value_str);
+    for (int i = 0; i < n; i++)
+    {
+        char data = value_str[i];
+        write(serial_port, &data, sizeof(data));
+        usleep(100000);
+    }
+    write(serial_port, &ent, sizeof(ent));
+    usleep(1000000);
+    int t = 0;
+    while (1)
+    {
+        char *data1 = receive_data(serial_port);
+        printf("\nReceived message: %s\n", data1);
+        if ((strchr(data1, 'Y') != NULL))
+        {
+            strcat(buffer, ID);
+            strcat(buffer, "$");
+            strcat(buffer, Value);
+            strcat(buffer, "$OK$");
+            // printf("\nSYN_EN_DIS done\n");
+            break;
+        }
+        else if ((strchr(data1, 'N') != NULL) || (t == 10))
+        {
+            strcat(buffer, ID);
+            strcat(buffer, "$");
+            strcat(buffer, Value);
+            strcat(buffer, "$ERROR$");
+            // printf("\nSYN_EN_DIS error\n");
+            break;
+        }
+        t++;
+    }
+}
+
+// HÃ m Ä‘á»“ng bá»™ 1 port tá»« database vÃ  gá»­i lá»‡nh write()
+static void dong_bo_port_write(int serial_port, int port)
+{
+    sqlite3 *db = NULL;
+    sqlite3_stmt *st = NULL;
+    char latest_time[32] = "";
+    char latest_profile_name[64] = "";
+    int latest_rowid = -1;
+
+    if (sqlite3_open(DB_PATH, &db) != SQLITE_OK)
+    {
+        fprintf(stderr, "Cannot open DB\n");
+        return;
+    }
+
+    char target_iface[8];
+    sprintf(target_iface, "eth%d", port);
+
+    // LÃ¡ÂºÂ¥y tÃ¡ÂºÂ¥t cÃ¡ÂºÂ£ row cÃƒÂ³ DefenseProfileUsingTime != NULL
+    const char *sql = "SELECT rowid, DefenseProfileUsingTime, DefenseProfileName FROM DefenseProfiles WHERE DefenseProfileUsingTime IS NOT NULL";
+
+    if (sqlite3_prepare_v2(db, sql, -1, &st, NULL) == SQLITE_OK)
+    {
+        while (sqlite3_step(st) == SQLITE_ROW)
+        {
+            int rowid = sqlite3_column_int(st, 0);
+            const char *json_text = (const char *)sqlite3_column_text(st, 1);
+            const char *profile_name = (const char *)sqlite3_column_text(st, 2);
+
+            if (!json_text || !profile_name)
+                continue;
+
+            cJSON *root_json = cJSON_Parse(json_text);
+            if (!root_json || !cJSON_IsArray(root_json))
+            {
+                if (root_json)
+                    cJSON_Delete(root_json);
+                continue;
+            }
+
+            int n = cJSON_GetArraySize(root_json);
+            for (int i = 0; i < n; i++)
+            {
+                cJSON *e = cJSON_GetArrayItem(root_json, i);
+                cJSON *iface_obj = cJSON_GetObjectItem(e, "interface");
+                cJSON *start_obj = cJSON_GetObjectItem(e, "start");
+                const char *iface = (iface_obj && cJSON_IsString(iface_obj)) ? iface_obj->valuestring : NULL;
+                const char *start = (start_obj && cJSON_IsString(start_obj)) ? start_obj->valuestring : NULL;
+
+                if (iface && start && strcmp(iface, target_iface) == 0)
+                {
+                    if (latest_time[0] == 0 || strcmp(start, latest_time) > 0)
+                    {
+                        strcpy(latest_time, start);
+                        strcpy(latest_profile_name, profile_name);
+                        latest_rowid = rowid;
+                    }
+                }
+            }
+            cJSON_Delete(root_json);
+        }
+    }
+    sqlite3_finalize(st);
+    // TÃ¡ÂºÂ¡o JSON gÃ¡Â»Â­i UART
+    cJSON *root = cJSON_CreateObject();
+    cJSON_AddStringToObject(root, "port", target_iface);
+    cJSON_AddStringToObject(root, "DefenseProfileName", latest_profile_name);
+    cJSON_AddStringToObject(root, "LatestStartTime", latest_time); // <-- thÃƒÂªm mÃ¡Â»â€˜c thÃ¡Â»Âi gian mÃ¡Â»â€ºi nhÃ¡ÂºÂ¥t
+
+    printf("Port %d: Final selection - Profile: %s, Time: %s\n", port, latest_profile_name, latest_time);
+
+    // Náº¿u tÃ¬m tháº¥y profile, Ä‘á»c cáº¥u hÃ¬nh vÃ  gá»­i lá»‡nh
+    if (latest_rowid != -1)
+    {
+        printf("Port %d (eth%d) is using profile: %s\n", port, port, latest_profile_name);
+        printf("Port %d: Syncing configuration...\n", port);
+
+        const char *query =
+            "SELECT "
+            "SYNFloodSYNThreshold, SYNFloodACKThreshold, "
+            "UDPFloodThreshold, UDPFloodRate, "
+            "DNSFloodThreshold, "
+            "ICMPFloodThreshold, ICMPFloodRate, "
+            "IPSecIKEThreshold, "
+            "LANDAttackEnable, UDPFloodEnable, DNSFloodEnable, ICMPFloodEnable, IPSecIKEEnable, "
+            "TCPFragmentEnable, UDPFragmentEnable, HTTPFloodEnable, HTTPSFloodEnable, "
+            "SYNFloodWhiteListTimeOut, SYNFloodEnable "
+            "FROM DefenseProfiles WHERE rowid = ?";
+
+        if (sqlite3_prepare_v2(db, query, -1, &st, NULL) == SQLITE_OK)
+        {
+            sqlite3_bind_int(st, 1, latest_rowid);
+            if (sqlite3_step(st) == SQLITE_ROW)
+            {
+                int i = 0;
+                int syn_syn = sqlite3_column_int(st, i++);
+                int syn_ack = sqlite3_column_int(st, i++);
+                int udp_thr = sqlite3_column_int(st, i++);
+                int udp_rate = sqlite3_column_int(st, i++);
+                int dns_thr = sqlite3_column_int(st, i++);
+                int icmp_thr = sqlite3_column_int(st, i++);
+                int icmp_rate = sqlite3_column_int(st, i++);
+                int ike_thr = sqlite3_column_int(st, i++);
+                int land_en = sqlite3_column_int(st, i++);
+                int udp_en = sqlite3_column_int(st, i++);
+                int dns_en = sqlite3_column_int(st, i++);
+                int icmp_en = sqlite3_column_int(st, i++);
+                int ike_en = sqlite3_column_int(st, i++);
+                int tcpfrag = sqlite3_column_int(st, i++);
+                int udpfrag = sqlite3_column_int(st, i++);
+                int http_en = sqlite3_column_int(st, i++);
+                int https_en = sqlite3_column_int(st, i++);
+                int wl_timeout = sqlite3_column_int(st, i++);
+                int syn_en = sqlite3_column_int(st, i++); // Láº¥y giÃ¡ trá»‹ SYNFloodEnable
+
+                // Khai báo biến buffer, ID, Value trước khi sử dụng trong dong_bo_port_write
+                char buffer[256] = "";
+                char ID[32] = "";
+                char Value[64] = "";
+                int t = 0;
+                // Gửi SYN enable/disable
+                printf("  - SYN Enable: %d\n", syn_en);
+                send_syn_enable_disable(serial_port, port, syn_en, syn_en, ID, Value, buffer);
+
+                // Gửi tất cả threshold/rate
+                printf("  - SYN Threshold: %d\n", syn_syn);
+                send_syn_threshold(serial_port, port, syn_syn, syn_en, ID, Value, buffer);
+
+                printf("  - ACK Threshold: %d\n", syn_ack);
+                send_ack_threshold(serial_port, port, syn_ack, syn_en, ID, Value, buffer);
+
+                printf("  - UDP Threshold: %d\n", udp_thr);
+                send_udp_threshold(serial_port, port, udp_thr, udp_en, ID, Value, buffer);
+
+                printf("  - UDP Rate: %d\n", udp_rate);
+                send_udp_threshold_ps(serial_port, port, udp_rate, udp_en, ID, Value, buffer);
+
+                printf("  - DNS Threshold: %d\n", dns_thr);
+                send_dns_threshold(serial_port, port, dns_thr, dns_en, ID, Value, buffer);
+
+                printf("  - ICMP Threshold: %d\n", icmp_thr);
+                send_icmp_threshold(serial_port, port, icmp_thr, icmp_en, ID, Value, buffer);
+
+                printf("  - ICMP Rate: %d\n", icmp_rate);
+                send_icmp_threshold_ps(serial_port, port, icmp_rate, icmp_en, ID, Value, buffer);
+
+                printf("  - IPSec IKE Threshold: %d\n", ike_thr);
+                send_ike_threshold(serial_port, port, ike_thr, ike_en, ID, Value, buffer);
+
+                // Gửi enable/disable luôn, bất kể giá trị 0 hay 1
+                printf("  - LAND Enable: %d\n", land_en);
+                send_land_enable_disable(serial_port, port, land_en, land_en, ID, Value, buffer);
+
+                printf("  - UDP Enable: %d\n", udp_en);
+                send_udp_enable_disable(serial_port, port, udp_en, udp_en, ID, Value, buffer);
+
+                printf("  - DNS Enable: %d\n", dns_en);
+                send_dns_enable_disable(serial_port, port, dns_en, dns_en, ID, Value, buffer);
+
+                printf("  - ICMP Enable: %d\n", icmp_en);
+                send_icmp_enable_disable(serial_port, port, icmp_en, icmp_en, ID, Value, buffer);
+
+                printf("  - IPSec IKE Enable: %d\n", ike_en);
+                send_ike_enable_disable(serial_port, port, ike_en, ike_en, ID, Value, buffer);
+
+                printf("  - TCP Fragment Enable: %d\n", tcpfrag);
+                send_tcpfrag_enable_disable(serial_port, port, tcpfrag, tcpfrag, ID, Value, buffer);
+
+                printf("  - UDP Fragment Enable: %d\n", udpfrag);
+                send_udpfrag_enable_disable(serial_port, port, udpfrag, udpfrag, ID, Value, buffer);
+
+                printf("  - HTTP Enable: %d\n", http_en);
+                send_http_enable_disable(serial_port, port, http_en, http_en, ID, Value, buffer);
+
+                printf("  - HTTPS Enable: %d\n", https_en);
+                send_https_enable_disable(serial_port, port, https_en, https_en, ID, Value, buffer);
+
+                // Gửi whitelist timeout luôn
+                printf("  - Whitelist Timeout: %d\n", wl_timeout);
+                send_whitelist_timeout(serial_port, port, wl_timeout, wl_timeout, ID, Value, buffer);
+
+                printf("Port %d: Sync done!\n", port);
+            }
+        }
+        sqlite3_finalize(st);
+    }
+    else
+    {
+        printf("Port %d (eth%d): No configuration found for this port. Skipping.\n", port, port);
+    }
+
+    sqlite3_close(db);
+}
+// HÃ m hiá»ƒn thá»‹ progress bar
+void progress_bar(int percent, int width)
+{
+    int step = (percent * width) / 100;
+    printf("\033[2K\r[");
+    for (int i = 0; i < width; i++)
+    {
+        if (i < step)
+            printf("#");
+        else
+            printf(" ");
+    }
+    printf("] %d%%\r", percent);
+    fflush(stdout);
+}
+
+// HÃ m Ä‘á»“ng bá»™ táº¥t cáº£ 4 port
+void dong_bo_all_ports_write(int serial_port)
+{
+    printf("=== STARTING CONFIGURATION SYNC FOR 4 PORTS ===\n");
+    int total_ports = 4;
+    int progress_percent[4] = {30, 50, 80, 100};
+    int width = 40;
+    for (int port = 1; port <= total_ports; port++)
+    {
+        printf("\n--- SYNCING PORT %d ---\n", port);
+        dong_bo_port_write(serial_port, port);
+        sleep(1);
+    }
+    for (int i = 0; i < 4; i++)
+    {
+        progress_bar(progress_percent[i], width);
+        sleep(1);
+    }
+    printf("\nDone!\n");
+    printf("\n=== CONFIGURATION SYNC COMPLETED FOR ALL 4 PORTS ===\n");
+}
+
+void load_port_config()
+{
+    FILE *file = fopen(CONFIG_FILE, "r");
+    if (file != NULL)
+    {
+        fscanf(file, "%d", &current_port);
+        fclose(file);
+    }
+}
+void cleanup_and_exit(int code)
+{
+    flush_batch_to_file(LOGFILE_HTTP_IPv4);
+    flush_batch_to_file(LOGFILE_HTTP_IPv6);
+    if (batch_queue)
+        g_queue_free(batch_queue);
+    if (ip_table)
+        g_hash_table_destroy(ip_table);
+    if (serial_port > 0)
+        close(serial_port);
+    exit(code);
+}
+void clear_input()
+{
+    int ch;
+    while ((ch = getchar()) != '\n' && ch != EOF)
+        ;
+}
+
+// main C
+
 int main()
 {
-  serial_port = configure_serial_port("/dev/ttyUSB0", B115200);
-  // signal(SIGINT, handle_signal);
-  // SIGTSTP
-  signal(SIGTSTP, handle_signal);
-  /******************************************************************/
-  read_config_mode_save_logfile();
-  read_threshold_from_file();
-  read_threshold_timecounter_from_file();
-  create_http_filelog(LOGFILE_HTTP_IPv4);
-  create_http_filelog(LOGFILE_HTTP_IPv6);
-  ip_table = g_hash_table_new_full(g_str_hash, g_str_equal, g_free, NULL);
-  batch_queue = g_queue_new();
-  load_ips_from_file(LOGFILE_HTTP_IPv4);
-  load_ips_from_file(LOGFILE_HTTP_IPv6);
-  send_http_ipv4_start(serial_port, LOGFILE_HTTP_IPv4);
-  sleep(1);
-  send_http_ipv6_start(serial_port, LOGFILE_HTTP_IPv6);
-  previous_mode_fc();
-  /******************************************************************/
-  pthread_mutex_lock(&run_mutex);
-  if (!is_run_running)
-  {
-    if (pthread_create(&run_thread, NULL, run, NULL) != 0)
+    serial_port = configure_serial_port("/dev/ttyUSB0", B115200);
+    // serial_port = configure_serial_port("/dev/pts/4", B115200);
+    //  filepath: f:\DDoS_github\cli_working.c
+    // serial_port = configure_serial_port("/dev/pts/23", B115200);
+    if (serial_port < 0)
     {
-      perror("pthread_create");
-      is_run_running = true;
-      exit(1);
+        printf("Failed to open serial port\n");
+        exit(1);
     }
-  }
-  pthread_mutex_unlock(&run_mutex);
-  /******************************************************************/
-  printf("\n 10");
-  sleep(2);
-  // Sync Time
-  send_data_sync_time(serial_port);
-  ModeStart_cnt(serial_port);
+    // ...existing code...
+    signal(SIGINT, handle_signal);  // Ctrl+C
+    signal(SIGTERM, handle_signal); // kill
+    signal(SIGTSTP, handle_signal); // Ctrl+Z
+    // signal(SIGINT, handle_signal);
+    // SIGTSTP
+    signal(SIGTSTP, handle_signal);
+    /******************************************************************/
+    read_config_mode_save_logfile();
+    read_threshold_from_file();
+    read_threshold_timecounter_from_file();
+    // load_port_config();  // Load saved port configuration
+    // create_http_filelog(LOGFILE_HTTP_IPv4);
+    // create_http_filelog(LOGFILE_HTTP_IPv6);
+    // ip_table = g_hash_table_new_full(g_str_hash, g_str_equal, g_free, NULL);
+    // batch_queue = g_queue_new();
+    // load_ips_from_file(LOGFILE_HTTP_IPv4);
+    // load_ips_from_file(LOGFILE_HTTP_IPv6);
+    // send_http_ipv4_start(serial_port, LOGFILE_HTTP_IPv4);
+    sleep(1);
+    // send_http_ipv6_start(serial_port, LOGFILE_HTTP_IPv6);
+    previous_mode_fc();
+    // bom 5 l?n m?i lo?i
 
-  flush_batch_to_file(LOGFILE_HTTP_IPv4);
-  flush_batch_to_file(LOGFILE_HTTP_IPv6);
-  g_queue_free(batch_queue);
-  g_hash_table_destroy(ip_table);
-  if (pthread_join(run_thread, NULL) != 0)
-  {
-    perror("pthread_join");
-    exit(1);
-  }
-  close(serial_port);
-  return 0;
+    /******************************************************************/
+    pthread_mutex_lock(&run_mutex);
+    if (!is_run_running)
+    {
+        if (pthread_create(&run_thread, NULL, run, NULL) != 0)
+        {
+            perror("pthread_create");
+            is_run_running = true;
+            exit(1);
+        }
+    }
+    pthread_mutex_unlock(&run_mutex);
+    /******************************************************************/
+    printf("\n 10");
+    sleep(2);
+    // Sync Time
+    // send_data_sync_time(serial_port);
+    // dong_bo_all_ports_write(serial_port);
+    // ModeStart_cnt(serial_port);
+    // G?i h m test
+
+    // start_packet_test(10);
+
+    // dong_bo_all_ports_write(serial_port);
+    new_menu(serial_port);
+    //  Mode_Condition_SDCard_Admin(serial_port);
+
+    flush_batch_to_file(LOGFILE_HTTP_IPv4);
+    flush_batch_to_file(LOGFILE_HTTP_IPv6);
+    g_queue_free(batch_queue);
+    g_hash_table_destroy(ip_table);
+    if (pthread_join(run_thread, NULL) != 0)
+    {
+        perror("pthread_join");
+        exit(1);
+    }
+    close(serial_port);
+    return 0;
 }
